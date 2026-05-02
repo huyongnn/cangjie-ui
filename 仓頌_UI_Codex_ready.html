@@ -20083,5 +20083,200 @@ html,body{
 })();
 </script>
 
+<style id="cangjieAppleStoreV63OverflowStyle">
+/* ===== V63：页面级横向溢出最终收口 ===== */
+html,
+body{
+  width:100%!important;
+  max-width:100%!important;
+  overflow-x:clip!important;
+}
+@supports not (overflow-x:clip){
+  html,body{overflow-x:hidden!important}
+}
+body > nav,
+body > div,
+body > main,
+body > section{
+  max-width:100vw!important;
+  box-sizing:border-box!important;
+}
+#globalUnifiedNavV41{
+  left:0!important;
+  right:auto!important;
+  max-width:100vw!important;
+  box-sizing:border-box!important;
+}
+#cashierRoot,
+#stockRoot,
+#ordersRoot,
+#inventoryStep1Root,
+#ownerStep1Root,
+#reportsStep1Root,
+#configStep1Root,
+#inventoryView{
+  width:100vw!important;
+  max-width:100vw!important;
+  box-sizing:border-box!important;
+  overflow-x:clip!important;
+}
+#cashierRoot .cashier-layout,
+#stockRoot .stock-layout,
+#ordersRoot .orders-layout,
+.inventory-step1-layout,
+.owner-step1-layout{
+  width:100%!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+  overflow-x:hidden!important;
+}
+.cashier-center,
+.cashier-right,
+.stock-main,
+.stock-batch-panel,
+.orders-list-panel,
+.orders-detail,
+.inventory-step1-main,
+.inventory-step1-tree,
+.owner-step1-side,
+.owner-step1-main,
+.reports-step1-top,
+.reports-step1-section,
+.config-step1-layout,
+.config-step1-body{
+  min-width:0!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+}
+.cashier-product-area,
+.cashier-products,
+.order-list,
+.order-summary,
+.stock-table-wrap,
+.reports-step1-table-wrap,
+.owner-step1-table-wrap,
+.inventory-step1-table-wrap,
+.buyer-v47-table-wrap{
+  min-width:0!important;
+  max-width:100%!important;
+}
+@media(max-width:980px){
+  #cashierRoot,
+  #stockRoot,
+  #ordersRoot,
+  #inventoryStep1Root,
+  #ownerStep1Root,
+  #reportsStep1Root,
+  #configStep1Root,
+  #inventoryView{
+    margin-left:0!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    left:0!important;
+    right:0!important;
+  }
+  #cashierRoot .cashier-layout,
+  #stockRoot .stock-layout,
+  #ordersRoot .orders-layout{
+    display:block!important;
+    grid-template-columns:none!important;
+  }
+  .batch-modal-v45,
+  .batch-modal,
+  .buyer-v47-modal,
+  .bill-center-modal,
+  .codebill-modal,
+  .settle-modal{
+    max-width:calc(100vw - 24px)!important;
+  }
+}
+</style>
+
+<style id="cangjieAppleStoreV64ModalMaskStyle">
+/* ===== V64：弹窗遮罩隔离，避免底层旧色透出 ===== */
+.modal-mask.show,
+#batchModal.show,
+#goodsModal.show,
+.product-batch-picker-mask.show,
+.v51-batch-edit-mask.show,
+.v52-batch-edit-mask.show,
+.v53-batch-edit-mask.show,
+.order-edit-step1-mask.show,
+.owner-fee-step1-mask.show,
+#subBuyerPickerStep1.show,
+#cashierAddBuyerMaskStep1.show{
+  background:rgba(20,22,24,.46)!important;
+  backdrop-filter:blur(22px) saturate(120%)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(120%)!important;
+  z-index:2147482500!important;
+}
+#batchModal.show::before,
+#goodsModal.show::before,
+.modal-mask.show::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:rgba(245,245,243,.18);
+  pointer-events:none;
+}
+#batchModal .batch-modal-v45,
+#goodsModal .modal,
+.modal-mask.show > .modal{
+  position:relative!important;
+  z-index:1!important;
+}
+.toast,
+#tudou2SaveStatusV57{
+  z-index:2147482600!important;
+}
+</style>
+
+<style id="cangjieAppleStoreV65FocusStyle">
+/* ===== V65：统一焦点态，去除系统橙色描边 ===== */
+button:focus,
+button:focus-visible,
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+[tabindex]:focus,
+[tabindex]:focus-visible{
+  outline:none!important;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.cashier-add-buyer-modal-step1 input:focus,
+.cj-v59-input-body input:focus,
+.cj-v59-input-body textarea:focus{
+  border-color:rgba(111,143,122,.36)!important;
+  box-shadow:0 0 0 4px rgba(111,143,122,.13)!important;
+}
+#ordersRoot button:focus,
+#ordersRoot button:focus-visible,
+#cashierRoot button:focus,
+#cashierRoot button:focus-visible,
+#stockRoot button:focus,
+#stockRoot button:focus-visible,
+#ownerStep1Root button:focus,
+#ownerStep1Root button:focus-visible,
+#reportsStep1Root button:focus,
+#reportsStep1Root button:focus-visible,
+#buyerManagerV47 button:focus,
+#buyerManagerV47 button:focus-visible,
+#configStep1Root button:focus,
+#configStep1Root button:focus-visible{
+  border-color:rgba(29,29,31,.18)!important;
+  box-shadow:0 0 0 4px rgba(111,143,122,.10)!important;
+}
+#globalUnifiedNavV41 .v41-nav-btn:focus,
+#globalUnifiedNavV41 .v41-nav-btn:focus-visible{
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)!important;
+}
+</style>
+
 </body>
 </html>
