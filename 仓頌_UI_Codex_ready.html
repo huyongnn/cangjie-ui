@@ -18013,5 +18013,667 @@ body.show-inbound #inboundRoot button{
 })();
 </script>
 
+<style id="cangjieAppleV58Style">
+/* ===== V58 Apple UI：只做视觉层增强，不改 V57 数据与业务逻辑 ===== */
+:root{
+  --cj-bg:#f5f7f4;
+  --cj-surface:rgba(255,255,255,.88);
+  --cj-surface-strong:#fff;
+  --cj-line:rgba(30,43,34,.12);
+  --cj-text:#162118;
+  --cj-muted:#657067;
+  --cj-green:#208a3b;
+  --cj-green-2:#35a854;
+  --cj-blue:#2167d8;
+  --cj-red:#bd2b38;
+  --cj-orange:#c96f25;
+  --cj-shadow:0 18px 48px rgba(24,40,30,.10);
+  --cj-shadow-soft:0 8px 24px rgba(24,40,30,.08);
+  --cj-radius:18px;
+  --cj-radius-sm:12px;
+}
+body{
+  background:radial-gradient(circle at 20% 0%,rgba(83,166,91,.10),transparent 28%),
+    linear-gradient(180deg,#fbfcfa 0%,var(--cj-bg) 100%)!important;
+  color:var(--cj-text);
+}
+#globalUnifiedNavV41{
+  width:74px!important;
+  background:rgba(18,29,24,.92)!important;
+  backdrop-filter:blur(22px) saturate(160%);
+  -webkit-backdrop-filter:blur(22px) saturate(160%);
+  border-right:1px solid rgba(255,255,255,.08)!important;
+  box-shadow:12px 0 34px rgba(0,0,0,.12);
+  padding:14px 8px!important;
+  gap:8px!important;
+}
+#globalUnifiedNavV41 .v41-logo,
+.cashier-logo,.stock-logo,.orders-logo,.side-logo,.logo{
+  color:#fff!important;
+  font-weight:950!important;
+  letter-spacing:0!important;
+}
+#globalUnifiedNavV41 .v41-logo{
+  width:54px!important;
+  min-height:50px!important;
+  border-radius:17px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  background:linear-gradient(145deg,#208a3b,#35a854)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 10px 24px rgba(32,138,59,.28);
+  font-size:15px!important;
+}
+#globalUnifiedNavV41 .v41-nav-btn,
+.cashier-nav-btn,.stock-nav-btn,.orders-nav-btn,.side-item{
+  border:0!important;
+  border-radius:15px!important;
+  background:transparent!important;
+  color:rgba(255,255,255,.70)!important;
+  font-size:12px!important;
+  font-weight:850!important;
+  min-height:42px!important;
+  box-shadow:none!important;
+  transition:background .18s ease,color .18s ease,transform .18s ease!important;
+}
+#globalUnifiedNavV41 .v41-nav-btn.active,
+#globalUnifiedNavV41 .v41-nav-btn:hover,
+.cashier-nav-btn.active,.cashier-nav-btn:hover,
+.stock-nav-btn.active,.stock-nav-btn:hover,
+.orders-nav-btn.active,.orders-nav-btn:hover,
+.side-item.active,.side-item:hover{
+  background:rgba(255,255,255,.14)!important;
+  color:#fff!important;
+  transform:translateY(-1px)!important;
+}
+.cashier-left-nav,.stock-side,.orders-side,.sidebar{
+  background:rgba(18,29,24,.92)!important;
+  backdrop-filter:blur(22px) saturate(160%);
+  -webkit-backdrop-filter:blur(22px) saturate(160%);
+}
+#cashierRoot .cashier-layout{
+  background:linear-gradient(120deg,#f8faf7 0%,#eef4ee 100%)!important;
+  grid-template-columns:74px 230px minmax(520px,1fr) minmax(360px,420px)!important;
+  gap:0!important;
+}
+#cashierRoot .cashier-batches,
+#cashierRoot .cashier-center,
+#cashierRoot .cashier-right,
+#stockRoot .stock-batch-panel,
+#stockRoot .stock-main,
+#ordersRoot .orders-list-panel,
+#ordersRoot .orders-detail{
+  background:transparent!important;
+}
+#cashierRoot .cashier-batches{
+  padding:18px 14px!important;
+  border-right:1px solid var(--cj-line)!important;
+}
+#cashierRoot .cashier-batch-title{
+  height:48px!important;
+  border-radius:16px!important;
+  background:var(--cj-surface-strong)!important;
+  color:var(--cj-text)!important;
+  box-shadow:var(--cj-shadow-soft)!important;
+  border:1px solid rgba(255,255,255,.72)!important;
+}
+#cashierRoot .cashier-center{
+  padding:20px!important;
+}
+#cashierRoot .cashier-top,
+#stockRoot .stock-topbar,
+#ordersRoot .orders-detail-head{
+  border:1px solid rgba(255,255,255,.78)!important;
+  background:var(--cj-surface)!important;
+  box-shadow:var(--cj-shadow-soft)!important;
+  border-radius:22px!important;
+  padding:18px!important;
+  backdrop-filter:blur(18px) saturate(150%);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);
+}
+#cashierRoot .cashier-top h1,
+#stockRoot .stock-topbar h2,
+#ordersRoot .orders-detail-head h2{
+  margin:0!important;
+  font-size:26px!important;
+  font-weight:950!important;
+  letter-spacing:0!important;
+}
+#cashierRoot .cashier-top p,
+#stockRoot .stock-topbar p,
+#ordersRoot .orders-detail-head p{
+  color:var(--cj-muted)!important;
+  font-weight:650!important;
+}
+#cashierRoot input,#cashierRoot select,
+#stockRoot input,#stockRoot select,
+#ordersRoot input,#ordersRoot select,
+#configStep1Root input,#configStep1Root select,#configStep1Root textarea,
+#buyerManagerV47 input,#buyerManagerV47 select,#buyerManagerV47 textarea{
+  border:1px solid var(--cj-line)!important;
+  background:rgba(255,255,255,.86)!important;
+  border-radius:14px!important;
+  min-height:42px!important;
+  color:var(--cj-text)!important;
+  outline:none!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55)!important;
+}
+#cashierRoot input:focus,#cashierRoot select:focus,
+#stockRoot input:focus,#stockRoot select:focus,
+#buyerManagerV47 input:focus,#buyerManagerV47 select:focus,#buyerManagerV47 textarea:focus,
+#configStep1Root textarea:focus{
+  border-color:rgba(32,138,59,.45)!important;
+  box-shadow:0 0 0 4px rgba(32,138,59,.12)!important;
+}
+#cashierRoot .cashier-product-area{
+  margin-top:16px!important;
+  border-radius:24px!important;
+  background:rgba(255,255,255,.50)!important;
+  border:1px solid rgba(255,255,255,.76)!important;
+  box-shadow:var(--cj-shadow)!important;
+  padding:14px!important;
+}
+#cashierRoot .cashier-products{
+  gap:12px!important;
+  padding:4px!important;
+}
+#cashierRoot .cashier-product-card{
+  border:1px solid rgba(255,255,255,.72)!important;
+  border-radius:18px!important;
+  box-shadow:var(--cj-shadow-soft)!important;
+  overflow:hidden!important;
+  min-height:112px!important;
+  transform:none!important;
+}
+#cashierRoot .cashier-product-card:hover{
+  transform:translateY(-2px)!important;
+  box-shadow:0 16px 36px rgba(24,40,30,.14)!important;
+}
+#cashierRoot .cashier-product-card.in-stock{
+  background:linear-gradient(145deg,#208a3b,#46b65f)!important;
+}
+#cashierRoot .cashier-product-card.out-stock{
+  background:linear-gradient(145deg,#c54a55,#bd2b38)!important;
+}
+#cashierRoot .cashier-catbar{
+  border-left:1px solid var(--cj-line)!important;
+  background:rgba(255,255,255,.58)!important;
+  border-radius:18px!important;
+}
+#cashierRoot .cashier-right{
+  padding:20px 18px!important;
+  border-left:1px solid var(--cj-line)!important;
+}
+#cashierRoot .order-head,
+#cashierRoot .order-summary,
+#cashierRoot .order-list{
+  background:var(--cj-surface)!important;
+  border:1px solid rgba(255,255,255,.78)!important;
+  border-radius:22px!important;
+  box-shadow:var(--cj-shadow-soft)!important;
+}
+#cashierRoot .order-head{padding:14px!important;margin-bottom:12px!important}
+#cashierRoot .order-list{padding:8px!important}
+#cashierRoot .order-table-head{
+  color:var(--cj-muted)!important;
+  background:transparent!important;
+  font-weight:900!important;
+}
+#cashierRoot .order-row{
+  border-radius:16px!important;
+  background:#fff!important;
+  border:1px solid var(--cj-line)!important;
+  margin-bottom:8px!important;
+  box-shadow:0 4px 14px rgba(24,40,30,.05)!important;
+}
+#cashierRoot .order-total{
+  background:linear-gradient(145deg,#17231b,#23382a)!important;
+  color:#fff!important;
+  border-radius:18px!important;
+  padding:14px 16px!important;
+}
+#cashierRoot .order-total b{color:#fff!important;font-size:30px!important}
+#cashierRoot .codebill-btn,
+#cashierRoot .checkout-btn,
+#cashierRoot .bill-center-btn,
+#stockRoot .stock-btn-green,
+#stockRoot .batch-create-btn,
+#configStep1Root .config-step1-green,
+#buyerManagerV47 .buyer-v47-use,
+#buyerManagerV47 .buyer-v47-copy-text{
+  background:linear-gradient(145deg,var(--cj-green),var(--cj-green-2))!important;
+  color:#fff!important;
+  border:0!important;
+  border-radius:15px!important;
+  box-shadow:0 10px 24px rgba(32,138,59,.22)!important;
+}
+#stockRoot .stock-layout{
+  background:linear-gradient(120deg,#f8faf7 0%,#eef4ee 100%)!important;
+  grid-template-columns:74px 300px minmax(0,1fr)!important;
+}
+#stockRoot .stock-batch-panel{
+  padding:18px!important;
+  border-right:1px solid var(--cj-line)!important;
+}
+#stockRoot .stock-batch-head,
+#ordersRoot .orders-list-head{
+  background:var(--cj-surface)!important;
+  border:1px solid rgba(255,255,255,.78)!important;
+  border-radius:22px!important;
+  box-shadow:var(--cj-shadow-soft)!important;
+  padding:16px!important;
+}
+#stockRoot .stock-batch-card,
+#ordersRoot .order-card,
+#buyerManagerV47 .buyer-v47-card{
+  border:1px solid rgba(255,255,255,.80)!important;
+  border-radius:18px!important;
+  background:var(--cj-surface-strong)!important;
+  box-shadow:0 8px 22px rgba(24,40,30,.07)!important;
+}
+#stockRoot .stock-batch-card.active,
+#buyerManagerV47 .buyer-v47-card.active{
+  border-color:rgba(32,138,59,.35)!important;
+  background:linear-gradient(145deg,#eef9f0,#fff)!important;
+  box-shadow:0 12px 28px rgba(32,138,59,.14)!important;
+}
+#stockRoot .stock-main{padding:20px!important}
+#stockRoot .stock-summary{
+  gap:12px!important;
+  margin:16px 0!important;
+}
+#stockRoot .stock-summary-card{
+  border:1px solid rgba(255,255,255,.78)!important;
+  border-radius:20px!important;
+  background:var(--cj-surface)!important;
+  box-shadow:var(--cj-shadow-soft)!important;
+  padding:16px!important;
+}
+#stockRoot .stock-summary-card span{color:var(--cj-muted)!important;font-weight:800!important}
+#stockRoot .stock-summary-card b{font-size:22px!important;color:var(--cj-text)!important}
+#stockRoot .stock-table-wrap{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+#stockRoot .stock-table,
+#stockRoot .stock-table thead,
+#stockRoot .stock-table tbody{
+  display:block!important;
+  width:100%!important;
+}
+#stockRoot .stock-table thead{display:none!important}
+#stockRoot .stock-table tbody{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr))!important;
+  gap:14px!important;
+}
+#stockRoot .stock-table tr{
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:10px!important;
+  padding:16px!important;
+  min-height:218px!important;
+  border:1px solid rgba(255,255,255,.78)!important;
+  border-radius:22px!important;
+  background:var(--cj-surface-strong)!important;
+  box-shadow:var(--cj-shadow-soft)!important;
+}
+#stockRoot .stock-table td{
+  display:block!important;
+  border:0!important;
+  padding:0!important;
+  font-size:12px!important;
+  color:var(--cj-muted)!important;
+}
+#stockRoot .stock-table td:nth-child(1){
+  grid-column:1/3!important;
+  color:var(--cj-muted)!important;
+  font-weight:900!important;
+}
+#stockRoot .stock-table td:nth-child(2){
+  grid-column:1/3!important;
+  color:var(--cj-text)!important;
+}
+#stockRoot .stock-goods-name{
+  display:inline-block!important;
+  font-size:20px!important;
+  font-weight:950!important;
+  margin-right:8px!important;
+}
+#stockRoot .stock-tag{
+  border-radius:999px!important;
+  background:#edf6ef!important;
+  color:var(--cj-green)!important;
+  padding:4px 8px!important;
+  font-weight:950!important;
+}
+#stockRoot .stock-sub{color:var(--cj-muted)!important;margin-top:4px!important}
+#stockRoot .stock-num{
+  color:var(--cj-text)!important;
+  font-size:15px!important;
+  font-weight:900!important;
+}
+#stockRoot .stock-positive{color:var(--cj-green)!important}
+#stockRoot .stock-negative{color:var(--cj-red)!important}
+#stockRoot .stock-table td:nth-child(8){
+  grid-column:1/3!important;
+}
+#stockRoot .inventory-step1-batch-op{
+  width:100%!important;
+  min-height:40px!important;
+  border-radius:14px!important;
+}
+body.buyers-mode-step1 #buyerManagerV47.buyer-v47-mask.show{
+  background:linear-gradient(120deg,#f8faf7 0%,#eef4ee 100%)!important;
+}
+body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-modal{
+  background:transparent!important;
+  gap:0!important;
+}
+body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-left{
+  background:rgba(255,255,255,.62)!important;
+  border-right:1px solid var(--cj-line)!important;
+  padding:18px!important;
+}
+body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-right{
+  padding:20px!important;
+  background:transparent!important;
+}
+#buyerManagerV47 .buyer-v47-left-head,
+#buyerManagerV47 .buyer-v47-top,
+#buyerManagerV47 .buyer-v47-section,
+#buyerManagerV47 .buyer-v47-info,
+#buyerManagerV47 .buyer-v47-bill-text,
+#buyerManagerV47 .buyer-v47-bill-side,
+#buyerPaymentV47 .buyer-v47-pay-modal{
+  border:1px solid rgba(255,255,255,.78)!important;
+  border-radius:22px!important;
+  background:var(--cj-surface)!important;
+  box-shadow:var(--cj-shadow-soft)!important;
+}
+#buyerManagerV47 .buyer-v47-top{padding:18px!important}
+#buyerManagerV47 .buyer-v47-info-grid{gap:12px!important}
+#buyerManagerV47 .buyer-v47-table-wrap{
+  border-radius:18px!important;
+  border:1px solid var(--cj-line)!important;
+  background:#fff!important;
+}
+#buyerManagerV47 .buyer-v47-table th{
+  background:#f3f6f2!important;
+  color:var(--cj-muted)!important;
+  font-weight:950!important;
+}
+#buyerManagerV47 .buyer-v47-bill-box{
+  grid-template-columns:minmax(0,1fr) 190px!important;
+  gap:12px!important;
+}
+#buyerManagerV47 .buyer-v47-bill-text{
+  min-height:220px!important;
+  line-height:1.55!important;
+}
+#configStep1Root{
+  background:linear-gradient(120deg,#f8faf7 0%,#eef4ee 100%)!important;
+}
+#configStep1Root .config-step1-top,
+#configStep1Root .config-step1-card,
+#configStep1Root .config-step1-side,
+#configStep1Root .config-fallback-card,
+#configStep1Root .config-fallback-head{
+  border:1px solid rgba(255,255,255,.78)!important;
+  border-radius:22px!important;
+  background:var(--cj-surface)!important;
+  box-shadow:var(--cj-shadow-soft)!important;
+}
+#configStep1Root .config-step1-main h2,
+#configStep1Root .config-step1-top h1{
+  letter-spacing:0!important;
+  font-weight:950!important;
+}
+#configStep1Root .config-step1-status{
+  border-radius:999px!important;
+  border:1px solid var(--cj-line)!important;
+  background:#fff!important;
+  color:var(--cj-green)!important;
+  font-weight:950!important;
+}
+#configStep1Root .config-step1-menu{
+  gap:8px!important;
+}
+#configStep1Root .config-step1-menu button{
+  background:#fff!important;
+  color:var(--cj-text)!important;
+  border:1px solid var(--cj-line)!important;
+  box-shadow:none!important;
+  border-radius:14px!important;
+}
+#configStep1Root .config-step1-menu button.active,
+#configStep1Root .config-step1-menu button:hover{
+  background:linear-gradient(145deg,var(--cj-green),var(--cj-green-2))!important;
+  color:#fff!important;
+  border-color:transparent!important;
+}
+#configStep1Root .config-step1-test,
+#configStep1Root textarea{
+  min-height:132px!important;
+  resize:vertical!important;
+}
+.cj-v58-nav-hint{
+  display:none;
+}
+@media(max-width:980px){
+  body{overflow:auto!important}
+  #globalUnifiedNavV41{
+    width:100vw!important;
+    height:58px!important;
+    flex-direction:row!important;
+    overflow-x:auto!important;
+    border-right:0!important;
+    border-bottom:1px solid rgba(255,255,255,.10)!important;
+    padding:7px 8px!important;
+  }
+  #globalUnifiedNavV41 .v41-logo{
+    min-width:54px!important;
+    min-height:42px!important;
+  }
+  #globalUnifiedNavV41 .v41-nav-btn{
+    min-width:64px!important;
+    min-height:42px!important;
+    padding:0 10px!important;
+  }
+  #cashierRoot .cashier-layout,
+  #stockRoot .stock-layout,
+  #ordersRoot .orders-layout{
+    display:block!important;
+    min-height:100vh!important;
+    padding-top:58px!important;
+  }
+  #cashierRoot .cashier-left-nav,
+  #stockRoot .stock-side,
+  #ordersRoot .orders-side,
+  #inboundRoot .sidebar{
+    display:none!important;
+  }
+  #cashierRoot .cashier-batches{
+    display:none!important;
+  }
+  #cashierRoot .cashier-center,
+  #cashierRoot .cashier-right,
+  #stockRoot .stock-batch-panel,
+  #stockRoot .stock-main{
+    padding:12px!important;
+    border:0!important;
+  }
+  #cashierRoot .cashier-top,
+  #stockRoot .stock-topbar{
+    display:block!important;
+  }
+  #cashierRoot .cashier-top-tools,
+  #stockRoot .stock-actions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:8px!important;
+    margin-top:12px!important;
+  }
+  #cashierRoot .cashier-product-area{
+    display:block!important;
+    box-shadow:none!important;
+    padding:10px!important;
+  }
+  #cashierRoot .cashier-catbar{
+    display:flex!important;
+    overflow-x:auto!important;
+    border-left:0!important;
+    margin-top:10px!important;
+  }
+  #cashierRoot .cashier-right{
+    padding-bottom:24px!important;
+  }
+  #stockRoot .stock-summary{
+    grid-template-columns:1fr 1fr!important;
+  }
+  body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-modal{
+    display:block!important;
+  }
+  body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-left{
+    max-height:38vh!important;
+    border-right:0!important;
+    border-bottom:1px solid var(--cj-line)!important;
+  }
+  #buyerManagerV47 .buyer-v47-top-actions,
+  #buyerManagerV47 .buyer-v47-actions,
+  #buyerManagerV47 .buyer-v47-pay-actions{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+  }
+  #buyerManagerV47 .buyer-v47-bill-box{
+    grid-template-columns:1fr!important;
+  }
+  #buyerManagerV47 .buyer-v47-table,
+  #buyerManagerV47 .buyer-v47-table thead,
+  #buyerManagerV47 .buyer-v47-table tbody{
+    display:block!important;
+  }
+  #buyerManagerV47 .buyer-v47-table thead{display:none!important}
+  #buyerManagerV47 .buyer-v47-table tr{
+    display:block!important;
+    border:1px solid var(--cj-line)!important;
+    border-radius:16px!important;
+    padding:10px!important;
+    margin:8px!important;
+    background:#fff!important;
+  }
+  #buyerManagerV47 .buyer-v47-table td{
+    display:flex!important;
+    justify-content:space-between!important;
+    gap:12px!important;
+    border:0!important;
+    padding:5px 0!important;
+    font-size:12px!important;
+  }
+  #buyerManagerV47 .buyer-v47-table td:nth-child(1)::before{content:"时间";color:var(--cj-muted);font-weight:900}
+  #buyerManagerV47 .buyer-v47-table td:nth-child(2)::before{content:"单号";color:var(--cj-muted);font-weight:900}
+  #buyerManagerV47 .buyer-v47-table td:nth-child(3)::before{content:"状态";color:var(--cj-muted);font-weight:900}
+  #buyerManagerV47 .buyer-v47-table td:nth-child(4)::before{content:"商品";color:var(--cj-muted);font-weight:900}
+  #buyerManagerV47 .buyer-v47-table td:nth-child(5)::before{content:"金额";color:var(--cj-muted);font-weight:900}
+  #buyerManagerV47 .buyer-v47-table td:nth-child(6)::before{content:"已收";color:var(--cj-muted);font-weight:900}
+  #buyerManagerV47 .buyer-v47-table td:nth-child(7)::before{content:"欠款";color:var(--cj-muted);font-weight:900}
+  #buyerManagerV47 .buyer-v47-table td:nth-child(8)::before{content:"操作";color:var(--cj-muted);font-weight:900}
+}
+@media(max-width:640px){
+  #cashierRoot .cashier-top h1,
+  #stockRoot .stock-topbar h2{
+    font-size:22px!important;
+  }
+  #cashierRoot .cashier-products{
+    grid-template-columns:1fr 1fr!important;
+  }
+  #stockRoot .stock-summary{
+    grid-template-columns:1fr!important;
+  }
+  #stockRoot .stock-table tbody{
+    grid-template-columns:1fr!important;
+  }
+  #stockRoot .stock-table tr{
+    grid-template-columns:1fr!important;
+  }
+  #stockRoot .stock-table td:nth-child(1),
+  #stockRoot .stock-table td:nth-child(2),
+  #stockRoot .stock-table td:nth-child(8){
+    grid-column:1!important;
+  }
+  #buyerManagerV47 .buyer-v47-top-actions,
+  #buyerManagerV47 .buyer-v47-actions,
+  #buyerManagerV47 .buyer-v47-pay-actions{
+    grid-template-columns:1fr!important;
+  }
+}
+</style>
+
+<script id="cangjieAppleV58Script">
+/* ===== V58 Apple UI：轻量 DOM 标记与导航统一，不接管业务流程 ===== */
+(function(){
+  function addClass(el, cls){
+    if(el && !el.classList.contains(cls)) el.classList.add(cls);
+  }
+  function syncNavLabelsV58(){
+    var nav = document.getElementById("globalUnifiedNavV41");
+    if(!nav) return;
+    var logo = nav.querySelector(".v41-logo");
+    if(logo) logo.textContent = "仓頡";
+    Array.from(nav.querySelectorAll(".v41-nav-btn")).forEach(function(btn){
+      var text = (btn.textContent || "").trim();
+      if(text === "客户") btn.textContent = "买家";
+      if(text === "入库") btn.textContent = "批次";
+      if(text === "配置") btn.setAttribute("aria-label","连接配置");
+    });
+  }
+  function markPagesV58(){
+    addClass(document.getElementById("cashierRoot"), "cj-apple-cashier-v58");
+    addClass(document.getElementById("stockRoot"), "cj-card-stock-v58");
+    addClass(document.getElementById("buyerManagerV47"), "cj-mobile-buyer-v58");
+    addClass(document.getElementById("configStep1Root"), "cj-printer-config-v58");
+  }
+  function annotateStockCardsV58(){
+    var wrap = document.getElementById("stockTableWrap");
+    if(!wrap) return;
+    Array.from(wrap.querySelectorAll(".stock-table tbody tr")).forEach(function(row){
+      if(row.getAttribute("data-cj-v58")) return;
+      row.setAttribute("data-cj-v58","card");
+      var stateCell = row.children && row.children[6];
+      if(stateCell){
+        var state = (stateCell.textContent || "").trim();
+        row.setAttribute("data-stock-state", state);
+      }
+    });
+  }
+  function enhanceV58(){
+    syncNavLabelsV58();
+    markPagesV58();
+    annotateStockCardsV58();
+  }
+  ["renderStockModule","renderCashierAll","renderCashierProducts","renderBuyerV47","renderConfigStep1"].forEach(function(name){
+    var fn = window[name];
+    if(typeof fn === "function" && !fn.__cangjieAppleV58Wrapped){
+      window[name] = function(){
+        var result = fn.apply(this, arguments);
+        setTimeout(enhanceV58, 0);
+        return result;
+      };
+      window[name].__cangjieAppleV58Wrapped = true;
+    }
+  });
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", enhanceV58);
+  }else{
+    enhanceV58();
+  }
+  setTimeout(enhanceV58, 120);
+  setInterval(enhanceV58, 1200);
+})();
+</script>
+
 </body>
 </html>
