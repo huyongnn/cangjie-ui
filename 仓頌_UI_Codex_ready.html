@@ -19651,5 +19651,437 @@ body.buyers-mode-step1 #buyerManagerV47.buyer-v47-mask.show,
 }
 </style>
 
+<style id="cangjieAppleStoreV62ClosureStyle">
+/* ===== V62：全局视觉收口。覆盖库存/货主/报表/订单/批次弹窗残留绿 ===== */
+html,body{
+  max-width:100vw!important;
+  overflow-x:hidden!important;
+}
+#cashierRoot,
+#stockRoot,
+#ordersRoot,
+#inventoryStep1Root,
+#ownerStep1Root,
+#reportsStep1Root,
+#configStep1Root,
+#inventoryView{
+  max-width:100vw!important;
+  overflow-x:hidden!important;
+}
+#cashierRoot *,
+#stockRoot *,
+#ordersRoot *,
+#inventoryStep1Root *,
+#ownerStep1Root *,
+#reportsStep1Root *,
+#configStep1Root *,
+#inventoryView *,
+.batch-modal-v45 *,
+.batch-modal *{
+  letter-spacing:0!important;
+}
+/* Inventory Step1 */
+#inventoryStep1Root{
+  background:linear-gradient(135deg,#fafaf9 0%,#f1f2ef 100%)!important;
+  color:#1d1d1f!important;
+}
+.inventory-step1-layout{
+  background:transparent!important;
+}
+.inventory-step1-tree,
+.inventory-step1-main,
+.inventory-step1-top,
+.inventory-step1-section,
+.inventory-step1-summary > div,
+.inventory-step1-node{
+  background:rgba(255,255,255,.86)!important;
+  border:1px solid rgba(255,255,255,.72)!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.045)!important;
+  backdrop-filter:blur(18px) saturate(135%)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(135%)!important;
+}
+.inventory-step1-tree,
+.inventory-step1-top,
+.inventory-step1-section{
+  border-radius:22px!important;
+}
+.inventory-step1-node{
+  border-radius:17px!important;
+  color:#1d1d1f!important;
+}
+.inventory-step1-node.active{
+  background:#fbfdfb!important;
+  border-color:rgba(111,143,122,.26)!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.055)!important;
+}
+.inventory-step1-gray,
+.inventory-step1-greenbtn,
+.inventory-step1-batch-op,
+.inventory-step1-mini,
+.inventory-step1-mini.green{
+  background:#fff!important;
+  color:#1d1d1f!important;
+  border:1px solid rgba(29,29,31,.12)!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.045)!important;
+}
+.inventory-step1-greenbtn{
+  background:#202124!important;
+  color:#fff!important;
+  border-color:#202124!important;
+}
+.inventory-step1-green{
+  color:#4f6f5a!important;
+}
+.inventory-step1-table-wrap,
+.inventory-step1-table{
+  background:#fff!important;
+  border-color:rgba(29,29,31,.10)!important;
+}
+.inventory-step1-table th{
+  background:#f6f6f4!important;
+  color:#6e6e73!important;
+}
+.inventory-step1-table em{
+  background:#eef4ef!important;
+  color:#4f6f5a!important;
+  border:1px solid rgba(111,143,122,.28)!important;
+}
+/* Owner Step1 */
+#ownerStep1Root{
+  background:linear-gradient(135deg,#fafaf9 0%,#f1f2ef 100%)!important;
+  color:#1d1d1f!important;
+}
+.owner-step1-layout,
+.owner-step1-side,
+.owner-step1-main{
+  background:transparent!important;
+}
+.owner-step1-side,
+.owner-step1-top,
+.owner-step1-section,
+.owner-step1-summary-card,
+.owner-step1-card,
+.owner-fee-step1-dialog,
+.owner-fee-inline-step1{
+  background:rgba(255,255,255,.86)!important;
+  border:1px solid rgba(255,255,255,.72)!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.045)!important;
+  backdrop-filter:blur(18px) saturate(135%)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(135%)!important;
+  border-radius:22px!important;
+}
+.owner-step1-tabs{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:6px!important;
+  padding:5px!important;
+  background:#ededeb!important;
+  border-radius:14px!important;
+}
+.owner-step1-tabs button{
+  background:transparent!important;
+  color:#6e6e73!important;
+  border:0!important;
+  box-shadow:none!important;
+  border-radius:11px!important;
+}
+.owner-step1-tabs button.active{
+  background:#fff!important;
+  color:#1d1d1f!important;
+  box-shadow:0 2px 8px rgba(0,0,0,.08)!important;
+}
+.owner-step1-card.active{
+  background:#fbfdfb!important;
+  border-color:rgba(111,143,122,.26)!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.055)!important;
+}
+.owner-step1-green,
+.owner-step1-gray,
+.owner-step1-orange,
+.owner-step1-red,
+.owner-fee-inline-grid-step1 button,
+.owner-fee-inline-add-btn-step1,
+.owner-fee-step1-confirm,
+.owner-fee-step1-chip,
+.owner-fee-step1-signs button{
+  background:#fff!important;
+  color:#1d1d1f!important;
+  border:1px solid rgba(29,29,31,.12)!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.045)!important;
+}
+.owner-step1-green,
+.owner-fee-step1-confirm,
+.owner-fee-inline-add-btn-step1{
+  background:#202124!important;
+  color:#fff!important;
+  border-color:#202124!important;
+}
+.owner-step1-orange,
+.owner-fee-inline-grid-step1 button{
+  background:#f7f1ea!important;
+  color:#a8794d!important;
+  border-color:rgba(168,121,77,.24)!important;
+}
+.owner-step1-red,
+.owner-fee-step1-signs button.active.minus{
+  background:#f6eeee!important;
+  color:#a65b62!important;
+  border-color:rgba(166,91,98,.24)!important;
+}
+.owner-fee-step1-signs button.active.plus,
+.owner-fee-step1-chip.active{
+  background:#202124!important;
+  color:#fff!important;
+}
+.owner-step1-table-wrap,
+.owner-step1-table{
+  background:#fff!important;
+  border-color:rgba(29,29,31,.10)!important;
+}
+.owner-step1-table th{
+  background:#f6f6f4!important;
+  color:#6e6e73!important;
+}
+/* Reports Step1 */
+#reportsStep1Root{
+  background:linear-gradient(135deg,#fafaf9 0%,#f1f2ef 100%)!important;
+  color:#1d1d1f!important;
+  overflow-x:hidden!important;
+}
+.reports-step1-top,
+.reports-step1-card,
+.reports-step1-section,
+.reports-step1-table-wrap{
+  background:rgba(255,255,255,.86)!important;
+  border:1px solid rgba(255,255,255,.72)!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.045)!important;
+  backdrop-filter:blur(18px) saturate(135%)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(135%)!important;
+  border-radius:22px!important;
+}
+.reports-step1-top{
+  margin:18px!important;
+  border-bottom:1px solid rgba(255,255,255,.72)!important;
+}
+.reports-step1-tabs{
+  margin:0 18px 14px!important;
+  padding:5px!important;
+  background:#ededeb!important;
+  border:0!important;
+  border-radius:14px!important;
+  display:inline-flex!important;
+}
+.reports-step1-tabs button,
+.reports-step1-filters button{
+  background:#fff!important;
+  color:#1d1d1f!important;
+  border:1px solid rgba(29,29,31,.12)!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.045)!important;
+}
+.reports-step1-tabs button{
+  border:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  color:#6e6e73!important;
+}
+.reports-step1-tabs button.active,
+.reports-step1-filters button{
+  background:#202124!important;
+  color:#fff!important;
+  border-color:#202124!important;
+}
+.reports-step1-summary{
+  padding:0 18px 14px!important;
+}
+.reports-step1-section{
+  margin:0 18px 18px!important;
+  padding:16px!important;
+}
+.reports-step1-table th{
+  background:#f6f6f4!important;
+  color:#6e6e73!important;
+}
+.reports-step1-tag{
+  background:#eef4ef!important;
+  color:#4f6f5a!important;
+  border:1px solid rgba(111,143,122,.28)!important;
+}
+.reports-step1-tag.orange{
+  background:#f7f1ea!important;
+  color:#a8794d!important;
+  border-color:rgba(168,121,77,.24)!important;
+}
+.reports-step1-profit{color:#4f6f5a!important}
+.reports-step1-loss{color:#a65b62!important}
+/* Orders */
+#ordersRoot .orders-detail-actions button,
+#ordersRoot .btn-blue,
+#ordersRoot .btn-gray,
+#ordersRoot .order-edit-step1-green,
+#ordersRoot .order-edit-step1-gray,
+#ordersRoot .take-order-btn,
+#ordersRoot .copy-order-btn{
+  background:#fff!important;
+  color:#1d1d1f!important;
+  border:1px solid rgba(29,29,31,.12)!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.045)!important;
+}
+#ordersRoot .btn-blue,
+#ordersRoot .order-edit-step1-green{
+  background:#202124!important;
+  color:#fff!important;
+  border-color:#202124!important;
+}
+#ordersRoot .orders-detail-body,
+#ordersRoot .order-info,
+#ordersRoot .order-info-card{
+  background:rgba(255,255,255,.86)!important;
+  border-color:rgba(255,255,255,.72)!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.045)!important;
+}
+/* Batch create / owner modal */
+.batch-modal,
+.batch-modal-v45{
+  background:rgba(255,255,255,.94)!important;
+  color:#1d1d1f!important;
+  border:1px solid rgba(255,255,255,.72)!important;
+  box-shadow:0 24px 70px rgba(0,0,0,.18)!important;
+}
+.batch-modal-left-v45,
+.batch-modal-right-v45,
+.batch-owner-card-v45,
+.batch-owner-row-v45,
+.batch-owner-add-panel-step1{
+  background:rgba(255,255,255,.86)!important;
+  border:1px solid rgba(29,29,31,.10)!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.045)!important;
+  border-radius:18px!important;
+}
+.batch-owner-row-v45.active,
+.batch-owner-card-v45.active{
+  background:#fbfdfb!important;
+  border-color:rgba(111,143,122,.26)!important;
+}
+.batch-save-v45,
+.batch-next-btn-v45,
+.batch-owner-add-btn-v45,
+.batch-owner-add-grid-step1 button,
+.batch-modal-v45 button.next,
+.batch-modal-v45 .next,
+.batch-modal button.save,
+.batch-modal button.confirm{
+  background:#202124!important;
+  color:#fff!important;
+  border:1px solid #202124!important;
+  box-shadow:0 6px 16px rgba(0,0,0,.10)!important;
+}
+.batch-modal-close-v45,
+.batch-cancel-v45,
+.batch-modal-v45 button.cancel,
+.batch-modal-v45 button.gray{
+  background:#fff!important;
+  color:#1d1d1f!important;
+  border:1px solid rgba(29,29,31,.12)!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.045)!important;
+}
+.batch-type-pill-v45,
+.batch-type-pill-v45.active,
+.owner-type-badge-v45,
+.owner-type-badge-v45.self,
+.owner-type-badge-v45.consignment{
+  background:#eef4ef!important;
+  color:#4f6f5a!important;
+  border:1px solid rgba(111,143,122,.28)!important;
+}
+/* Dynamic buttons still using old green classes */
+.btn-green,
+.inventory-btn-green,
+.stock-btn-green,
+.batch-create-btn,
+.confirm-btn,
+.action-btn.green,
+.batch-sale-toggle-step1.green,
+.buyer-substore-actions-step1 .green{
+  background:#202124!important;
+  color:#fff!important;
+  border:1px solid #202124!important;
+  box-shadow:0 6px 16px rgba(0,0,0,.10)!important;
+}
+.buyer-substore-actions-step1 .blue{
+  background:#fff!important;
+  color:#1d1d1f!important;
+  border:1px solid rgba(29,29,31,.12)!important;
+}
+/* Prevent table overflow from creating page-wide horizontal scroll */
+.reports-step1-table-wrap,
+.owner-step1-table-wrap,
+.inventory-step1-table-wrap,
+.stock-table-wrap,
+.orders-detail-body,
+.buyer-v47-table-wrap{
+  max-width:100%!important;
+  overflow:auto!important;
+}
+@media(max-width:980px){
+  #reportsStep1Root,
+  #ownerStep1Root,
+  #inventoryStep1Root,
+  #configStep1Root{
+    margin-left:0!important;
+    width:100vw!important;
+  }
+  .reports-step1-summary,
+  .owner-step1-summary,
+  .inventory-step1-summary{
+    grid-template-columns:1fr 1fr!important;
+  }
+  .batch-modal-grid-v45{
+    grid-template-columns:1fr!important;
+  }
+}
+@media(max-width:640px){
+  .reports-step1-summary,
+  .owner-step1-summary,
+  .inventory-step1-summary{
+    grid-template-columns:1fr!important;
+  }
+  .reports-step1-tabs{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+  }
+}
+</style>
+
+<script id="cangjieAppleStoreV62Script">
+/* ===== V62：给动态模块补标记，不接管业务 ===== */
+(function(){
+  function markV62(){
+    try{
+      document.querySelectorAll(".owner-step1-tabs button,.reports-step1-tabs button").forEach(function(btn){
+        btn.setAttribute("data-cj-v62","segmented");
+      });
+      document.querySelectorAll(".batch-modal-v45 button,.owner-step1-actions button,.owner-step1-actions a,.reports-step1-filters button").forEach(function(btn){
+        btn.setAttribute("data-cj-v62","button");
+      });
+    }catch(err){}
+  }
+  ["renderOwnerStep1","renderReportsStep1","renderInventoryStep1","openBatchModal","openBatchCreateFlow","renderStockModule","renderOrdersCenter","renderOrderDetail"].forEach(function(name){
+    var fn = window[name];
+    if(typeof fn === "function" && !fn.__cangjieV62Wrapped){
+      window[name] = function(){
+        var result = fn.apply(this, arguments);
+        setTimeout(markV62, 0);
+        return result;
+      };
+      window[name].__cangjieV62Wrapped = true;
+    }
+  });
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", markV62);
+  else markV62();
+  setTimeout(markV62, 120);
+  setInterval(markV62, 1500);
+})();
+</script>
+
 </body>
 </html>
