@@ -18675,5 +18675,981 @@ body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-right{
 })();
 </script>
 
+<style id="cangjiePromptFixV59Style">
+/* ===== V59：替换原生 prompt，适配 in-app browser 与移动端 ===== */
+.cj-v59-input-mask{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(12,18,14,.42);
+  backdrop-filter:blur(18px) saturate(150%);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);
+  z-index:2147483600;
+}
+.cj-v59-input-mask.show{display:flex}
+.cj-v59-input-modal{
+  width:min(420px,100%);
+  border:1px solid rgba(255,255,255,.78);
+  border-radius:22px;
+  background:rgba(255,255,255,.94);
+  box-shadow:0 24px 70px rgba(0,0,0,.22);
+  overflow:hidden;
+  color:#162118;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;
+}
+.cj-v59-input-head{
+  padding:18px 18px 10px;
+}
+.cj-v59-input-head h3{
+  margin:0;
+  font-size:20px;
+  line-height:1.2;
+  font-weight:950;
+  letter-spacing:0;
+}
+.cj-v59-input-head p{
+  margin:8px 0 0;
+  color:#657067;
+  font-size:13px;
+  line-height:1.45;
+}
+.cj-v59-input-body{
+  padding:0 18px 16px;
+}
+.cj-v59-input-body input,
+.cj-v59-input-body textarea{
+  width:100%;
+  border:1px solid rgba(30,43,34,.14);
+  border-radius:16px;
+  background:#fff;
+  color:#162118;
+  outline:none;
+  font-size:16px;
+  padding:0 14px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
+}
+.cj-v59-input-body input{height:48px}
+.cj-v59-input-body textarea{
+  min-height:112px;
+  padding-top:12px;
+  resize:vertical;
+  line-height:1.55;
+}
+.cj-v59-input-body input:focus,
+.cj-v59-input-body textarea:focus{
+  border-color:rgba(32,138,59,.48);
+  box-shadow:0 0 0 4px rgba(32,138,59,.12);
+}
+.cj-v59-input-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  padding:14px 18px 18px;
+  border-top:1px solid rgba(30,43,34,.10);
+  background:rgba(245,247,244,.70);
+}
+.cj-v59-input-actions button{
+  height:44px;
+  border:0;
+  border-radius:15px;
+  font-size:14px;
+  font-weight:950;
+  cursor:pointer;
+}
+.cj-v59-input-cancel{
+  background:#e9ede7!important;
+  color:#29352d!important;
+  box-shadow:none!important;
+}
+.cj-v59-input-ok{
+  background:linear-gradient(145deg,#208a3b,#35a854)!important;
+  color:#fff!important;
+  box-shadow:0 10px 24px rgba(32,138,59,.22)!important;
+}
+@media(max-width:640px){
+  .cj-v59-input-mask{
+    align-items:flex-end;
+    padding:12px;
+  }
+  .cj-v59-input-modal{
+    border-radius:22px 22px 18px 18px;
+  }
+}
+</style>
+
+<script id="cangjiePromptFixV59Script">
+/* ===== V59：修复 prompt() unsupported，只替换输入入口，不改 V57 数据逻辑 ===== */
+(function(){
+  function escV59(v){
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function(m){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];
+    });
+  }
+  function saveV59(){
+    try{ if(typeof tudou2SaveNow === "function") setTimeout(tudou2SaveNow, 0); }catch(err){}
+  }
+  function refreshCommonV59(){
+    try{ if(typeof renderAll === "function") renderAll(); }catch(err){}
+    try{ if(typeof renderCashierCustomers === "function") renderCashierCustomers(); }catch(err){}
+    try{ if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill(); }catch(err){}
+    try{ if(typeof renderBuyerV47 === "function") renderBuyerV47(); }catch(err){}
+    saveV59();
+  }
+  function ensureInputModalV59(){
+    var mask = document.getElementById("cjPromptFixV59");
+    if(mask) return mask;
+    mask = document.createElement("div");
+    mask.id = "cjPromptFixV59";
+    mask.className = "cj-v59-input-mask";
+    mask.innerHTML = '<div class="cj-v59-input-modal" role="dialog" aria-modal="true">'
+      + '<div class="cj-v59-input-head"><h3 id="cjPromptFixTitleV59">输入</h3><p id="cjPromptFixSubV59">请填写内容后确认。</p></div>'
+      + '<div class="cj-v59-input-body" id="cjPromptFixBodyV59"></div>'
+      + '<div class="cj-v59-input-actions"><button class="cj-v59-input-cancel" type="button" id="cjPromptFixCancelV59">取消</button><button class="cj-v59-input-ok" type="button" id="cjPromptFixOkV59">确认</button></div>'
+      + '</div>';
+    document.body.appendChild(mask);
+    return mask;
+  }
+  window.cangjieInputV59 = function(options){
+    options = options || {};
+    return new Promise(function(resolve){
+      var mask = ensureInputModalV59();
+      var title = document.getElementById("cjPromptFixTitleV59");
+      var sub = document.getElementById("cjPromptFixSubV59");
+      var body = document.getElementById("cjPromptFixBodyV59");
+      var ok = document.getElementById("cjPromptFixOkV59");
+      var cancel = document.getElementById("cjPromptFixCancelV59");
+      var isText = options.type === "textarea";
+      title.textContent = options.title || "输入";
+      sub.textContent = options.sub || "请填写内容后确认。";
+      body.innerHTML = isText
+        ? '<textarea id="cjPromptFixFieldV59"></textarea>'
+        : '<input id="cjPromptFixFieldV59" type="'+escV59(options.inputType || "text")+'">';
+      var field = document.getElementById("cjPromptFixFieldV59");
+      field.value = options.value == null ? "" : String(options.value);
+      function close(value){
+        mask.classList.remove("show");
+        ok.onclick = null;
+        cancel.onclick = null;
+        mask.onclick = null;
+        document.onkeydown = oldKeydown;
+        resolve(value);
+      }
+      var oldKeydown = document.onkeydown;
+      ok.onclick = function(){ close(field.value); };
+      cancel.onclick = function(){ close(null); };
+      mask.onclick = function(ev){ if(ev.target === mask) close(null); };
+      document.onkeydown = function(ev){
+        if(ev.key === "Escape"){ ev.preventDefault(); close(null); return; }
+        if(ev.key === "Enter" && !isText){ ev.preventDefault(); close(field.value); return; }
+        if(typeof oldKeydown === "function") return oldKeydown.call(document, ev);
+      };
+      mask.classList.add("show");
+      setTimeout(function(){ try{ field.focus(); field.select(); }catch(err){} }, 0);
+    });
+  };
+
+  window.addOwnerFromBatchModal = async function(){
+    var name = await window.cangjieInputV59({title:"新增货主", sub:"新增后会自动选中该货主。"});
+    if(name == null) return;
+    var clean = String(name).trim();
+    if(!clean) return;
+    if(typeof owners !== "undefined" && Array.isArray(owners) && !owners.includes(clean)) owners.push(clean);
+    if(typeof renderOwnerOptions === "function") renderOwnerOptions();
+    var sel = document.getElementById("batchOwnerSelect");
+    if(sel) sel.value = clean;
+    if(typeof refreshBatchPreview === "function") refreshBatchPreview();
+    saveV59();
+    if(typeof toast === "function") toast("货主已新增");
+  };
+
+  window.renameBatch = async function(){
+    if(typeof activeBatch !== "function") return;
+    var batch = activeBatch();
+    if(!batch) return;
+    var owner = await window.cangjieInputV59({title:"修改货主名称", value:batch.owner || ""});
+    if(owner == null) return;
+    owner = String(owner).trim();
+    if(!owner) return;
+    var no = await window.cangjieInputV59({title:"修改批次号", value:batch.no || ""});
+    if(no == null) return;
+    no = String(no).trim();
+    if(!no) return;
+    batch.owner = owner;
+    if(typeof owners !== "undefined" && Array.isArray(owners) && !owners.includes(owner)) owners.push(owner);
+    batch.no = no;
+    refreshCommonV59();
+    if(typeof toast === "function") toast("批次已修改");
+  };
+
+  window.addFee = async function(){
+    if(typeof activeBatch !== "function") return;
+    var b = activeBatch();
+    var val = await window.cangjieInputV59({title:"费用金额", sub:"填写当前批次的费用金额。", value:String((b && b.fee) || 0), inputType:"number"});
+    if(val == null) return;
+    if(b) b.fee = Number(val || 0);
+    if(typeof renderDetail === "function") renderDetail();
+    saveV59();
+    if(typeof toast === "function") toast("费用已更新");
+  };
+
+  window.addRemark = async function(){
+    if(typeof activeBatch !== "function") return;
+    var b = activeBatch();
+    var val = await window.cangjieInputV59({title:"批次备注", sub:"备注会保存在当前批次中。", value:(b && b.remark) || "", type:"textarea"});
+    if(val == null) return;
+    if(b) b.remark = val;
+    saveV59();
+    if(typeof toast === "function") toast("备注已保存");
+  };
+
+  window.addCategory = async function(){
+    var name = await window.cangjieInputV59({title:"新增分类", sub:"新增后会自动选中该分类。"});
+    if(name == null) return;
+    var clean = String(name).trim();
+    if(!clean) return;
+    if(typeof productCategories !== "undefined" && Array.isArray(productCategories) && !productCategories.includes(clean)) productCategories.push(clean);
+    if(typeof fillCategoryOptions === "function") fillCategoryOptions();
+    var sel = document.getElementById("gmCategory");
+    if(sel) sel.value = clean;
+    saveV59();
+    if(typeof toast === "function") toast("分类已新增");
+  };
+
+  window.addCashierCustomer = async function(){
+    var name = await window.cangjieInputV59({title:"新增买家", sub:"新增后会自动设为当前收银买家。"});
+    if(name == null) return;
+    var clean = String(name).trim();
+    if(!clean) return;
+    var list = (typeof cashierCustomers !== "undefined" && Array.isArray(cashierCustomers)) ? cashierCustomers : [];
+    var existed = list.find(function(c){ return c && c.name === clean && !c.disabled; });
+    var c = existed || {id:"c" + Date.now(), name:clean, debt:0, payments:[], parentId:"", disabled:false};
+    if(!existed) list.push(c);
+    if(typeof renderCashierCustomers === "function") renderCashierCustomers();
+    var sel = document.getElementById("cashierCustomer");
+    if(sel) sel.value = c.id;
+    if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill();
+    saveV59();
+    if(typeof toast === "function") toast(existed ? "买家已存在，已选中" : "买家已新增");
+  };
+
+  window.addBuyerV47 = async function(){
+    var name = await window.cangjieInputV59({title:"新增买家", sub:"正式买家可收银、赊欠和还款。"});
+    if(name == null) return;
+    var clean = String(name).trim();
+    if(!clean) return;
+    var list = (typeof cashierCustomers !== "undefined" && Array.isArray(cashierCustomers)) ? cashierCustomers : [];
+    var existed = list.find(function(c){ return c && c.name === clean && !c.disabled; });
+    if(existed){
+      selectedBuyerV47Id = existed.id;
+      if(typeof renderBuyerV47 === "function") renderBuyerV47();
+      if(typeof toast === "function") toast("买家已存在，已为你选中");
+      return;
+    }
+    var c = {id:"c" + Date.now(), name:clean, debt:0, payments:[], parentId:"", disabled:false};
+    list.push(c);
+    selectedBuyerV47Id = c.id;
+    refreshCommonV59();
+    if(typeof toast === "function") toast("买家已新增");
+  };
+
+  window.addSubBuyerV47Step1 = async function(){
+    var list = (typeof cashierCustomers !== "undefined" && Array.isArray(cashierCustomers)) ? cashierCustomers : [];
+    var parent = list.find(function(c){ return c && c.id === (typeof selectedBuyerV47Id !== "undefined" ? selectedBuyerV47Id : ""); });
+    if(!parent || parent.id === "c1" || parent.name === "临时客户" || parent.parentId){
+      alert("请先选择一个正式主买家。");
+      return;
+    }
+    var name = await window.cangjieInputV59({title:"新增门店", sub:"门店会关联到当前主买家：" + parent.name});
+    if(name == null) return;
+    var clean = String(name).trim();
+    if(!clean) return;
+    var existed = list.find(function(c){ return c && c.name === clean; });
+    if(existed) existed.parentId = parent.id;
+    else list.push({id:"c" + Date.now(), name:clean, debt:0, payments:[], parentId:parent.id, disabled:false});
+    refreshCommonV59();
+    if(typeof toast === "function") toast("门店已关联到：" + parent.name);
+  };
+
+  window.linkExistingSubBuyerV47Step1 = async function(){
+    var list = (typeof cashierCustomers !== "undefined" && Array.isArray(cashierCustomers)) ? cashierCustomers : [];
+    var parent = list.find(function(c){ return c && c.id === (typeof selectedBuyerV47Id !== "undefined" ? selectedBuyerV47Id : ""); });
+    if(!parent || parent.id === "c1" || parent.name === "临时客户" || parent.parentId){
+      alert("请先选择一个正式主买家。");
+      return;
+    }
+    var name = await window.cangjieInputV59({title:"关联已有买家", sub:"输入已有买家的完整名称。"});
+    if(name == null) return;
+    var clean = String(name).trim();
+    var child = list.find(function(c){ return c && c.name === clean; });
+    if(!child){ alert("没有找到这个买家。"); return; }
+    if(child.id === parent.id){ alert("不能把主买家关联到自己名下。"); return; }
+    child.parentId = parent.id;
+    refreshCommonV59();
+    if(typeof toast === "function") toast("已关联门店：" + child.name);
+  };
+
+  window.prompt = function(message, value){
+    console.warn("仓頡 V59 已拦截原生 prompt，请使用页面内输入弹窗入口：", message);
+    return value == null ? "" : String(value);
+  };
+})();
+</script>
+
+<style id="cangjieAppleStoreV60Style">
+/* ===== V60：Apple 风 + 菜小秘逻辑。仅重做视觉层，不改业务逻辑 ===== */
+:root{
+  --cj60-bg:#f5f5f3;
+  --cj60-bg-2:#fbfbfa;
+  --cj60-ink:#1d1d1f;
+  --cj60-sub:#6e6e73;
+  --cj60-side:#17191b;
+  --cj60-side-2:rgba(24,26,28,.88);
+  --cj60-line:rgba(29,29,31,.10);
+  --cj60-card:rgba(255,255,255,.86);
+  --cj60-card-solid:#fff;
+  --cj60-accent:#6f8f7a;
+  --cj60-accent-soft:#eef4ef;
+  --cj60-accent-line:rgba(111,143,122,.28);
+  --cj60-blue:#506f9c;
+  --cj60-red:#a65b62;
+  --cj60-orange:#a8794d;
+  --cj60-shadow:0 14px 38px rgba(0,0,0,.07);
+  --cj60-shadow-soft:0 6px 18px rgba(0,0,0,.045);
+}
+html,body{
+  background:
+    radial-gradient(circle at 18% -10%,rgba(111,143,122,.10),transparent 26%),
+    linear-gradient(180deg,var(--cj60-bg-2) 0%,var(--cj60-bg) 100%)!important;
+  color:var(--cj60-ink)!important;
+  letter-spacing:0!important;
+}
+body,button,input,select,textarea{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif!important;
+}
+button{
+  letter-spacing:0!important;
+}
+#globalUnifiedNavV41,
+.cashier-left-nav,
+.stock-side,
+.orders-side,
+.sidebar{
+  background:linear-gradient(180deg,rgba(28,30,32,.94),rgba(16,18,20,.94))!important;
+  color:rgba(255,255,255,.72)!important;
+  backdrop-filter:blur(24px) saturate(155%)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(155%)!important;
+  border-right:1px solid rgba(255,255,255,.08)!important;
+  box-shadow:10px 0 28px rgba(0,0,0,.14)!important;
+}
+#globalUnifiedNavV41 .v41-logo,
+.cashier-logo,
+.stock-logo,
+.orders-logo,
+.side-logo,
+.logo{
+  background:rgba(255,255,255,.10)!important;
+  color:#f5f5f7!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10)!important;
+  border-radius:16px!important;
+}
+#globalUnifiedNavV41 .v41-nav-btn,
+.cashier-nav-btn,
+.stock-nav-btn,
+.orders-nav-btn,
+.side-item{
+  background:transparent!important;
+  color:rgba(255,255,255,.64)!important;
+  border:1px solid transparent!important;
+  box-shadow:none!important;
+  border-radius:14px!important;
+  font-weight:760!important;
+  transform:none!important;
+}
+#globalUnifiedNavV41 .v41-nav-btn.active,
+#globalUnifiedNavV41 .v41-nav-btn:hover,
+.cashier-nav-btn.active,.cashier-nav-btn:hover,
+.stock-nav-btn.active,.stock-nav-btn:hover,
+.orders-nav-btn.active,.orders-nav-btn:hover,
+.side-item.active,.side-item:hover{
+  background:rgba(255,255,255,.11)!important;
+  color:#fff!important;
+  border-color:rgba(255,255,255,.10)!important;
+  box-shadow:none!important;
+  transform:none!important;
+}
+#cashierRoot .cashier-layout,
+#stockRoot .stock-layout,
+#ordersRoot .orders-layout{
+  background:
+    radial-gradient(circle at 75% 0%,rgba(111,143,122,.08),transparent 30%),
+    linear-gradient(135deg,#fafaf9 0%,#f1f2ef 100%)!important;
+}
+#cashierRoot .cashier-batches,
+#cashierRoot .cashier-center,
+#cashierRoot .cashier-right,
+#stockRoot .stock-batch-panel,
+#stockRoot .stock-main,
+#ordersRoot .orders-list-panel,
+#ordersRoot .orders-detail{
+  background:transparent!important;
+}
+#cashierRoot .cashier-batches,
+#stockRoot .stock-batch-panel,
+#ordersRoot .orders-list-panel{
+  border-right:1px solid var(--cj60-line)!important;
+}
+#cashierRoot .cashier-top,
+#cashierRoot .cashier-product-area,
+#cashierRoot .order-head,
+#cashierRoot .order-summary,
+#cashierRoot .order-list,
+#stockRoot .stock-topbar,
+#stockRoot .stock-batch-head,
+#stockRoot .stock-summary-card,
+#stockRoot .stock-batch-card,
+#stockRoot .stock-table tr,
+#ordersRoot .orders-list-head,
+#ordersRoot .order-card,
+#ordersRoot .orders-detail-head,
+#ordersRoot .orders-detail-body,
+#buyerManagerV47 .buyer-v47-left-head,
+#buyerManagerV47 .buyer-v47-top,
+#buyerManagerV47 .buyer-v47-section,
+#buyerManagerV47 .buyer-v47-info,
+#buyerManagerV47 .buyer-v47-bill-text,
+#buyerManagerV47 .buyer-v47-bill-side,
+#buyerManagerV47 .buyer-v47-card,
+#configStep1Root .config-step1-top,
+#configStep1Root .config-step1-card,
+#configStep1Root .config-step1-side,
+.cj-v59-input-modal{
+  background:var(--cj60-card)!important;
+  border:1px solid rgba(255,255,255,.70)!important;
+  box-shadow:var(--cj60-shadow-soft)!important;
+  backdrop-filter:blur(18px) saturate(135%)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(135%)!important;
+}
+#cashierRoot .cashier-top,
+#stockRoot .stock-topbar,
+#ordersRoot .orders-detail-head,
+#buyerManagerV47 .buyer-v47-top{
+  box-shadow:var(--cj60-shadow)!important;
+}
+#cashierRoot h1,
+#stockRoot h1,
+#stockRoot h2,
+#ordersRoot h1,
+#ordersRoot h2,
+#buyerManagerV47 h2,
+#configStep1Root h1,
+#configStep1Root h2{
+  color:var(--cj60-ink)!important;
+  font-weight:820!important;
+  letter-spacing:0!important;
+}
+#cashierRoot p,
+#stockRoot p,
+#ordersRoot p,
+#buyerManagerV47 p,
+#configStep1Root p,
+#cashierRoot .stock-sub,
+#stockRoot .stock-sub{
+  color:var(--cj60-sub)!important;
+}
+#cashierRoot input,#cashierRoot select,#cashierRoot textarea,
+#stockRoot input,#stockRoot select,#stockRoot textarea,
+#ordersRoot input,#ordersRoot select,#ordersRoot textarea,
+#buyerManagerV47 input,#buyerManagerV47 select,#buyerManagerV47 textarea,
+#configStep1Root input,#configStep1Root select,#configStep1Root textarea,
+.cj-v59-input-body input,
+.cj-v59-input-body textarea{
+  background:rgba(255,255,255,.72)!important;
+  border:1px solid var(--cj60-line)!important;
+  color:var(--cj60-ink)!important;
+  box-shadow:none!important;
+  border-radius:13px!important;
+}
+#cashierRoot input:focus,#cashierRoot select:focus,#cashierRoot textarea:focus,
+#stockRoot input:focus,#stockRoot select:focus,#stockRoot textarea:focus,
+#ordersRoot input:focus,#ordersRoot select:focus,#ordersRoot textarea:focus,
+#buyerManagerV47 input:focus,#buyerManagerV47 select:focus,#buyerManagerV47 textarea:focus,
+#configStep1Root input:focus,#configStep1Root select:focus,#configStep1Root textarea:focus,
+.cj-v59-input-body input:focus,
+.cj-v59-input-body textarea:focus{
+  border-color:var(--cj60-accent-line)!important;
+  box-shadow:0 0 0 4px rgba(111,143,122,.12)!important;
+}
+#cashierRoot .cashier-batch-title,
+#cashierRoot .cashier-product-card,
+#stockRoot .stock-batch-card,
+#ordersRoot .order-card,
+#buyerManagerV47 .buyer-v47-card{
+  background:var(--cj60-card-solid)!important;
+  color:var(--cj60-ink)!important;
+  border:1px solid rgba(29,29,31,.08)!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.045)!important;
+  transform:none!important;
+}
+#cashierRoot .cashier-product-card:hover,
+#stockRoot .stock-batch-card:hover,
+#ordersRoot .order-card:hover,
+#buyerManagerV47 .buyer-v47-card:hover{
+  transform:translateY(-1px)!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.07)!important;
+}
+#cashierRoot .cashier-product-card.in-stock,
+#cashierRoot .cashier-product-card.out-stock{
+  background:var(--cj60-card-solid)!important;
+  color:var(--cj60-ink)!important;
+}
+#cashierRoot .cashier-product-card.in-stock{
+  border-color:rgba(111,143,122,.22)!important;
+}
+#cashierRoot .cashier-product-card.out-stock{
+  border-color:rgba(166,91,98,.26)!important;
+}
+#cashierRoot .cashier-product-card.in-stock::after{
+  background:var(--cj60-accent-soft)!important;
+  color:#4f6f5a!important;
+}
+#cashierRoot .cashier-product-card.out-stock::after{
+  background:#f6eeee!important;
+  color:var(--cj60-red)!important;
+}
+#cashierRoot .order-total{
+  background:#202124!important;
+  color:#fff!important;
+  box-shadow:none!important;
+}
+#cashierRoot .order-total b{
+  color:#fff!important;
+  font-weight:760!important;
+}
+#cashierRoot .codebill-btn,
+#cashierRoot .checkout-btn,
+#cashierRoot .bill-center-btn,
+#stockRoot .stock-btn-green,
+#stockRoot .batch-create-btn,
+#stockRoot .inventory-step1-batch-op,
+#buyerManagerV47 .buyer-v47-use,
+#buyerManagerV47 .buyer-v47-copy,
+#buyerManagerV47 .buyer-v47-copy-text,
+#buyerManagerV47 .buyer-v47-share,
+#buyerManagerV47 .buyer-v47-pay,
+#buyerManagerV47 .buyer-v47-mini-btn,
+#configStep1Root .config-step1-green,
+#configStep1Root .config-step1-gray,
+#configStep1Root .config-fallback-green,
+#configStep1Root .config-fallback-gray,
+.cj-v59-input-ok,
+.cj-v59-input-cancel{
+  background:#fff!important;
+  color:var(--cj60-ink)!important;
+  border:1px solid var(--cj60-line)!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.045)!important;
+  transform:none!important;
+}
+#cashierRoot .checkout-btn,
+#stockRoot .stock-btn-green,
+#stockRoot .batch-create-btn,
+#buyerManagerV47 .buyer-v47-use,
+#configStep1Root .config-step1-green,
+.cj-v59-input-ok{
+  background:#202124!important;
+  color:#fff!important;
+  border-color:#202124!important;
+}
+#cashierRoot .codebill-btn,
+#cashierRoot .bill-center-btn,
+#buyerManagerV47 .buyer-v47-copy-text,
+#buyerManagerV47 .buyer-v47-mini-btn.blue{
+  background:var(--cj60-accent-soft)!important;
+  color:#445f4d!important;
+  border-color:var(--cj60-accent-line)!important;
+}
+#buyerManagerV47 .buyer-v47-pay,
+#buyerManagerV47 .buyer-v47-mini-btn.orange{
+  background:#f7f1ea!important;
+  color:var(--cj60-orange)!important;
+  border-color:rgba(168,121,77,.24)!important;
+}
+#stockRoot .inventory-step1-orangebtn{
+  background:#f7f1ea!important;
+  color:var(--cj60-orange)!important;
+  border-color:rgba(168,121,77,.24)!important;
+}
+#stockRoot .inventory-step1-greenbtn{
+  background:var(--cj60-accent-soft)!important;
+  color:#445f4d!important;
+  border-color:var(--cj60-accent-line)!important;
+}
+#cashierRoot button:hover,
+#stockRoot button:hover,
+#ordersRoot button:hover,
+#buyerManagerV47 button:hover,
+#configStep1Root button:hover,
+.cj-v59-input-actions button:hover{
+  transform:none!important;
+  filter:brightness(.985);
+}
+#stockRoot .stock-summary-card b,
+#stockRoot .stock-num,
+#stockRoot .stock-goods-name{
+  color:var(--cj60-ink)!important;
+}
+#stockRoot .stock-positive{
+  color:#4f6f5a!important;
+}
+#stockRoot .stock-negative{
+  color:var(--cj60-red)!important;
+}
+#stockRoot .stock-tag,
+#buyerManagerV47 .buyer-v47-tag,
+#buyerManagerV47 .buyer-v47-status.cash,
+#configStep1Root .config-step1-status{
+  background:var(--cj60-accent-soft)!important;
+  color:#4f6f5a!important;
+  border:1px solid var(--cj60-accent-line)!important;
+}
+#buyerManagerV47 .buyer-v47-status.debt{
+  background:#f6eeee!important;
+  color:var(--cj60-red)!important;
+}
+#buyerManagerV47 .buyer-v47-status.part{
+  background:#f7f1ea!important;
+  color:var(--cj60-orange)!important;
+}
+#buyerManagerV47 .buyer-v47-status.other{
+  background:#eef2f8!important;
+  color:var(--cj60-blue)!important;
+}
+body.buyers-mode-step1 #buyerManagerV47.buyer-v47-mask.show,
+#configStep1Root{
+  background:
+    radial-gradient(circle at 72% 0%,rgba(111,143,122,.08),transparent 30%),
+    linear-gradient(135deg,#fafaf9 0%,#f1f2ef 100%)!important;
+}
+#buyerManagerV47 .buyer-v47-table th{
+  background:#f6f6f4!important;
+  color:var(--cj60-sub)!important;
+}
+#buyerManagerV47 .buyer-v47-table-wrap{
+  background:#fff!important;
+  border:1px solid var(--cj60-line)!important;
+}
+#configStep1Root .config-step1-menu button{
+  background:#fff!important;
+  color:var(--cj60-ink)!important;
+  border:1px solid var(--cj60-line)!important;
+}
+#configStep1Root .config-step1-menu button.active,
+#configStep1Root .config-step1-menu button:hover{
+  background:#202124!important;
+  color:#fff!important;
+  border-color:#202124!important;
+}
+.cj-v59-input-mask{
+  background:rgba(20,22,24,.42)!important;
+}
+.cj-v59-input-actions{
+  background:rgba(246,246,244,.78)!important;
+}
+@media(max-width:980px){
+  #globalUnifiedNavV41{
+    background:linear-gradient(90deg,rgba(28,30,32,.94),rgba(16,18,20,.94))!important;
+    border-bottom:1px solid rgba(255,255,255,.08)!important;
+    box-shadow:0 8px 24px rgba(0,0,0,.12)!important;
+  }
+  #cashierRoot .cashier-center,
+  #cashierRoot .cashier-right,
+  #stockRoot .stock-batch-panel,
+  #stockRoot .stock-main,
+  #ordersRoot .orders-list-panel,
+  #ordersRoot .orders-detail{
+    background:transparent!important;
+  }
+}
+</style>
+
+<script id="cangjiePromptClickGuardV61Script">
+/* ===== V61：捕获旧 onclick，确保不再触发原生 prompt ===== */
+(function(){
+  if(document.__cangjiePromptClickGuardV61) return;
+  document.__cangjiePromptClickGuardV61 = true;
+  function textOf(el){
+    return String((el && el.textContent) || "").replace(/\s+/g,"").trim();
+  }
+  function callByName(name){
+    var fn = window[name];
+    if(typeof fn === "function"){
+      try{ fn(); }catch(err){ console.error("V61 input route failed:", name, err); }
+      return true;
+    }
+    return false;
+  }
+  document.addEventListener("click", function(ev){
+    var el = ev.target && ev.target.closest ? ev.target.closest("button,[onclick]") : null;
+    if(!el) return;
+    var code = String(el.getAttribute("onclick") || "");
+    var txt = textOf(el);
+    var route = "";
+    if(code.indexOf("addCategory") >= 0 || txt === "新增分类") route = "addCategory";
+    else if(code.indexOf("addOwnerFromBatchModal") >= 0 || txt === "新增货主") route = "addOwnerFromBatchModal";
+    else if(code.indexOf("renameBatch") >= 0 || txt === "改名" || txt === "修改批次") route = "renameBatch";
+    else if(code.indexOf("addFee") >= 0 || txt === "费用") route = "addFee";
+    else if(code.indexOf("addRemark") >= 0 || txt === "备注") route = "addRemark";
+    else if(code.indexOf("addCashierCustomer") >= 0 || txt === "新增买家") route = "addCashierCustomer";
+    else if(code.indexOf("addBuyerV47") >= 0 || txt === "新增正式买家") route = "addBuyerV47";
+    else if(code.indexOf("addSubBuyerV47Step1") >= 0 || txt === "新增门店") route = "addSubBuyerV47Step1";
+    else if(code.indexOf("linkExistingSubBuyerV47Step1") >= 0 || txt === "关联已有买家") route = "linkExistingSubBuyerV47Step1";
+    if(!route) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+    callByName(route);
+    return false;
+  }, true);
+})();
+</script>
+
+<style id="cangjieAppleStoreV60ModalPatch">
+/* ===== V60 modal polish：补齐新增买家/门店等弹窗颜色 ===== */
+#cashierAddBuyerMaskStep1,
+#subBuyerPickerStep1,
+.buyer-v47-pay-mask,
+.codebill-modal-mask,
+.settle-mask,
+.bill-center-mask{
+  background:rgba(20,22,24,.42)!important;
+  backdrop-filter:blur(18px) saturate(135%)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(135%)!important;
+}
+.cashier-add-buyer-modal-step1,
+.sub-buyer-picker-modal-step1,
+.buyer-v47-pay-modal,
+.codebill-modal,
+.settle-modal,
+.bill-center-modal,
+.batch-modal-v45,
+.v51-batch-edit-modal,
+.v52-batch-edit-modal,
+.v53-batch-edit-modal,
+.order-edit-step1-modal{
+  background:rgba(255,255,255,.94)!important;
+  border:1px solid rgba(255,255,255,.72)!important;
+  box-shadow:0 24px 70px rgba(0,0,0,.18)!important;
+  backdrop-filter:blur(20px) saturate(140%)!important;
+  -webkit-backdrop-filter:blur(20px) saturate(140%)!important;
+}
+.cashier-add-buyer-modal-step1 header,
+.sub-buyer-picker-modal-step1 header,
+.buyer-v47-pay-modal h3,
+.codebill-header,
+.settle-header,
+.bill-center-header,
+.batch-modal-head-v45,
+.v51-batch-edit-head,
+.v52-batch-edit-head,
+.v53-batch-edit-head,
+.order-edit-step1-head{
+  background:rgba(246,246,244,.78)!important;
+  border-color:rgba(29,29,31,.10)!important;
+  color:#1d1d1f!important;
+}
+.cashier-add-buyer-modal-step1 input,
+.sub-buyer-picker-modal-step1 input,
+.buyer-v47-pay-form input,
+.buyer-v47-pay-form select,
+.buyer-v47-pay-form textarea,
+.v51-batch-edit-body input,
+.v51-batch-edit-body select,
+.v51-batch-edit-body textarea,
+.v52-batch-edit-body input,
+.v52-batch-edit-body select,
+.v52-batch-edit-body textarea,
+.v53-batch-edit-body input,
+.v53-batch-edit-body select,
+.v53-batch-edit-body textarea{
+  background:#fff!important;
+  border:1px solid rgba(29,29,31,.12)!important;
+  color:#1d1d1f!important;
+  box-shadow:none!important;
+}
+.cashier-add-buyer-modal-step1 .save,
+.sub-buyer-picker-modal-step1 .save,
+.buyer-v47-pay-confirm,
+.settle-confirm,
+.codebill-save,
+.checkout-btn,
+.confirm-btn,
+.action-btn.green,
+.batch-save-v45,
+.v51-batch-save,
+.v52-batch-save,
+.v53-batch-save,
+.order-edit-step1-green{
+  background:#202124!important;
+  color:#fff!important;
+  border:1px solid #202124!important;
+  box-shadow:0 6px 16px rgba(0,0,0,.10)!important;
+}
+.cashier-add-buyer-modal-step1 .cancel,
+.sub-buyer-picker-modal-step1 .cancel,
+.buyer-v47-pay-cancel,
+.settle-cancel,
+.codebill-close,
+.codebill-copy,
+.bill-center-close,
+.batch-modal-close-v45,
+.batch-cancel-v45,
+.v51-batch-cancel,
+.v52-batch-cancel,
+.v53-batch-cancel,
+.order-edit-step1-gray{
+  background:#fff!important;
+  color:#1d1d1f!important;
+  border:1px solid rgba(29,29,31,.12)!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.04)!important;
+}
+.order-edit-step1-red{
+  background:#f6eeee!important;
+  color:#a65b62!important;
+  border:1px solid rgba(166,91,98,.24)!important;
+  box-shadow:none!important;
+}
+.cashier-add-buyer-modal-step1 .save:hover,
+.sub-buyer-picker-modal-step1 .save:hover,
+.buyer-v47-pay-confirm:hover,
+.settle-confirm:hover,
+.codebill-save:hover,
+.checkout-btn:hover,
+.confirm-btn:hover,
+.action-btn.green:hover{
+  filter:brightness(.98)!important;
+  transform:none!important;
+}
+</style>
+
+<style id="cangjieAppleStoreV60FinalColorFix">
+/* ===== V60 final color fix：清除剩余大面积绿色按钮 ===== */
+#cashierRoot .cashier-catbar button,
+#cashierRoot .cat,
+#cashierRoot .order-customer-row button,
+#cashierRoot .order-tab,
+#cashierRoot .order-add-tab,
+#cashierRoot .pay-box button,
+#cashierRoot .discount-box button,
+#cashierRoot .cashier-product-card button,
+#cashierRoot .cashier-batch-card,
+#stockRoot .stock-actions button,
+#globalUnifiedNavV41 button,
+#tudou2SaveStatusV57{
+  background:#fff!important;
+  color:#1d1d1f!important;
+  border:1px solid rgba(29,29,31,.12)!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.045)!important;
+  transform:none!important;
+}
+#cashierRoot .order-customer-row button,
+#cashierRoot .order-add-tab,
+#cashierRoot .cashier-catbar button,
+#cashierRoot .cat{
+  min-height:40px!important;
+  border-radius:13px!important;
+}
+#cashierRoot .order-tab.active,
+#cashierRoot .cashier-catbar button.active,
+#cashierRoot .cat.active{
+  background:#202124!important;
+  color:#fff!important;
+  border-color:#202124!important;
+}
+#cashierRoot .cashier-product-card,
+#cashierRoot .cashier-product-card *,
+#cashierRoot .cashier-product-card.in-stock,
+#cashierRoot .cashier-product-card.out-stock{
+  color:#1d1d1f!important;
+}
+#cashierRoot .cashier-product-card .stock,
+#cashierRoot .cashier-product-card .sub,
+#cashierRoot .cashier-product-card p,
+#cashierRoot .cashier-product-card span{
+  color:#6e6e73!important;
+}
+#cashierRoot .cashier-product-card.in-stock::after,
+#cashierRoot .cashier-product-card.out-stock::after,
+#tudou2SaveStatusV57{
+  background:#eef4ef!important;
+  color:#4f6f5a!important;
+  border:1px solid rgba(111,143,122,.28)!important;
+}
+#cashierRoot .checkout-btn,
+#cashierRoot .order-actions .checkout-btn,
+#cashierRoot .order-total,
+#stockRoot .batch-create-btn,
+#stockRoot .stock-btn-green{
+  background:#202124!important;
+  color:#fff!important;
+  border-color:#202124!important;
+}
+#cashierRoot .codebill-btn,
+#cashierRoot .bill-center-btn{
+  background:#f7f7f5!important;
+  color:#1d1d1f!important;
+  border:1px solid rgba(29,29,31,.12)!important;
+}
+#globalUnifiedNavV41 .v41-nav-btn{
+  background:transparent!important;
+  color:rgba(255,255,255,.64)!important;
+  border-color:transparent!important;
+  box-shadow:none!important;
+}
+#globalUnifiedNavV41 .v41-nav-btn.active,
+#globalUnifiedNavV41 .v41-nav-btn:hover{
+  background:rgba(255,255,255,.11)!important;
+  color:#fff!important;
+  border-color:rgba(255,255,255,.10)!important;
+}
+#globalUnifiedNavV41 .v41-logo{
+  background:rgba(255,255,255,.10)!important;
+  color:#f5f5f7!important;
+}
+#buyerManagerV47 .buyer-v47-add,
+#buyerManagerV47 .buyer-v47-temp,
+#buyerManagerV47 .buyer-v47-close,
+#buyerManagerV47 .buyer-v47-print,
+#buyerManagerV47 .buyer-v47-copy,
+#buyerManagerV47 .buyer-v47-copy-text,
+#buyerManagerV47 .buyer-v47-share,
+#buyerManagerV47 .buyer-v47-pay,
+#buyerManagerV47 .buyer-v47-use{
+  background:#fff!important;
+  color:#1d1d1f!important;
+  border:1px solid rgba(29,29,31,.12)!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.045)!important;
+}
+#buyerManagerV47 .buyer-v47-use,
+#buyerManagerV47 .buyer-v47-add{
+  background:#202124!important;
+  color:#fff!important;
+  border-color:#202124!important;
+}
+#buyerManagerV47 .buyer-v47-pay{
+  background:#f7f1ea!important;
+  color:#a8794d!important;
+  border-color:rgba(168,121,77,.24)!important;
+}
+#buyerManagerV47 .buyer-v47-card.active,
+#stockRoot .stock-batch-card.active{
+  background:#fbfdfb!important;
+  border-color:rgba(111,143,122,.26)!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.055)!important;
+}
+</style>
+
 </body>
 </html>
