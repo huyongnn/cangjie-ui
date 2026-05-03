@@ -20569,5 +20569,294 @@ body.show-cashier #cashierRoot .order-actions{
 }
 </style>
 
+<style id="cangjieBatchLayoutV67Style">
+/* ===== V67：批次页排版修复，避免旧 grid 挤成竖排 ===== */
+body.show-stock #stockRoot{
+  margin-left:74px!important;
+  width:calc(100vw - 74px)!important;
+  max-width:calc(100vw - 74px)!important;
+  overflow:hidden!important;
+  background:linear-gradient(135deg,#fafaf9 0%,#f1f2ef 100%)!important;
+}
+body.show-stock #stockRoot .stock-layout{
+  display:grid!important;
+  grid-template-columns:minmax(260px,320px) minmax(0,1fr)!important;
+  grid-template-areas:"batch main"!important;
+  gap:16px!important;
+  height:100vh!important;
+  width:100%!important;
+  max-width:100%!important;
+  padding:18px!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+}
+body.show-stock #stockRoot .stock-side{
+  display:none!important;
+}
+body.show-stock #stockRoot .stock-batch-panel{
+  grid-area:batch!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:12px!important;
+  min-width:0!important;
+  height:100%!important;
+  padding:0!important;
+  border-right:0!important;
+  overflow:auto!important;
+}
+body.show-stock #stockRoot .stock-main{
+  grid-area:main!important;
+  min-width:0!important;
+  height:100%!important;
+  padding:0!important;
+  overflow:auto!important;
+}
+body.show-stock #stockRoot .stock-batch-head,
+body.show-stock #stockRoot .stock-batch-card,
+body.show-stock #stockRoot .stock-topbar,
+body.show-stock #stockRoot .stock-summary-card,
+body.show-stock #stockRoot .stock-table tr{
+  border-radius:22px!important;
+}
+body.show-stock #stockRoot *,
+body.show-stock #stockRoot .stock-batch-head *,
+body.show-stock #stockRoot .stock-batch-card *,
+body.show-stock #stockRoot .stock-topbar *,
+body.show-stock #stockRoot .stock-summary-card *,
+body.show-stock #stockRoot .stock-table *,
+body.show-stock #stockRoot .stock-empty *{
+  writing-mode:horizontal-tb!important;
+  text-orientation:mixed!important;
+  word-break:normal!important;
+  overflow-wrap:break-word!important;
+}
+body.show-stock #stockRoot .stock-batch-head{
+  padding:20px!important;
+  margin:0!important;
+}
+body.show-stock #stockRoot .batch-head-row{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+}
+body.show-stock #stockRoot .batch-head-row h1{
+  font-size:28px!important;
+  line-height:1.15!important;
+  margin:0!important;
+}
+body.show-stock #stockRoot #stockBatchSearch{
+  width:100%!important;
+  margin-top:14px!important;
+}
+body.show-stock #stockRoot .stock-batch-list{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:10px!important;
+  min-width:0!important;
+}
+body.show-stock #stockRoot .stock-batch-card{
+  width:100%!important;
+  min-height:auto!important;
+  padding:18px!important;
+  text-align:left!important;
+}
+body.show-stock #stockRoot .stock-batch-card b{
+  display:block!important;
+  font-size:18px!important;
+  line-height:1.25!important;
+  margin-bottom:6px!important;
+}
+body.show-stock #stockRoot .stock-batch-card span{
+  display:block!important;
+  font-size:13px!important;
+  line-height:1.45!important;
+  color:#6e6e73!important;
+}
+body.show-stock #stockRoot .stock-topbar{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:18px!important;
+  padding:24px 26px!important;
+  margin:0 0 14px!important;
+}
+body.show-stock #stockRoot .stock-topbar h2{
+  font-size:30px!important;
+  line-height:1.15!important;
+  margin:0 0 8px!important;
+}
+body.show-stock #stockRoot .stock-topbar p{
+  line-height:1.55!important;
+  max-width:620px!important;
+}
+body.show-stock #stockRoot .stock-actions{
+  display:grid!important;
+  grid-template-columns:minmax(180px,1fr) auto auto auto!important;
+  gap:10px!important;
+  min-width:min(520px,52%)!important;
+  align-items:center!important;
+}
+body.show-stock #stockRoot .stock-actions input,
+body.show-stock #stockRoot .stock-actions button{
+  width:100%!important;
+  min-width:0!important;
+  white-space:nowrap!important;
+}
+body.show-stock #stockRoot .stock-summary{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:12px!important;
+  margin:0 0 14px!important;
+}
+body.show-stock #stockRoot .stock-summary-card{
+  padding:18px!important;
+  min-width:0!important;
+}
+body.show-stock #stockRoot .stock-summary-card span,
+body.show-stock #stockRoot .stock-summary-card b{
+  display:block!important;
+  line-height:1.25!important;
+}
+body.show-stock #stockRoot .stock-summary-card b{
+  font-size:24px!important;
+  margin-top:6px!important;
+}
+body.show-stock #stockRoot .stock-table-wrap{
+  min-width:0!important;
+  max-width:100%!important;
+}
+body.show-stock #stockRoot .stock-table tbody{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr))!important;
+  gap:12px!important;
+}
+body.show-stock #stockRoot .stock-table tr{
+  min-height:220px!important;
+  padding:18px!important;
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:12px!important;
+  align-content:start!important;
+}
+body.show-stock #stockRoot .stock-table td{
+  background:transparent!important;
+  border:0!important;
+  padding:0!important;
+  min-width:0!important;
+}
+body.show-stock #stockRoot .stock-table td:nth-child(1){
+  grid-column:1 / -1!important;
+  font-size:12px!important;
+  color:#6e6e73!important;
+}
+body.show-stock #stockRoot .stock-table td:nth-child(2){
+  grid-column:1 / -1!important;
+}
+body.show-stock #stockRoot .stock-table td:nth-child(2) .stock-goods-name{
+  font-size:24px!important;
+  line-height:1.15!important;
+  margin:0 8px 6px 0!important;
+}
+body.show-stock #stockRoot .stock-table td:nth-child(2) .stock-sub{
+  font-size:13px!important;
+  line-height:1.45!important;
+}
+body.show-stock #stockRoot .stock-table td:nth-child(3){
+  grid-column:1 / -1!important;
+  padding:10px 12px!important;
+  border-radius:14px!important;
+  background:#f7f7f5!important;
+}
+body.show-stock #stockRoot .stock-table td:nth-child(4),
+body.show-stock #stockRoot .stock-table td:nth-child(5),
+body.show-stock #stockRoot .stock-table td:nth-child(6),
+body.show-stock #stockRoot .stock-table td:nth-child(7){
+  padding:12px!important;
+  border-radius:14px!important;
+  background:#f7f7f5!important;
+}
+body.show-stock #stockRoot .stock-table td:nth-child(4)::before{content:"入库";display:block;color:#6e6e73;font-size:12px;font-weight:800;margin-bottom:5px}
+body.show-stock #stockRoot .stock-table td:nth-child(5)::before{content:"已售";display:block;color:#6e6e73;font-size:12px;font-weight:800;margin-bottom:5px}
+body.show-stock #stockRoot .stock-table td:nth-child(6)::before{content:"剩余";display:block;color:#6e6e73;font-size:12px;font-weight:800;margin-bottom:5px}
+body.show-stock #stockRoot .stock-table td:nth-child(7)::before{content:"状态";display:block;color:#6e6e73;font-size:12px;font-weight:800;margin-bottom:5px}
+body.show-stock #stockRoot .stock-table td:nth-child(8){
+  grid-column:1 / -1!important;
+}
+body.show-stock #stockRoot .stock-table .stock-num{
+  font-size:18px!important;
+  line-height:1.25!important;
+}
+@media(max-width:1280px){
+  body.show-stock #stockRoot .stock-layout{
+    grid-template-columns:minmax(220px,280px) minmax(0,1fr)!important;
+    gap:12px!important;
+    padding:14px!important;
+  }
+  body.show-stock #stockRoot .stock-topbar{
+    display:block!important;
+  }
+  body.show-stock #stockRoot .stock-actions{
+    grid-template-columns:1fr 1fr!important;
+    min-width:0!important;
+    margin-top:14px!important;
+  }
+  body.show-stock #stockRoot .stock-summary{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  body.show-stock #stockRoot .stock-table tbody{
+    grid-template-columns:1fr!important;
+  }
+  body.show-stock #stockRoot .stock-table tr{
+    grid-template-columns:minmax(170px,.9fr) repeat(4,minmax(92px,1fr))!important;
+    min-height:150px!important;
+    align-items:start!important;
+  }
+  body.show-stock #stockRoot .stock-table td:nth-child(1){
+    grid-column:1 / -1!important;
+  }
+  body.show-stock #stockRoot .stock-table td:nth-child(2),
+  body.show-stock #stockRoot .stock-table td:nth-child(3),
+  body.show-stock #stockRoot .stock-table td:nth-child(4),
+  body.show-stock #stockRoot .stock-table td:nth-child(5),
+  body.show-stock #stockRoot .stock-table td:nth-child(6){
+    grid-column:auto!important;
+  }
+  body.show-stock #stockRoot .stock-table td:nth-child(7),
+  body.show-stock #stockRoot .stock-table td:nth-child(8){
+    grid-column:auto!important;
+  }
+}
+@media(max-width:980px){
+  body.show-stock #stockRoot{
+    margin-left:0!important;
+    width:100vw!important;
+    max-width:100vw!important;
+    overflow:auto!important;
+  }
+  body.show-stock #stockRoot .stock-layout{
+    display:block!important;
+    height:auto!important;
+    min-height:100vh!important;
+    padding:70px 12px 18px!important;
+    overflow:visible!important;
+  }
+  body.show-stock #stockRoot .stock-batch-panel,
+  body.show-stock #stockRoot .stock-main{
+    height:auto!important;
+    overflow:visible!important;
+  }
+  body.show-stock #stockRoot .stock-batch-panel{
+    margin-bottom:12px!important;
+  }
+}
+@media(max-width:640px){
+  body.show-stock #stockRoot .stock-actions,
+  body.show-stock #stockRoot .stock-summary{
+    grid-template-columns:1fr!important;
+  }
+}
+</style>
+
 </body>
 </html>
