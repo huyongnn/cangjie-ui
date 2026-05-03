@@ -21563,5 +21563,80 @@ body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-right{
 }
 </style>
 
+<style id="cangjieCashierProductDensityV71Style">
+/* ===== V71：收银商品卡片密度优化，一行稳定两张 ===== */
+@media(min-width:981px){
+  body.show-cashier #cashierRoot .cashier-product-area{
+    padding:12px!important;
+    gap:10px!important;
+  }
+  body.show-cashier #cashierRoot .cashier-products{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+    align-content:start!important;
+  }
+  body.show-cashier #cashierRoot .cashier-product-card{
+    min-height:112px!important;
+    max-width:none!important;
+    padding:14px 14px 12px!important;
+    border-radius:18px!important;
+    gap:8px!important;
+  }
+  body.show-cashier #cashierRoot .cashier-product-name{
+    font-size:20px!important;
+    line-height:1.2!important;
+    margin:0!important;
+    padding-right:58px!important;
+  }
+  body.show-cashier #cashierRoot .cashier-card-batch-info{
+    font-size:14px!important;
+    line-height:1.25!important;
+    margin:0!important;
+  }
+  body.show-cashier #cashierRoot .cashier-product-meta{
+    font-size:12px!important;
+    line-height:1.35!important;
+    margin:0!important;
+  }
+  body.show-cashier #cashierRoot .cashier-product-card::after{
+    top:12px!important;
+    right:12px!important;
+    min-height:26px!important;
+    padding:0 10px!important;
+    border-radius:999px!important;
+    font-size:12px!important;
+    line-height:26px!important;
+  }
+  body.show-cashier #cashierRoot .cashier-catbar{
+    width:50px!important;
+    min-width:50px!important;
+    padding:6px!important;
+    gap:7px!important;
+  }
+  body.show-cashier #cashierRoot .cashier-catbar button,
+  body.show-cashier #cashierRoot .cashier-catbar .cat,
+  body.show-cashier #cashierRoot .cat{
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    min-height:38px!important;
+    font-size:15px!important;
+  }
+}
+@media(min-width:981px) and (max-width:1280px){
+  body.show-cashier #cashierRoot .cashier-product-card{
+    min-height:104px!important;
+    padding:12px!important;
+  }
+  body.show-cashier #cashierRoot .cashier-product-name{
+    font-size:18px!important;
+  }
+  body.show-cashier #cashierRoot .cashier-card-batch-info{
+    font-size:13px!important;
+  }
+}
+</style>
+
 </body>
 </html>
