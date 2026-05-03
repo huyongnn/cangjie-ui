@@ -21782,5 +21782,91 @@ body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-right{
 }
 </style>
 
+<style id="cangjieCashierOrderItemDensityV73Style">
+/* ===== V73：已选货品行压缩，件数/斤数/单价同排 ===== */
+@media(min-width:981px){
+  body.show-cashier #cashierRoot .order-item{
+    grid-template-columns:minmax(0,1fr) 68px 76px 82px 44px!important;
+    grid-template-areas:"name qty weight price del"!important;
+    align-items:center!important;
+    gap:7px!important;
+    min-height:74px!important;
+    padding:10px!important;
+    border-radius:16px!important;
+  }
+  body.show-cashier #cashierRoot .order-item-name b{
+    font-size:16px!important;
+    line-height:1.18!important;
+    margin:0!important;
+  }
+  body.show-cashier #cashierRoot .order-item-name span{
+    display:none!important;
+  }
+  body.show-cashier #cashierRoot .order-item > div:nth-child(2){
+    grid-area:qty!important;
+  }
+  body.show-cashier #cashierRoot .order-item > div:nth-child(3){
+    grid-area:price!important;
+  }
+  body.show-cashier #cashierRoot .order-item.loose-row > div:nth-child(7){
+    grid-area:weight!important;
+    display:block!important;
+  }
+  body.show-cashier #cashierRoot .order-item.fixed-row{
+    grid-template-columns:minmax(0,1fr) 68px 82px 64px 44px!important;
+    grid-template-areas:"name qty price money del"!important;
+  }
+  body.show-cashier #cashierRoot .order-item.fixed-row > div:nth-child(7){
+    display:none!important;
+  }
+  body.show-cashier #cashierRoot .order-item input{
+    height:36px!important;
+    min-height:36px!important;
+    border-radius:12px!important;
+    padding:0 8px!important;
+    font-size:14px!important;
+  }
+  body.show-cashier #cashierRoot .order-item small{
+    display:none!important;
+  }
+  body.show-cashier #cashierRoot .order-item > .order-money{
+    grid-area:money!important;
+    font-size:15px!important;
+    line-height:1!important;
+    padding:0!important;
+    text-align:right!important;
+    white-space:nowrap!important;
+  }
+  body.show-cashier #cashierRoot .order-item.loose-row > .order-money{
+    align-self:center!important;
+  }
+  body.show-cashier #cashierRoot .order-item > .order-del{
+    grid-area:del!important;
+    min-height:54px!important;
+    height:54px!important;
+    border-radius:14px!important;
+    font-size:14px!important;
+  }
+}
+@media(min-width:981px) and (max-width:1280px){
+  body.show-cashier #cashierRoot .order-item{
+    grid-template-columns:minmax(0,1fr) 58px 66px 72px 40px!important;
+    gap:6px!important;
+    padding:9px!important;
+  }
+  body.show-cashier #cashierRoot .order-item.fixed-row{
+    grid-template-columns:minmax(0,1fr) 58px 72px 54px 40px!important;
+  }
+  body.show-cashier #cashierRoot .order-item input{
+    height:34px!important;
+    min-height:34px!important;
+  }
+  body.show-cashier #cashierRoot .order-item > .order-del{
+    min-height:48px!important;
+    height:48px!important;
+  }
+}
+</style>
+
 </body>
 </html>
