@@ -20858,6 +20858,120 @@ body.show-stock #stockRoot .stock-table .stock-num{
 }
 </style>
 
+<style id="cangjieCashierActionBarV69Style">
+/* ===== V69：桌面收银下单按钮保持可见 ===== */
+@media(min-width:981px){
+  body.show-cashier #cashierRoot{
+    margin-left:74px!important;
+    width:calc(100vw - 74px)!important;
+    max-width:calc(100vw - 74px)!important;
+    overflow:hidden!important;
+  }
+  body.show-cashier #cashierRoot .cashier-layout{
+    display:grid!important;
+    grid-template-columns:minmax(220px,280px) minmax(360px,1fr) minmax(360px,430px)!important;
+    grid-template-areas:"batches center right"!important;
+    grid-template-rows:minmax(0,1fr)!important;
+    height:100vh!important;
+    min-height:0!important;
+    overflow:hidden!important;
+    align-content:stretch!important;
+  }
+  body.show-cashier #cashierRoot .cashier-batches,
+  body.show-cashier #cashierRoot .cashier-center,
+  body.show-cashier #cashierRoot .cashier-right{
+    height:100%!important;
+    min-height:0!important;
+    overflow:auto!important;
+  }
+  body.show-cashier #cashierRoot .cashier-right{
+    display:grid!important;
+    grid-template-rows:auto auto minmax(120px,1fr) auto!important;
+    gap:0!important;
+    overflow:hidden!important;
+  }
+  body.show-cashier #cashierRoot .order-head{
+    margin:0 0 10px!important;
+  }
+  body.show-cashier #cashierRoot .order-table-head{
+    flex:0 0 auto!important;
+  }
+  body.show-cashier #cashierRoot .order-list{
+    min-height:0!important;
+    max-height:none!important;
+    overflow:auto!important;
+    margin-bottom:10px!important;
+  }
+  body.show-cashier #cashierRoot .order-summary{
+    position:relative!important;
+    z-index:30!important;
+    max-height:44vh!important;
+    overflow:auto!important;
+    margin-bottom:0!important;
+    box-shadow:0 -10px 28px rgba(0,0,0,.06),0 10px 28px rgba(0,0,0,.06)!important;
+  }
+  body.show-cashier #cashierRoot .order-actions{
+    position:sticky!important;
+    bottom:0!important;
+    z-index:40!important;
+    width:100%!important;
+    max-width:100%!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    padding-top:10px!important;
+    background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.96))!important;
+    backdrop-filter:blur(14px) saturate(130%)!important;
+    -webkit-backdrop-filter:blur(14px) saturate(130%)!important;
+  }
+  body.show-cashier #cashierRoot .codebill-btn,
+  body.show-cashier #cashierRoot .checkout-btn{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    min-height:48px!important;
+    font-size:16px!important;
+  }
+  body.show-cashier #tudou2SaveStatusV57{
+    top:14px!important;
+    right:18px!important;
+    bottom:auto!important;
+  }
+}
+@media(min-width:981px) and (max-width:1280px){
+  body.show-cashier #cashierRoot .cashier-layout{
+    grid-template-columns:minmax(176px,214px) minmax(260px,1fr) minmax(292px,330px)!important;
+    gap:12px!important;
+    padding:14px!important;
+  }
+  body.show-cashier #cashierRoot .cashier-product-area{
+    min-height:0!important;
+    max-height:46vh!important;
+    overflow:auto!important;
+  }
+  body.show-cashier #cashierRoot .cashier-products{
+    grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important;
+  }
+  body.show-cashier #cashierRoot .cashier-product-card{
+    min-height:132px!important;
+    padding:16px!important;
+  }
+  body.show-cashier #cashierRoot .order-customer-row{
+    grid-template-columns:1fr!important;
+  }
+  body.show-cashier #cashierRoot .pay-box,
+  body.show-cashier #cashierRoot .discount-box,
+  body.show-cashier #cashierRoot .total-breakdown{
+    grid-template-columns:1fr!important;
+  }
+  body.show-cashier #cashierRoot .order-actions{
+    grid-template-columns:1fr!important;
+    gap:8px!important;
+  }
+  body.show-cashier #cashierRoot .checkout-btn{
+    order:-1!important;
+  }
+}
+</style>
+
 <style id="cangjieAllPagesLayoutV68Style">
 /* ===== V68：全页面排版巡查收口。只修视觉层，不接管业务逻辑 ===== */
 body:not(.show-cashier):not(.show-stock) #ordersRoot,
