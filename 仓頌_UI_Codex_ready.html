@@ -20278,5 +20278,296 @@ textarea:focus-visible,
 }
 </style>
 
+<style id="cangjieCashierLayoutV66Style">
+/* ===== V66：收银台排版收口，修复左侧挤压和竖排 ===== */
+body.show-cashier #cashierRoot{
+  margin-left:74px!important;
+  padding-left:0!important;
+  width:calc(100vw - 74px)!important;
+  max-width:calc(100vw - 74px)!important;
+  overflow:hidden!important;
+  background:linear-gradient(135deg,#fafaf9 0%,#f1f2ef 100%)!important;
+}
+body.show-cashier #cashierRoot .cashier-layout{
+  display:grid!important;
+  grid-template-columns:minmax(220px,260px) minmax(460px,1fr) minmax(420px,500px)!important;
+  grid-template-areas:"batches center right"!important;
+  gap:14px!important;
+  height:100vh!important;
+  max-width:100%!important;
+  padding:18px!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+}
+body.show-cashier #cashierRoot .cashier-left-nav{
+  display:none!important;
+}
+body.show-cashier #cashierRoot .cashier-batches{
+  grid-area:batches!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:12px!important;
+  min-width:0!important;
+  height:100%!important;
+  padding:0!important;
+  border-right:0!important;
+  overflow:auto!important;
+}
+body.show-cashier #cashierRoot .cashier-center{
+  grid-area:center!important;
+  min-width:0!important;
+  height:100%!important;
+  padding:0!important;
+  overflow:auto!important;
+}
+body.show-cashier #cashierRoot .cashier-right{
+  grid-area:right!important;
+  min-width:0!important;
+  height:100%!important;
+  padding:0!important;
+  border-left:0!important;
+  overflow:auto!important;
+}
+body.show-cashier #cashierRoot .cashier-batch-title,
+body.show-cashier #cashierRoot .cashier-batch-card,
+body.show-cashier #cashierRoot .cashier-top,
+body.show-cashier #cashierRoot .cashier-product-area,
+body.show-cashier #cashierRoot .order-head,
+body.show-cashier #cashierRoot .order-list,
+body.show-cashier #cashierRoot .order-summary{
+  border-radius:22px!important;
+}
+body.show-cashier #cashierRoot .cashier-batch-title,
+body.show-cashier #cashierRoot .cashier-batch-card{
+  width:100%!important;
+  min-height:auto!important;
+  writing-mode:horizontal-tb!important;
+  text-orientation:mixed!important;
+  white-space:normal!important;
+  text-align:left!important;
+  padding:16px!important;
+}
+body.show-cashier #cashierRoot .cashier-batch-title *,
+body.show-cashier #cashierRoot .cashier-batch-card *,
+body.show-cashier #cashierRoot .cashier-top *,
+body.show-cashier #cashierRoot .cashier-product-card *,
+body.show-cashier #cashierRoot .order-head *,
+body.show-cashier #cashierRoot .order-list *,
+body.show-cashier #cashierRoot .order-summary *{
+  writing-mode:horizontal-tb!important;
+  text-orientation:mixed!important;
+  word-break:normal!important;
+  overflow-wrap:break-word!important;
+}
+body.show-cashier #cashierRoot .cashier-top{
+  display:block!important;
+  padding:24px 26px!important;
+  margin:0 0 14px!important;
+}
+body.show-cashier #cashierRoot .cashier-top h1{
+  font-size:30px!important;
+  line-height:1.15!important;
+  margin:0 0 8px!important;
+  max-width:none!important;
+}
+body.show-cashier #cashierRoot .cashier-top p{
+  max-width:560px!important;
+  line-height:1.55!important;
+}
+body.show-cashier #cashierRoot .cashier-top-tools{
+  display:grid!important;
+  grid-template-columns:minmax(180px,1fr) 170px 150px!important;
+  gap:10px!important;
+  margin-top:18px!important;
+  align-items:center!important;
+}
+body.show-cashier #cashierRoot .cashier-top-tools input,
+body.show-cashier #cashierRoot .cashier-top-tools select,
+body.show-cashier #cashierRoot .cashier-top-tools button{
+  width:100%!important;
+  min-width:0!important;
+}
+body.show-cashier #cashierRoot .cashier-product-area{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 58px!important;
+  gap:12px!important;
+  padding:16px!important;
+  margin:0!important;
+  min-height:360px!important;
+}
+body.show-cashier #cashierRoot .cashier-products{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fill,minmax(190px,1fr))!important;
+  gap:12px!important;
+  align-content:start!important;
+  min-width:0!important;
+}
+body.show-cashier #cashierRoot .cashier-product-card{
+  min-height:138px!important;
+  padding:18px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:space-between!important;
+}
+body.show-cashier #cashierRoot .cashier-catbar{
+  width:58px!important;
+  min-width:58px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:8px!important;
+  padding:8px!important;
+  overflow:auto!important;
+}
+body.show-cashier #cashierRoot .cashier-catbar button,
+body.show-cashier #cashierRoot .cashier-catbar .cat,
+body.show-cashier #cashierRoot .cat{
+  width:42px!important;
+  height:42px!important;
+  min-width:42px!important;
+  min-height:42px!important;
+  padding:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+body.show-cashier #cashierRoot .order-head{
+  padding:20px!important;
+  margin:0 0 12px!important;
+}
+body.show-cashier #cashierRoot .order-customer-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto auto!important;
+  gap:10px!important;
+  align-items:center!important;
+}
+body.show-cashier #cashierRoot .order-tabs{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:10px!important;
+  margin-top:14px!important;
+}
+body.show-cashier #cashierRoot .order-table-head{
+  display:grid!important;
+  grid-template-columns:minmax(120px,1fr) 90px 100px 90px 70px!important;
+  gap:10px!important;
+  padding:0 18px 8px!important;
+}
+body.show-cashier #cashierRoot .order-list{
+  min-height:260px!important;
+  padding:12px!important;
+  margin-bottom:12px!important;
+}
+body.show-cashier #cashierRoot .order-row{
+  display:grid!important;
+  grid-template-columns:minmax(120px,1fr) 90px 100px 90px 58px!important;
+  gap:10px!important;
+  align-items:start!important;
+  padding:14px!important;
+}
+body.show-cashier #cashierRoot .order-row input{
+  width:100%!important;
+  min-width:0!important;
+}
+body.show-cashier #cashierRoot .order-summary{
+  padding:18px!important;
+}
+body.show-cashier #cashierRoot .pay-box,
+body.show-cashier #cashierRoot .discount-box,
+body.show-cashier #cashierRoot .total-breakdown{
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:10px!important;
+}
+body.show-cashier #cashierRoot .discount-box input:last-child{
+  grid-column:1 / -1!important;
+}
+body.show-cashier #cashierRoot .order-actions{
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:10px!important;
+}
+@media(max-width:1280px){
+  body.show-cashier #cashierRoot .cashier-layout{
+    grid-template-columns:minmax(190px,230px) minmax(390px,1fr) minmax(360px,430px)!important;
+    gap:12px!important;
+    padding:14px!important;
+  }
+  body.show-cashier #cashierRoot .cashier-top-tools{
+    grid-template-columns:1fr!important;
+  }
+  body.show-cashier #cashierRoot .cashier-products{
+    grid-template-columns:repeat(auto-fill,minmax(170px,1fr))!important;
+  }
+}
+@media(min-width:981px) and (max-width:1500px){
+  body.show-cashier #cashierRoot .cashier-layout{
+    grid-template-columns:minmax(210px,250px) minmax(0,1fr)!important;
+    grid-template-areas:
+      "batches center"
+      "batches right"!important;
+    grid-template-rows:auto minmax(420px,1fr)!important;
+    height:100vh!important;
+    overflow:auto!important;
+    align-content:start!important;
+  }
+  body.show-cashier #cashierRoot .cashier-batches{
+    position:sticky!important;
+    top:0!important;
+    max-height:calc(100vh - 28px)!important;
+  }
+  body.show-cashier #cashierRoot .cashier-center,
+  body.show-cashier #cashierRoot .cashier-right{
+    height:auto!important;
+    overflow:visible!important;
+  }
+  body.show-cashier #cashierRoot .cashier-right{
+    display:grid!important;
+    grid-template-rows:auto auto minmax(220px,1fr) auto!important;
+  }
+  body.show-cashier #cashierRoot .order-list{
+    min-height:220px!important;
+  }
+}
+@media(max-width:980px){
+  body.show-cashier #cashierRoot{
+    margin-left:0!important;
+    padding-left:0!important;
+    width:100vw!important;
+    max-width:100vw!important;
+    overflow:auto!important;
+  }
+  body.show-cashier #cashierRoot .cashier-layout{
+    display:block!important;
+    height:auto!important;
+    min-height:100vh!important;
+    padding:70px 12px 18px!important;
+    overflow:visible!important;
+  }
+  body.show-cashier #cashierRoot .cashier-batches{
+    display:none!important;
+  }
+  body.show-cashier #cashierRoot .cashier-center,
+  body.show-cashier #cashierRoot .cashier-right{
+    height:auto!important;
+    overflow:visible!important;
+  }
+  body.show-cashier #cashierRoot .cashier-center{
+    margin-bottom:12px!important;
+  }
+  body.show-cashier #cashierRoot .cashier-product-area{
+    grid-template-columns:1fr!important;
+  }
+  body.show-cashier #cashierRoot .cashier-catbar{
+    width:100%!important;
+    min-width:0!important;
+    flex-direction:row!important;
+  }
+}
+</style>
+
 </body>
 </html>
