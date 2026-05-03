@@ -22403,5 +22403,39 @@ body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-right{
 }
 </style>
 
+<style id="cangjieStockNameReadableV79Style">
+/* ===== V79：批次表货品名可读性修正，缩字但不截成单字 ===== */
+@media(min-width:981px){
+  body.show-stock #stockRoot .stock-table th:nth-child(2),
+  body.show-stock #stockRoot .stock-table td:nth-child(2){
+    width:158px!important;
+  }
+  body.show-stock #stockRoot .stock-goods-name{
+    font-size:11px!important;
+    line-height:1.15!important;
+    max-width:112px!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    word-break:keep-all!important;
+    overflow-wrap:break-word!important;
+    margin:0 4px 1px 0!important;
+  }
+  body.show-stock #stockRoot .stock-tag{
+    min-height:15px!important;
+    line-height:15px!important;
+    padding:0 5px!important;
+    font-size:9px!important;
+    vertical-align:top!important;
+  }
+  body.show-stock #stockRoot .stock-table td{
+    height:40px!important;
+  }
+  body.show-stock #stockRoot .stock-sub{
+    font-size:9px!important;
+  }
+}
+</style>
+
 </body>
 </html>
