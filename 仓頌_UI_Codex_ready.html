@@ -20858,5 +20858,399 @@ body.show-stock #stockRoot .stock-table .stock-num{
 }
 </style>
 
+<style id="cangjieAllPagesLayoutV68Style">
+/* ===== V68：全页面排版巡查收口。只修视觉层，不接管业务逻辑 ===== */
+body:not(.show-cashier):not(.show-stock) #ordersRoot,
+body:not(.show-cashier):not(.show-stock) #inventoryStep1Root,
+body:not(.show-cashier):not(.show-stock) #ownerStep1Root,
+body:not(.show-cashier):not(.show-stock) #reportsStep1Root,
+body:not(.show-cashier):not(.show-stock) #configStep1Root{
+  margin-left:74px!important;
+  width:calc(100vw - 74px)!important;
+  max-width:calc(100vw - 74px)!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+}
+#ordersRoot *,
+#inventoryStep1Root *,
+#ownerStep1Root *,
+#reportsStep1Root *,
+#configStep1Root *{
+  box-sizing:border-box!important;
+  writing-mode:horizontal-tb!important;
+  text-orientation:mixed!important;
+}
+#cashierRoot .cashier-products{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fill,minmax(220px,260px))!important;
+  align-items:start!important;
+  justify-content:start!important;
+  gap:14px!important;
+}
+#cashierRoot .cashier-product-card{
+  width:100%!important;
+  max-width:260px!important;
+  min-width:0!important;
+}
+#cashierRoot .cashier-product-card b,
+#cashierRoot .cashier-product-card strong,
+#cashierRoot .cashier-product-card span,
+#cashierRoot .cashier-product-card p{
+  overflow-wrap:normal!important;
+  word-break:keep-all!important;
+}
+#inventoryStep1Root .inventory-step1-layout,
+#ownerStep1Root .owner-step1-layout,
+#configStep1Root .config-step1-layout{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+#inventoryStep1Root .inventory-step1-layout{
+  display:grid!important;
+  grid-template-columns:minmax(238px,292px) minmax(0,1fr)!important;
+}
+#ownerStep1Root .owner-step1-layout{
+  display:grid!important;
+  grid-template-columns:minmax(248px,304px) minmax(0,1fr)!important;
+}
+#configStep1Root .config-step1-body{
+  display:grid!important;
+  grid-template-columns:minmax(238px,300px) minmax(0,1fr)!important;
+  gap:16px!important;
+  width:100%!important;
+  max-width:100%!important;
+}
+#inventoryStep1Root .inventory-step1-tree,
+#inventoryStep1Root .inventory-step1-main,
+#ownerStep1Root .owner-step1-side,
+#ownerStep1Root .owner-step1-main,
+#configStep1Root .config-step1-side,
+#configStep1Root .config-step1-main{
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:auto!important;
+}
+#inventoryStep1Root .inventory-step1-top,
+#ownerStep1Root .owner-step1-top,
+#reportsStep1Root .reports-step1-top,
+#configStep1Root .config-step1-top{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+  min-width:0!important;
+  max-width:100%!important;
+}
+#inventoryStep1Root .inventory-step1-top > div:first-child,
+#ownerStep1Root .owner-step1-top > div:first-child,
+#reportsStep1Root .reports-step1-top > div:first-child,
+#configStep1Root .config-step1-top > div:first-child{
+  min-width:0!important;
+  flex:1 1 auto!important;
+}
+#inventoryStep1Root h1,
+#inventoryStep1Root h2,
+#ownerStep1Root h1,
+#ownerStep1Root h2,
+#reportsStep1Root h1,
+#configStep1Root h1,
+#configStep1Root h2,
+#ordersRoot h1,
+#ordersRoot h2{
+  max-width:100%!important;
+  line-height:1.15!important;
+  overflow-wrap:anywhere!important;
+}
+#inventoryStep1Root p,
+#ownerStep1Root p,
+#reportsStep1Root p,
+#configStep1Root p,
+#ordersRoot p{
+  max-width:760px!important;
+  line-height:1.5!important;
+  overflow-wrap:anywhere!important;
+}
+#inventoryStep1Root .inventory-step1-actions,
+#ownerStep1Root .owner-step1-actions,
+#reportsStep1Root .reports-step1-filters,
+#configStep1Root .config-step1-actions,
+#ordersRoot .orders-detail-actions{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:10px!important;
+  min-width:0!important;
+  max-width:100%!important;
+}
+#inventoryStep1Root .inventory-step1-actions{
+  flex:0 1 520px!important;
+}
+#inventoryStep1Root .inventory-step1-actions input{
+  flex:1 1 220px!important;
+  width:auto!important;
+  min-width:0!important;
+}
+#inventoryStep1Root .inventory-step1-actions button,
+#ownerStep1Root .owner-step1-actions button,
+#ownerStep1Root .owner-step1-actions a,
+#reportsStep1Root .reports-step1-filters button,
+#configStep1Root .config-step1-actions button,
+#ordersRoot .orders-detail-actions button{
+  min-width:0!important;
+  white-space:nowrap!important;
+}
+#reportsStep1Root .reports-step1-filters{
+  flex:0 1 520px!important;
+}
+#reportsStep1Root .reports-step1-filters input{
+  flex:1 1 148px!important;
+  min-width:0!important;
+}
+#reportsStep1Root .reports-step1-filters span{
+  flex:0 0 auto!important;
+}
+#inventoryStep1Root .inventory-step1-summary,
+#ownerStep1Root .owner-step1-summary,
+#reportsStep1Root .reports-step1-summary{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+}
+#inventoryStep1Root .inventory-step1-summary{
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr))!important;
+}
+#ownerStep1Root .owner-step1-summary{
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr))!important;
+}
+#reportsStep1Root .reports-step1-summary{
+  grid-template-columns:repeat(auto-fit,minmax(170px,1fr))!important;
+}
+#inventoryStep1Root .inventory-step1-card,
+#ownerStep1Root .owner-step1-stat,
+#reportsStep1Root .reports-step1-card{
+  min-width:0!important;
+}
+#inventoryStep1Root .inventory-step1-section,
+#ownerStep1Root .owner-step1-section,
+#reportsStep1Root .reports-step1-section{
+  max-width:100%!important;
+  overflow:hidden!important;
+}
+#inventoryStep1Root .inventory-step1-table-wrap,
+#ownerStep1Root .owner-step1-table-wrap,
+#reportsStep1Root .reports-step1-table-wrap{
+  width:100%!important;
+  max-width:100%!important;
+  overflow:auto!important;
+  border-radius:18px!important;
+}
+#inventoryStep1Root .inventory-step1-table,
+#ownerStep1Root .owner-step1-table,
+#reportsStep1Root .reports-step1-table{
+  width:100%!important;
+  min-width:760px!important;
+}
+#ordersRoot{
+  background:
+    radial-gradient(circle at 74% 0%,rgba(111,143,122,.08),transparent 30%),
+    linear-gradient(135deg,#fafaf9 0%,#f1f2ef 100%)!important;
+}
+#ordersRoot .orders-layout{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  display:grid!important;
+  grid-template-columns:minmax(264px,334px) minmax(0,1fr)!important;
+  gap:16px!important;
+  padding:16px!important;
+  overflow:hidden!important;
+}
+#ordersRoot .orders-side{
+  display:none!important;
+}
+#ordersRoot .orders-list-panel,
+#ordersRoot .orders-detail{
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:auto!important;
+  border-radius:24px!important;
+}
+#ordersRoot .orders-list-head{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:10px!important;
+  padding:18px!important;
+}
+#ordersRoot .orders-list-head input,
+#ordersRoot .orders-list-head select{
+  width:100%!important;
+  min-width:0!important;
+}
+#ordersRoot .order-card,
+#ordersRoot .orders-detail-head,
+#ordersRoot .orders-detail-body{
+  min-width:0!important;
+  max-width:100%!important;
+}
+#ordersRoot .order-card *,
+#ordersRoot .orders-detail-head *,
+#ordersRoot .orders-detail-body *{
+  overflow-wrap:anywhere!important;
+}
+#ordersRoot .orders-detail-head{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:14px!important;
+  padding:18px!important;
+}
+#ordersRoot .orders-detail-head > div:first-child{
+  min-width:0!important;
+  flex:1 1 auto!important;
+}
+#ordersRoot .orders-detail-body{
+  overflow:auto!important;
+}
+#configStep1Root .config-step1-top{
+  margin:18px!important;
+  border-radius:22px!important;
+}
+#configStep1Root .config-step1-status{
+  flex:0 0 auto!important;
+  max-width:100%!important;
+  white-space:normal!important;
+  line-height:1.25!important;
+  text-align:center!important;
+}
+#configStep1Root .config-step1-row{
+  align-items:flex-start!important;
+}
+#configStep1Root .config-step1-row > div{
+  min-width:0!important;
+}
+#configStep1Root .config-step1-printer-name,
+#configStep1Root .config-step1-note,
+#configStep1Root .config-step1-row span{
+  overflow-wrap:anywhere!important;
+}
+#configStep1Root textarea{
+  width:100%!important;
+  max-width:100%!important;
+}
+body.buyers-mode-step1 #buyerManagerV47.buyer-v47-mask.show{
+  left:74px!important;
+  width:calc(100vw - 74px)!important;
+  max-width:calc(100vw - 74px)!important;
+  overflow:hidden!important;
+}
+body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-modal{
+  width:min(1280px,calc(100% - 28px))!important;
+  max-width:calc(100% - 28px)!important;
+  grid-template-columns:minmax(246px,310px) minmax(0,1fr)!important;
+  overflow:hidden!important;
+}
+body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-left,
+body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-right{
+  min-width:0!important;
+  overflow:auto!important;
+}
+@media(max-width:1280px){
+  #inventoryStep1Root .inventory-step1-layout,
+  #ownerStep1Root .owner-step1-layout{
+    grid-template-columns:minmax(220px,268px) minmax(0,1fr)!important;
+  }
+  #configStep1Root .config-step1-body{
+    grid-template-columns:minmax(210px,260px) minmax(0,1fr)!important;
+    padding:14px!important;
+  }
+  #ordersRoot .orders-layout{
+    grid-template-columns:minmax(238px,300px) minmax(0,1fr)!important;
+    padding:14px!important;
+  }
+  #inventoryStep1Root .inventory-step1-top,
+  #ownerStep1Root .owner-step1-top,
+  #reportsStep1Root .reports-step1-top,
+  #configStep1Root .config-step1-top,
+  #ordersRoot .orders-detail-head{
+    display:block!important;
+  }
+  #inventoryStep1Root .inventory-step1-actions,
+  #ownerStep1Root .owner-step1-actions,
+  #reportsStep1Root .reports-step1-filters,
+  #configStep1Root .config-step1-actions,
+  #ordersRoot .orders-detail-actions{
+    justify-content:flex-start!important;
+    margin-top:12px!important;
+  }
+}
+@media(max-width:980px){
+  body:not(.show-cashier):not(.show-stock) #ordersRoot,
+  body:not(.show-cashier):not(.show-stock) #inventoryStep1Root,
+  body:not(.show-cashier):not(.show-stock) #ownerStep1Root,
+  body:not(.show-cashier):not(.show-stock) #reportsStep1Root,
+  body:not(.show-cashier):not(.show-stock) #configStep1Root{
+    margin-left:0!important;
+    width:100vw!important;
+    max-width:100vw!important;
+    overflow:auto!important;
+  }
+  #inventoryStep1Root .inventory-step1-layout,
+  #ownerStep1Root .owner-step1-layout,
+  #configStep1Root .config-step1-body,
+  #ordersRoot .orders-layout{
+    display:block!important;
+    grid-template-columns:none!important;
+    min-height:100vh!important;
+    overflow:visible!important;
+  }
+  #inventoryStep1Root .inventory-step1-tree,
+  #ownerStep1Root .owner-step1-side,
+  #configStep1Root .config-step1-side,
+  #ordersRoot .orders-list-panel{
+    margin-bottom:12px!important;
+  }
+  body.buyers-mode-step1 #buyerManagerV47.buyer-v47-mask.show{
+    left:0!important;
+    width:100vw!important;
+    max-width:100vw!important;
+    overflow:auto!important;
+  }
+  body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-modal{
+    display:block!important;
+    width:calc(100% - 20px)!important;
+    max-width:calc(100% - 20px)!important;
+  }
+}
+@media(max-width:640px){
+  #inventoryStep1Root .inventory-step1-actions,
+  #ownerStep1Root .owner-step1-actions,
+  #reportsStep1Root .reports-step1-filters,
+  #configStep1Root .config-step1-actions,
+  #ordersRoot .orders-detail-actions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    width:100%!important;
+  }
+  #inventoryStep1Root .inventory-step1-actions input,
+  #reportsStep1Root .reports-step1-filters input,
+  #inventoryStep1Root .inventory-step1-actions button,
+  #ownerStep1Root .owner-step1-actions button,
+  #ownerStep1Root .owner-step1-actions a,
+  #reportsStep1Root .reports-step1-filters button,
+  #configStep1Root .config-step1-actions button,
+  #ordersRoot .orders-detail-actions button{
+    width:100%!important;
+  }
+  #inventoryStep1Root .inventory-step1-table,
+  #ownerStep1Root .owner-step1-table,
+  #reportsStep1Root .reports-step1-table{
+    min-width:640px!important;
+  }
+}
+</style>
+
 </body>
 </html>
