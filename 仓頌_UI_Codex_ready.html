@@ -23785,5 +23785,159 @@ body.show-cashier .cashier-buyer-tree-section-v82{
 })();
 </script>
 
+<script>
+/* ===== V85：库存显示只按已完成订单重算，彻底排除码单草稿 ===== */
+(function(){
+  var rebuildingStockV85 = false;
+
+  function nStockV85(v){ return Number(v || 0) || 0; }
+  function batchesStockV85(){ return (typeof batches !== "undefined" && Array.isArray(batches)) ? batches : []; }
+  function ordersStockV85(){ return (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders : []; }
+  function batchNoStockV85(b){ return String((b && (b.no || b.batchNo)) || ""); }
+  function batchOwnerStockV85(b){ return String((b && (b.owner || b.ownerName)) || ""); }
+  function itemNameStockV85(item){ return String((item && (item.name || item.goodsName || item.productName)) || ""); }
+  function lineNameStockV85(line){ return String((line && (line.name || line.goodsName || line.productName)) || ""); }
+  function lineBatchNoStockV85(line){ return String((line && (line.batchNo || line.no)) || ""); }
+  function lineOwnerStockV85(line){ return String((line && (line.owner || line.batchOwner || line.ownerName)) || ""); }
+  function linePackStockV85(line){ return String((line && (line.pack || line.type)) || ""); }
+  function orderCountsStockV85(order){
+    if(!order) return false;
+    if(order.voided || order.status === "已作废" || order.displayStatus === "已作废") return false;
+    return Array.isArray(order.lines) && order.lines.length;
+  }
+  function lineQtyWeightStockV85(line, item){
+    var qty = nStockV85(line && line.qty);
+    var weight = nStockV85(line && line.weight);
+    if(!weight && linePackStockV85(line) === "定装"){
+      weight = qty * nStockV85((line && line.spec) || (item && item.spec));
+    }
+    return {qty:qty, weight:weight};
+  }
+  function batchMatchesLineStockV85(batch, line){
+    if(!batch || !line) return false;
+    if(line.batchId && String(batch.id || "") === String(line.batchId)) return true;
+    var owner = lineOwnerStockV85(line);
+    var no = lineBatchNoStockV85(line);
+    return (!owner || batchOwnerStockV85(batch) === owner) && (!no || batchNoStockV85(batch) === no);
+  }
+  function itemMatchesLineStockV85(item, line){
+    if(!item || !line) return false;
+    return (line.batchItemId && String(item.id || "") === String(line.batchItemId)) ||
+      (line.goodsId && String(item.goodsId || "") === String(line.goodsId)) ||
+      (line.itemId && String(item.id || "") === String(line.itemId)) ||
+      (!!lineNameStockV85(line) && itemNameStockV85(item) === lineNameStockV85(line));
+  }
+  function findItemForLineStockV85(line){
+    if(!line) return null;
+    var rows = batchesStockV85();
+    for(var bi=0; bi<rows.length; bi++){
+      var batch = rows[bi];
+      if(!batchMatchesLineStockV85(batch, line)) continue;
+      var items = Array.isArray(batch.items) ? batch.items : [];
+      for(var ii=0; ii<items.length; ii++){
+        if(itemMatchesLineStockV85(items[ii], line)) return items[ii];
+      }
+    }
+    for(var bj=0; bj<rows.length; bj++){
+      var looseItems = Array.isArray(rows[bj].items) ? rows[bj].items : [];
+      for(var ij=0; ij<looseItems.length; ij++){
+        if(itemMatchesLineStockV85(looseItems[ij], line)) return looseItems[ij];
+      }
+    }
+    return null;
+  }
+  function rebuildSoldFromFinalOrdersV85(){
+    if(rebuildingStockV85) return;
+    rebuildingStockV85 = true;
+    try{
+      batchesStockV85().forEach(function(batch){
+        (Array.isArray(batch.items) ? batch.items : []).forEach(function(item){
+          item.sold = 0;
+          item.soldWeight = 0;
+        });
+      });
+      ordersStockV85().forEach(function(order){
+        if(!orderCountsStockV85(order)) return;
+        (order.lines || []).forEach(function(line){
+          var item = findItemForLineStockV85(line);
+          if(!item) return;
+          var amount = lineQtyWeightStockV85(line, item);
+          item.sold = nStockV85(item.sold) + amount.qty;
+          item.soldWeight = nStockV85(item.soldWeight) + amount.weight;
+        });
+      });
+    }finally{
+      rebuildingStockV85 = false;
+    }
+  }
+  function refreshStockV85(){
+    try{ if(typeof renderCashierProducts === "function") renderCashierProducts(); }catch(err){}
+    try{ if(typeof renderCashierBatches === "function") renderCashierBatches(); }catch(err){}
+    try{ if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill(); }catch(err){}
+    try{ if(typeof renderBillCenter === "function") renderBillCenter(); }catch(err){}
+    try{ if(typeof renderStockModule === "function") renderStockModule(); }catch(err){}
+    try{ if(typeof renderInventoryStep1 === "function") renderInventoryStep1(); }catch(err){}
+    try{ if(typeof renderInventoryView === "function") renderInventoryView(); }catch(err){}
+  }
+  function saveStockV85(){
+    try{ if(typeof tudou2SaveNow === "function") setTimeout(tudou2SaveNow, 0); }catch(err){}
+  }
+  function wrapRenderStockV85(name){
+    var oldFn = window[name];
+    if(typeof oldFn !== "function" || oldFn.__finalOrderStockV85) return;
+    window[name] = function(){
+      rebuildSoldFromFinalOrdersV85();
+      return oldFn.apply(this, arguments);
+    };
+    window[name].__finalOrderStockV85 = true;
+  }
+  [
+    "renderCashierProducts",
+    "renderCashierBatches",
+    "renderStockModule",
+    "renderInventoryStep1",
+    "renderInventoryView",
+    "renderGoods",
+    "renderDetail",
+    "renderReportsStep1",
+    "renderOwnerStep1"
+  ].forEach(wrapRenderStockV85);
+
+  ["addProductToCodeBill","updateCodeBillItem","removeCodeBillItem","openCodeBillModal","takeSavedBill","deleteSavedBill"].forEach(function(name){
+    var oldFn = window[name];
+    if(typeof oldFn !== "function" || oldFn.__finalOrderStockDraftV85) return;
+    window[name] = function(){
+      var result = oldFn.apply(this, arguments);
+      rebuildSoldFromFinalOrdersV85();
+      refreshStockV85();
+      saveStockV85();
+      return result;
+    };
+    window[name].__finalOrderStockDraftV85 = true;
+  });
+
+  ["confirmOrderFromCodeBill","completeSettleOrder","saveOrderEditStep1","voidOrderEditStep1"].forEach(function(name){
+    var oldFn = window[name];
+    if(typeof oldFn !== "function" || oldFn.__finalOrderStockDoneV85) return;
+    window[name] = function(){
+      var result = oldFn.apply(this, arguments);
+      rebuildSoldFromFinalOrdersV85();
+      refreshStockV85();
+      saveStockV85();
+      return result;
+    };
+    window[name].__finalOrderStockDoneV85 = true;
+  });
+
+  window.rebuildSoldFromFinalOrdersV85 = function(){
+    rebuildSoldFromFinalOrdersV85();
+    refreshStockV85();
+    saveStockV85();
+  };
+
+  setTimeout(window.rebuildSoldFromFinalOrdersV85, 0);
+})();
+</script>
+
 </body>
 </html>
