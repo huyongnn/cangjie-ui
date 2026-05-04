@@ -24861,5 +24861,167 @@ body.show-stock #stockRoot .stock-table td:nth-child(5)::before{content:"已售/
 })();
 </script>
 
+<script>
+/* ===== V90：订单页防闪烁稳定层，只补渲染时序与空值防护 ===== */
+(function(){
+  function nV90(v){ return Number(v || 0) || 0; }
+  function mV90(v){ return typeof money === "function" ? money(v) : nV90(v).toFixed(2); }
+  function keyV90(order){ return String((order && (order.orderNo || order.billNo || order.id)) || ""); }
+  function orderRowsV90(){
+    try{ return (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders : []; }catch(err){ return []; }
+  }
+  function findOrderV90(order){
+    var key = keyV90(order);
+    if(!key) return order || null;
+    return orderRowsV90().find(function(row){ return keyV90(row) === key; }) || order || null;
+  }
+  function selectedOrderV90(){
+    try{
+      var selected = typeof currentSelectedOrderRecord === "function" ? currentSelectedOrderRecord() : null;
+      return findOrderV90(selected);
+    }catch(err){
+      return null;
+    }
+  }
+  function isVoidV90(order){
+    return !!(order && (order.voided || order.status === "已作废" || order.displayStatus === "已作废"));
+  }
+  function safePaidV90(order){
+    if(!order) return 0;
+    try{
+      if(typeof buyerV47PaidAmount === "function") return nV90(buyerV47PaidAmount(order));
+    }catch(err){}
+    return nV90(order.paid);
+  }
+  function safeDebtV90(order){
+    if(!order) return 0;
+    try{
+      if(typeof buyerV47DebtAmount === "function") return nV90(buyerV47DebtAmount(order));
+    }catch(err){}
+    var direct = nV90(order.debt);
+    if(direct > 0) return direct;
+    var status = String(order.displayStatus || order.status || "");
+    if(status.includes("赊欠")) return Math.max(0, nV90(order.totalAmount) - safePaidV90(order));
+    return 0;
+  }
+  function installBuyerDebtGuardV90(){
+    if(typeof window.buyerV47DebtAmount !== "function" || window.buyerV47DebtAmount.__safeNullV90) return;
+    var old = window.buyerV47DebtAmount;
+    window.buyerV47DebtAmount = function(order){
+      if(!order) return 0;
+      try{ return old.apply(this, arguments); }catch(err){
+        var direct = nV90(order.debt);
+        if(direct > 0) return direct;
+        return String(order.displayStatus || order.status || "").includes("赊欠") ? Math.max(0, nV90(order.totalAmount) - nV90(order.paid)) : 0;
+      }
+    };
+    window.buyerV47DebtAmount.__safeNullV90 = true;
+  }
+  function syncOrderRepayStripV90(order){
+    var box = document.getElementById("ordersDetailBody");
+    if(!box) return;
+    order = findOrderV90(order) || selectedOrderV90();
+    var oldStrip = box.querySelector(".order-repay-v81-strip");
+    if(!order || isVoidV90(order)){
+      if(oldStrip) oldStrip.remove();
+      return;
+    }
+    var debt = safeDebtV90(order);
+    var html = '<div class="order-repay-v81-cell"><span>订单金额</span><b>'+mV90(order.totalAmount || 0)+'</b></div>'
+      + '<div class="order-repay-v81-cell"><span>已收/已还</span><b>'+mV90(safePaidV90(order))+'</b></div>'
+      + '<div class="order-repay-v81-cell debt"><span>剩余欠款</span><b>'+mV90(debt)+'</b></div>'
+      + '<button class="order-repay-v81-action" type="button" '+(debt > 0 ? 'onclick="openOrderRepayV81()"' : "disabled")+'>'+(debt > 0 ? "还款" : "已结清")+'</button>';
+    if(oldStrip){
+      oldStrip.innerHTML = html;
+      return;
+    }
+    var grid = box.querySelector(".order-info-grid");
+    if(!grid || !grid.parentNode) return;
+    var strip = document.createElement("div");
+    strip.className = "order-repay-v81-strip";
+    strip.innerHTML = html;
+    grid.parentNode.insertBefore(strip, grid.nextSibling);
+  }
+  function syncOrderRepayButtonV90(order){
+    var actions = document.querySelector("#ordersRoot .orders-detail-actions");
+    if(!actions) return;
+    order = findOrderV90(order) || selectedOrderV90();
+    var debt = safeDebtV90(order);
+    var btn = document.getElementById("orderRepayV81Btn");
+    if(!order || isVoidV90(order) || debt <= 0){
+      if(btn) btn.remove();
+      return;
+    }
+    if(!btn){
+      btn = document.createElement("button");
+      btn.id = "orderRepayV81Btn";
+      btn.type = "button";
+      btn.className = "btn-blue";
+      btn.textContent = "还款";
+      btn.onclick = function(){ window.openOrderRepayV81(); };
+      var edit = document.getElementById("orderEditStep1Btn");
+      if(edit && edit.nextSibling) actions.insertBefore(btn, edit.nextSibling);
+      else actions.insertBefore(btn, actions.firstChild);
+    }
+  }
+  function stabilizeOrdersV90(order){
+    installBuyerDebtGuardV90();
+    syncOrderRepayStripV90(order);
+    syncOrderRepayButtonV90(order);
+    try{ if(typeof v41SetActive === "function") v41SetActive("orders"); }catch(err){}
+    try{ if(typeof v38SyncNavActive === "function") v38SyncNavActive("orders"); }catch(err){}
+    try{ if(typeof v40SyncNav === "function") v40SyncNav("orders"); }catch(err){}
+  }
+  installBuyerDebtGuardV90();
+
+  var oldDetailV90 = typeof window.renderOrderDetail === "function" ? window.renderOrderDetail : null;
+  if(oldDetailV90 && !oldDetailV90.__stableV90){
+    window.renderOrderDetail = function(order){
+      var result = oldDetailV90.apply(this, arguments);
+      stabilizeOrdersV90(order);
+      return result;
+    };
+    window.renderOrderDetail.__stableV90 = true;
+  }
+
+  var oldCenterV90 = typeof window.renderOrdersCenter === "function" ? window.renderOrdersCenter : null;
+  if(oldCenterV90 && !oldCenterV90.__stableV90){
+    window.renderOrdersCenter = function(){
+      var result = oldCenterV90.apply(this, arguments);
+      stabilizeOrdersV90(selectedOrderV90());
+      return result;
+    };
+    window.renderOrdersCenter.__stableV90 = true;
+  }
+
+  var oldShowAppPageV90 = typeof window.showAppPage === "function" ? window.showAppPage : null;
+  if(oldShowAppPageV90 && !oldShowAppPageV90.__stableOrdersV90){
+    window.showAppPage = function(page){
+      var next = page === "batch" ? "inbound" : (page === "inventory" ? "stock" : page);
+      if(next === "orders" && document.body.classList.contains("show-orders")){
+        stabilizeOrdersV90(selectedOrderV90());
+        return;
+      }
+      return oldShowAppPageV90.apply(this, arguments);
+    };
+    window.showAppPage.__stableOrdersV90 = true;
+  }
+
+  document.addEventListener("click", function(ev){
+    var btn = ev.target && ev.target.closest ? ev.target.closest("button") : null;
+    if(!btn || String(btn.textContent || "").trim() !== "订单") return;
+    if(document.body.classList.contains("show-orders")){
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      stabilizeOrdersV90(selectedOrderV90());
+      return;
+    }
+    setTimeout(function(){ stabilizeOrdersV90(selectedOrderV90()); }, 0);
+  }, true);
+
+  setTimeout(function(){ stabilizeOrdersV90(selectedOrderV90()); }, 0);
+})();
+</script>
+
 </body>
 </html>
