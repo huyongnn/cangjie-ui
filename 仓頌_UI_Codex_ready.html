@@ -23786,13 +23786,14 @@ body.show-cashier .cashier-buyer-tree-section-v82{
 </script>
 
 <script>
-/* ===== V85：库存显示只按已完成订单重算，彻底排除码单草稿 ===== */
+/* ===== V85：库存显示按已完成订单 + 已开码单重算，排除正在编辑的草稿 ===== */
 (function(){
   var rebuildingStockV85 = false;
 
   function nStockV85(v){ return Number(v || 0) || 0; }
   function batchesStockV85(){ return (typeof batches !== "undefined" && Array.isArray(batches)) ? batches : []; }
   function ordersStockV85(){ return (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders : []; }
+  function savedBillsStockV85(){ return (typeof savedCodeBills !== "undefined" && Array.isArray(savedCodeBills)) ? savedCodeBills : []; }
   function batchNoStockV85(b){ return String((b && (b.no || b.batchNo)) || ""); }
   function batchOwnerStockV85(b){ return String((b && (b.owner || b.ownerName)) || ""); }
   function itemNameStockV85(item){ return String((item && (item.name || item.goodsName || item.productName)) || ""); }
@@ -23804,6 +23805,14 @@ body.show-cashier .cashier-buyer-tree-section-v82{
     if(!order) return false;
     if(order.voided || order.status === "已作废" || order.displayStatus === "已作废") return false;
     return Array.isArray(order.lines) && order.lines.length;
+  }
+  function pendingBillCountsStockV85(bill){
+    if(!bill) return false;
+    if(bill.voided || bill.status === "已作废" || bill.displayStatus === "已作废") return false;
+    if(bill.orderNo) return false;
+    var st = String(bill.status || bill.displayStatus || "");
+    if(st === "已下单" || st === "已收银" || st === "已赊欠" || st === "已结清") return false;
+    return Array.isArray(bill.lines) && bill.lines.length;
   }
   function lineQtyWeightStockV85(line, item){
     var qty = nStockV85(line && line.qty);
@@ -23856,15 +23865,22 @@ body.show-cashier .cashier-buyer-tree-section-v82{
           item.soldWeight = 0;
         });
       });
-      ordersStockV85().forEach(function(order){
-        if(!orderCountsStockV85(order)) return;
-        (order.lines || []).forEach(function(line){
+      function addLinesStockV85(lines){
+        (Array.isArray(lines) ? lines : []).forEach(function(line){
           var item = findItemForLineStockV85(line);
           if(!item) return;
           var amount = lineQtyWeightStockV85(line, item);
           item.sold = nStockV85(item.sold) + amount.qty;
           item.soldWeight = nStockV85(item.soldWeight) + amount.weight;
         });
+      }
+      ordersStockV85().forEach(function(order){
+        if(!orderCountsStockV85(order)) return;
+        addLinesStockV85(order.lines);
+      });
+      savedBillsStockV85().forEach(function(bill){
+        if(!pendingBillCountsStockV85(bill)) return;
+        addLinesStockV85(bill.lines);
       });
     }finally{
       rebuildingStockV85 = false;
