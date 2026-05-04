@@ -24242,5 +24242,402 @@ body.show-cashier .cashier-buyer-tree-section-v82{
 })();
 </script>
 
+<style>
+/* ===== V88：库存页“已售”口径显示为已售/码单占用 ===== */
+body.show-stock #stockRoot .stock-table td:nth-child(5)::before{content:"已售/占用"!important}
+</style>
+
+<script>
+/* ===== V88：库存页与收银台统一按完成订单 + 未完成码单占用计算 ===== */
+(function(){
+  var oldStockCalcItemV88 = typeof window.stockCalcItem === "function" ? window.stockCalcItem : null;
+  var oldRenderStockV88 = typeof window.renderStockModule === "function" ? window.renderStockModule : null;
+  var oldRenderInventoryV88 = typeof window.renderInventoryStep1 === "function" ? window.renderInventoryStep1 : null;
+  var usageCacheV88 = null;
+  window.inventoryStep1FilterV88 = window.inventoryStep1FilterV88 || {type:"all", value:"all", title:"全部批次"};
+
+  function nV88(v){ return Number(v || 0) || 0; }
+  function eV88(v){ return typeof esc === "function" ? esc(v) : String(v ?? ""); }
+  function qV88(v){ return String(v ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\r?\n/g, " "); }
+  function mV88(v){ return typeof money === "function" ? money(v) : nV88(v).toFixed(2); }
+  function rowsV88(){ return (typeof batches !== "undefined" && Array.isArray(batches)) ? batches : []; }
+  function ordersV88(){ return (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders : []; }
+  function billsV88(){ return (typeof savedCodeBills !== "undefined" && Array.isArray(savedCodeBills)) ? savedCodeBills : []; }
+  function goodsV88(){ return (typeof goodsMaster !== "undefined" && Array.isArray(goodsMaster)) ? goodsMaster : []; }
+  function batchNoV88(batch){ return String((batch && (batch.no || batch.batchNo)) || ""); }
+  function batchOwnerV88(batch){ return String((batch && (batch.owner || batch.ownerName)) || ""); }
+  function lineBatchNoV88(line){ return String((line && (line.batchNo || line.no)) || ""); }
+  function lineOwnerV88(line){ return String((line && (line.owner || line.batchOwner || line.ownerName)) || ""); }
+  function lineNameV88(line){ return String((line && (line.name || line.goodsName || line.productName)) || ""); }
+  function itemGoodsV88(item){ return goodsV88().find(function(g){ return item && g && g.id === item.goodsId; }) || {}; }
+  function itemNameV88(item){
+    var g = itemGoodsV88(item);
+    return String((item && (item.name || item.goodsName || item.productName)) || g.name || "未命名商品");
+  }
+  function itemPackV88(item){
+    var g = itemGoodsV88(item);
+    return String((item && item.pack) || g.pack || "");
+  }
+  function itemSpecV88(item){
+    var g = itemGoodsV88(item);
+    return nV88((item && item.spec) || g.spec);
+  }
+  function itemUnitV88(item){
+    var g = itemGoodsV88(item);
+    return String((item && item.unit) || g.unit || "件");
+  }
+  function isConfirmedBatchV88(batch){
+    return !!(batch && batch.confirmed) && !(batch.ownerSettled || batch.ownerSettlementAt || batch.saleStatus === "settled");
+  }
+  function confirmedBatchesV88(){
+    try{ if(typeof ensureBatchConfirmFlags === "function") ensureBatchConfirmFlags(); }catch(err){}
+    return rowsV88().filter(isConfirmedBatchV88);
+  }
+  function completedOrderV88(order){
+    if(!order || order.voided || order.status === "已作废" || order.displayStatus === "已作废") return false;
+    if(typeof normalizeOrderType === "function"){
+      var t = normalizeOrderType(order);
+      return t === "已收银" || t === "已赊欠";
+    }
+    return !!(order.orderNo || order.status === "已下单" || order.status === "已收银" || order.status === "已赊欠");
+  }
+  function pendingBillV88(bill){
+    if(!bill || bill.voided || bill.status === "已作废" || bill.displayStatus === "已作废") return false;
+    if(bill.orderNo) return false;
+    var st = String(bill.status || bill.displayStatus || "");
+    if(st === "已下单" || st === "已收银" || st === "已赊欠" || st === "已结清") return false;
+    return Array.isArray(bill.lines) && bill.lines.length;
+  }
+  function batchMatchesLineV88(batch, line){
+    if(!batch || !line) return false;
+    if(line.batchId && String(batch.id || "") === String(line.batchId)) return true;
+    var owner = lineOwnerV88(line);
+    var no = lineBatchNoV88(line);
+    return (!owner || batchOwnerV88(batch) === owner) && (!no || batchNoV88(batch) === no);
+  }
+  function itemMatchesLineV88(item, line){
+    if(!item || !line) return false;
+    return (line.batchItemId && String(item.id || "") === String(line.batchItemId)) ||
+      (line.goodsId && String(item.goodsId || "") === String(line.goodsId)) ||
+      (line.itemId && String(item.id || "") === String(line.itemId)) ||
+      (!!lineNameV88(line) && itemNameV88(item) === lineNameV88(line));
+  }
+  function findItemForLineV88(line){
+    var batches = confirmedBatchesV88();
+    for(var bi=0; bi<batches.length; bi++){
+      var batch = batches[bi];
+      if(!batchMatchesLineV88(batch, line)) continue;
+      var items = Array.isArray(batch.items) ? batch.items : [];
+      for(var ii=0; ii<items.length; ii++){
+        if(itemMatchesLineV88(items[ii], line)) return {batch:batch, item:items[ii]};
+      }
+    }
+    for(var bj=0; bj<batches.length; bj++){
+      var loose = Array.isArray(batches[bj].items) ? batches[bj].items : [];
+      for(var ij=0; ij<loose.length; ij++){
+        if(itemMatchesLineV88(loose[ij], line)) return {batch:batches[bj], item:loose[ij]};
+      }
+    }
+    return {batch:null, item:null};
+  }
+  function lineQtyWeightV88(line, item){
+    var qty = nV88(line && line.qty);
+    var weight = nV88(line && line.weight);
+    var pack = String((line && (line.pack || line.type)) || itemPackV88(item));
+    if(!weight && pack === "定装") weight = qty * nV88((line && line.spec) || itemSpecV88(item));
+    return {qty:qty, weight:weight};
+  }
+  function ensureUsageRowV88(map, item){
+    if(!map.has(item)) map.set(item, {soldQty:0, soldWeight:0, pendingQty:0, pendingWeight:0, saleAmount:0, ledger:[]});
+    return map.get(item);
+  }
+  function addUsageLinesV88(map, source, pending){
+    (Array.isArray(source && source.lines) ? source.lines : []).forEach(function(line){
+      var found = findItemForLineV88(line);
+      if(!found.item) return;
+      var amount = lineQtyWeightV88(line, found.item);
+      var row = ensureUsageRowV88(map, found.item);
+      if(pending){
+        row.pendingQty += amount.qty;
+        row.pendingWeight += amount.weight;
+      }else{
+        row.soldQty += amount.qty;
+        row.soldWeight += amount.weight;
+        row.saleAmount += nV88(line.amount);
+      }
+      row.ledger.push({
+        pending:pending,
+        time:source.time || "",
+        buyer:source.customerName || "",
+        orderNo:source.orderNo || source.billNo || "",
+        qty:amount.qty,
+        weight:amount.weight,
+        amount:nV88(line.amount)
+      });
+    });
+  }
+  function usageMapV88(){
+    if(usageCacheV88) return usageCacheV88;
+    var map = new Map();
+    ordersV88().forEach(function(order){ if(completedOrderV88(order)) addUsageLinesV88(map, order, false); });
+    billsV88().forEach(function(bill){ if(pendingBillV88(bill)) addUsageLinesV88(map, bill, true); });
+    return map;
+  }
+  function findBatchForItemObjectV88(item){
+    for(var bi=0; bi<rowsV88().length; bi++){
+      var batch = rowsV88()[bi];
+      var items = Array.isArray(batch && batch.items) ? batch.items : [];
+      for(var ii=0; ii<items.length; ii++){
+        if(items[ii] === item) return batch;
+      }
+    }
+    return null;
+  }
+  function calcItemV88(item){
+    var pack = itemPackV88(item);
+    var fixed = pack === "定装";
+    var qty = nV88(item && item.qty);
+    var unit = itemUnitV88(item);
+    var spec = itemSpecV88(item);
+    var inWeight = fixed ? qty * spec : nV88(item && item.weight);
+    var usage = usageMapV88().get(item) || {soldQty:0, soldWeight:0, pendingQty:0, pendingWeight:0, saleAmount:0, ledger:[]};
+    var sold = usage.soldQty + usage.pendingQty;
+    var soldWeight = usage.soldWeight + usage.pendingWeight;
+    if(fixed) soldWeight = sold * spec;
+    if(!fixed && qty > 0 && sold >= qty && inWeight > 0 && soldWeight < inWeight) soldWeight = inWeight;
+    var remainQty = qty - sold;
+    var remainWeight = inWeight - soldWeight;
+    return {
+      qty:qty,
+      sold:sold,
+      soldWeight:soldWeight,
+      pendingQty:usage.pendingQty,
+      pendingWeight:usage.pendingWeight,
+      remainQty:remainQty,
+      inWeight:inWeight,
+      remainWeight:remainWeight,
+      unit:unit,
+      fixed:fixed,
+      saleAmount:usage.saleAmount,
+      ledger:usage.ledger
+    };
+  }
+  function amountTextV88(qty, weight, unit, pendingQty, pendingWeight){
+    var pending = (nV88(pendingQty) > 0 || nV88(pendingWeight) > 0)
+      ? '<span class="inventory-step1-sub">含码单占用 '+nV88(pendingQty)+eV88(unit || "件")+' / '+nV88(pendingWeight)+'斤</span>'
+      : "";
+    return nV88(qty)+eV88(unit || "件")+'<span class="inventory-step1-sub">'+nV88(weight)+'斤</span>'+pending;
+  }
+  function batchStoppedV88(batch){
+    return !!(batch && (batch.saleStopped || batch.soldOut || batch.saleStatus === "stopped" || batch.saleStatus === "soldout" || batch.salePaused || batch.settled || batch.closed));
+  }
+  function itemStoppedV88(item){
+    return !!(item && (item.saleStopped || item.saleStatus === "stopped" || item.salePaused || item.settled || item.closed));
+  }
+  function batchSoldOutV88(batch){
+    return !!(batch && (batch.soldOut || batch.saleStatus === "soldout"));
+  }
+  function batchSettledV88(batch){
+    return !!(batch && (batch.settled || batch.closed || batch.saleStatus === "settled"));
+  }
+  function itemSettledV88(item){
+    return !!(item && (item.settled || item.closed || item.saleStatus === "settled"));
+  }
+  function rowsForInventoryV88(){
+    var rows = [];
+    confirmedBatchesV88().forEach(function(batch){
+      (Array.isArray(batch.items) ? batch.items : []).forEach(function(item){
+        var calc = calcItemV88(item);
+        rows.push({
+          owner:batchOwnerV88(batch) || "-",
+          batchId:batch.id || "",
+          batchNo:batchNoV88(batch) || "-",
+          batchType:batch.tag || batch.type || "",
+          goodsId:item.goodsId || item.id || itemNameV88(item),
+          goodsName:itemNameV88(item),
+          pack:itemPackV88(item),
+          unit:calc.unit,
+          inQty:calc.qty,
+          inWeight:calc.inWeight,
+          soldQty:calc.sold,
+          soldWeight:calc.soldWeight,
+          pendingQty:calc.pendingQty,
+          pendingWeight:calc.pendingWeight,
+          remainQty:calc.remainQty,
+          remainWeight:calc.remainWeight,
+          saleAmount:calc.saleAmount,
+          orders:calc.ledger,
+          saleStopped:batchStoppedV88(batch) || itemStoppedV88(item),
+          soldOut:batchSoldOutV88(batch),
+          settled:batchSettledV88(batch) || itemSettledV88(item)
+        });
+      });
+    });
+    return rows;
+  }
+  function filteredRowsV88(){
+    var filter = window.inventoryStep1FilterV88 || {type:"all", value:"all", title:"全部批次"};
+    var q = String((document.getElementById("inventoryStep1Search") && document.getElementById("inventoryStep1Search").value) || "").trim().toLowerCase();
+    return rowsForInventoryV88().filter(function(r){
+      if(filter.type === "owner" && r.owner !== filter.value) return false;
+      if(filter.type === "batch" && r.batchId !== filter.value) return false;
+      if(filter.type === "goods" && r.goodsId !== filter.value && r.goodsName !== filter.value) return false;
+      if(!q) return true;
+      return [r.owner,r.batchNo,r.batchType,r.goodsName,r.pack].join(" ").toLowerCase().includes(q);
+    });
+  }
+  function stateTextV88(row){
+    if(row.settled || row.soldOut) return "已售完";
+    if(row.saleStopped) return "已停售";
+    if(row.remainQty < 0 || row.remainWeight < 0) return "超卖";
+    if(row.remainQty <= 0 && row.inQty > 0) return "售完";
+    if(row.pendingQty > 0 || row.pendingWeight > 0) return "占用中";
+    return "开售中";
+  }
+  function buildTreeV88(allRows){
+    var filter = window.inventoryStep1FilterV88 || {type:"all", value:"all", title:"全部批次"};
+    var owners = {};
+    allRows.forEach(function(row){
+      if(!owners[row.owner]) owners[row.owner] = {};
+      if(!owners[row.owner][row.batchId]) owners[row.owner][row.batchId] = {batchNo:row.batchNo, type:row.batchType, rows:[]};
+      owners[row.owner][row.batchId].rows.push(row);
+    });
+    var html = '<div class="inventory-step1-node '+(filter.type==="all" ? "active" : "")+'" onclick="inventoryStep1Select(\'all\',\'all\',\'全部批次\')"><b>全部批次</b><span>'+allRows.length+' 个商品明细</span></div>';
+    Object.keys(owners).forEach(function(owner){
+      var ownerRows = [];
+      Object.keys(owners[owner]).forEach(function(batchId){ ownerRows = ownerRows.concat(owners[owner][batchId].rows); });
+      html += '<div class="inventory-step1-node '+(filter.type==="owner" && filter.value===owner ? "active" : "")+'" onclick="inventoryStep1Select(\'owner\',\''+qV88(owner)+'\',\''+qV88(owner)+'\')"><b>'+eV88(owner)+'</b><span>'+Object.keys(owners[owner]).length+' 个批次｜'+ownerRows.length+' 个商品</span></div>';
+      Object.keys(owners[owner]).forEach(function(batchId){
+        var b = owners[owner][batchId];
+        var source = rowsV88().find(function(batch){ return batch && String(batch.id || "") === String(batchId || ""); });
+        var status = batchSoldOutV88(source) ? "｜已售完" : (batchStoppedV88(source) ? "｜已停售" : "");
+        html += '<div class="inventory-step1-node batch '+(filter.type==="batch" && filter.value===batchId ? "active" : "")+'" onclick="inventoryStep1Select(\'batch\',\''+qV88(batchId)+'\',\''+qV88(owner + "｜" + b.batchNo)+'\')"><b>批次 '+eV88(b.batchNo)+'</b><span>'+eV88(b.type)+'｜'+b.rows.length+' 个商品'+status+'</span></div>';
+      });
+    });
+    return html;
+  }
+  function renderBatchOpsV88(){
+    var actions = document.querySelector("#inventoryStep1Root .inventory-step1-actions");
+    if(!actions) return;
+    actions.querySelectorAll(".inventory-step1-batch-op").forEach(function(el){ el.remove(); });
+    var filter = window.inventoryStep1FilterV88 || {};
+    if(filter.type !== "batch") return;
+    var batch = rowsV88().find(function(b){ return b && String(b.id || "") === String(filter.value || ""); });
+    if(!batch) return;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "inventory-step1-batch-op " + (batchSoldOutV88(batch) ? "inventory-step1-gray" : "inventory-step1-orangebtn");
+    btn.textContent = batchSoldOutV88(batch) ? "取消售完" : "售完";
+    btn.onclick = function(){ if(typeof markInventoryBatchSoldOutStep1 === "function") markInventoryBatchSoldOutStep1(batch.id); };
+    actions.appendChild(btn);
+  }
+  function ensureInventoryDomV88(){
+    if(!document.getElementById("inventoryStep1Root") && typeof oldRenderInventoryV88 === "function"){
+      try{ oldRenderInventoryV88(); }catch(err){}
+    }
+    return !!document.getElementById("inventoryStep1Root");
+  }
+
+  window.stockCalcItem = function(item){
+    if(!item && oldStockCalcItemV88) return oldStockCalcItemV88.apply(this, arguments);
+    return calcItemV88(item);
+  };
+
+  if(typeof oldRenderStockV88 === "function" && !oldRenderStockV88.__stockUnifiedV88){
+    window.renderStockModule = function(){
+      usageCacheV88 = usageMapV88();
+      try{
+        var result = oldRenderStockV88.apply(this, arguments);
+        var soldLabel = document.querySelector("#stockSummarySold")?.parentElement?.querySelector("span");
+        if(soldLabel) soldLabel.textContent = "已售/码单占用";
+        document.querySelectorAll("#stockRoot .stock-table thead th").forEach(function(th){
+          if((th.textContent || "").includes("已售")) th.textContent = "已售/占用量";
+        });
+        var sub = document.querySelector("#stockRoot .stock-topbar p");
+        if(sub) sub.textContent = "只显示已确认入库的商品；已完成订单和码单中心未下单占用会同步到剩余库存。";
+        return result;
+      }finally{
+        usageCacheV88 = null;
+      }
+    };
+    window.renderStockModule.__stockUnifiedV88 = true;
+  }
+
+  window.inventoryStep1Select = function(type, value, title){
+    window.inventoryStep1FilterV88 = {type:type || "all", value:value || "all", title:title || "全部批次"};
+    window.renderInventoryStep1();
+  };
+
+  window.renderInventoryStep1 = function(){
+    if(!ensureInventoryDomV88()) return;
+    usageCacheV88 = usageMapV88();
+    try{
+      var root = document.getElementById("inventoryStep1Root");
+      if(!root) return;
+      var allRows = rowsForInventoryV88();
+      var showRows = filteredRowsV88();
+      var totals = showRows.reduce(function(s,r){
+        s.inQty += r.inQty; s.inWeight += r.inWeight;
+        s.soldQty += r.soldQty; s.soldWeight += r.soldWeight;
+        s.pendingQty += r.pendingQty; s.pendingWeight += r.pendingWeight;
+        s.remainQty += r.remainQty; s.remainWeight += r.remainWeight;
+        s.amount += r.saleAmount;
+        return s;
+      }, {inQty:0,inWeight:0,soldQty:0,soldWeight:0,pendingQty:0,pendingWeight:0,remainQty:0,remainWeight:0,amount:0});
+      var filter = window.inventoryStep1FilterV88 || {type:"all", value:"all", title:"全部批次"};
+      var tree = document.getElementById("inventoryStep1Tree");
+      var title = document.getElementById("inventoryStep1Title");
+      var sub = document.getElementById("inventoryStep1Sub");
+      var summary = document.getElementById("inventoryStep1Summary");
+      var table = document.getElementById("inventoryStep1Table");
+      var ledger = document.getElementById("inventoryStep1Ledger");
+      if(tree) tree.innerHTML = buildTreeV88(allRows);
+      if(title) title.textContent = filter.title || "全部批次";
+      if(sub) sub.textContent = "库存与收银台同口径：已完成订单 + 码单中心未下单占用，共同影响剩余。";
+      renderBatchOpsV88();
+      if(summary){
+        summary.innerHTML = [
+          ["商品明细", showRows.length],
+          ["入库数量", nV88(totals.inQty)],
+          ["入库重量", nV88(totals.inWeight) + "斤"],
+          ["已售/占用数量", nV88(totals.soldQty)],
+          ["已售/占用重量", nV88(totals.soldWeight) + "斤"],
+          ["码单占用", nV88(totals.pendingQty) + "件 / " + nV88(totals.pendingWeight) + "斤"],
+          ["剩余数量", nV88(totals.remainQty)],
+          ["剩余重量", nV88(totals.remainWeight) + "斤"],
+          ["销售金额", mV88(totals.amount)]
+        ].map(function(x){ return '<div class="inventory-step1-card"><span>'+eV88(x[0])+'</span><b>'+eV88(x[1])+'</b></div>'; }).join("");
+      }
+      if(table){
+        table.innerHTML = showRows.length ? '<table class="inventory-step1-table"><thead><tr><th>货主</th><th>批次</th><th>商品</th><th>入库数量/重量</th><th>已售/占用数量</th><th>剩余库存</th><th>销售金额</th><th>状态</th><th>操作</th></tr></thead><tbody>'+
+          showRows.map(function(r){
+            var remainCls = r.remainQty < 0 || r.remainWeight < 0 ? "inventory-negative" : "inventory-positive";
+            var opText = r.saleStopped ? "开售" : "停售";
+            var opClass = r.saleStopped ? "inventory-step1-greenbtn" : "inventory-step1-orangebtn";
+            return '<tr onclick="inventoryStep1Select(\'goods\',\''+qV88(r.goodsId)+'\',\''+qV88(r.goodsName)+'\')"><td>'+eV88(r.owner)+'</td><td><b>'+eV88(r.batchNo)+'</b><span>'+eV88(r.batchType)+'</span></td><td><b class="inventory-step1-green">'+eV88(r.goodsName)+'</b><span>'+eV88(r.pack)+'</span></td><td>'+amountTextV88(r.inQty,r.inWeight,r.unit)+'</td><td>'+amountTextV88(r.soldQty,r.soldWeight,r.unit,r.pendingQty,r.pendingWeight)+'</td><td>'+amountTextV88(r.remainQty,r.remainWeight,r.unit)+'</td><td>'+mV88(r.saleAmount)+'</td><td><em class="'+((r.settled || r.soldOut) ? "settled" : r.saleStopped ? "stopped" : "")+'">'+eV88(stateTextV88(r))+'</em></td><td><button type="button" class="'+opClass+'" onclick="event.stopPropagation();toggleInventoryGoodsSaleStep1(\''+qV88(r.batchId)+'\',\''+qV88(r.goodsId)+'\',\''+qV88(r.goodsName)+'\')">'+opText+'</button></td></tr>';
+          }).join("") + '</tbody></table>' : '<div class="inventory-step1-empty">暂无已确认入库库存。<br>新建批次后，必须点击“确认入库”才会进入库存和收银台。</div>';
+      }
+      if(ledger){
+        var orderLines = [];
+        showRows.forEach(function(r){
+          (r.orders || []).forEach(function(o){
+            orderLines.push('<tr><td>'+(o.pending ? "码单占用" : "销售出库")+'</td><td>'+eV88(o.time)+'</td><td>'+eV88(r.owner)+'</td><td>'+eV88(r.batchNo)+'</td><td>'+eV88(r.goodsName)+'</td><td>'+eV88(o.buyer)+'</td><td>'+eV88(o.orderNo)+'</td><td>-'+nV88(o.qty)+eV88(r.unit)+'</td><td>-'+nV88(o.weight)+'斤</td><td>'+mV88(o.amount)+'</td></tr>');
+          });
+        });
+        ledger.innerHTML = '<table class="inventory-step1-table"><thead><tr><th>类型</th><th>时间</th><th>货主</th><th>批次</th><th>商品</th><th>买家</th><th>单号</th><th>数量</th><th>重量</th><th>金额</th></tr></thead><tbody>'+
+          (orderLines.join("") || '<tr><td colspan="10">暂无销售出库或码单占用记录。</td></tr>') + '</tbody></table>';
+      }
+    }finally{
+      usageCacheV88 = null;
+    }
+  };
+
+  setTimeout(function(){
+    try{ if(typeof renderStockModule === "function") renderStockModule(); }catch(err){}
+    try{ if(typeof renderInventoryStep1 === "function") renderInventoryStep1(); }catch(err){}
+  }, 0);
+})();
+</script>
+
 </body>
 </html>
