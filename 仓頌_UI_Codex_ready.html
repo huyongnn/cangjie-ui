@@ -22527,5 +22527,454 @@ body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-right{
 }
 </style>
 
+<style id="cangjieOrderRepayV81Style">
+/* ===== V81：订单详情直接还款 ===== */
+#ordersRoot .order-repay-v81-strip{
+  margin:12px 0 14px!important;
+  padding:12px!important;
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:10px!important;
+  border:1px solid rgba(29,29,31,.08)!important;
+  border-radius:16px!important;
+  background:rgba(255,255,255,.78)!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.045)!important;
+}
+#ordersRoot .order-repay-v81-cell{
+  min-height:58px!important;
+  padding:10px 12px!important;
+  border-radius:13px!important;
+  background:rgba(247,248,245,.72)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+  gap:4px!important;
+}
+#ordersRoot .order-repay-v81-cell span{
+  color:#6b726c!important;
+  font-size:12px!important;
+  font-weight:800!important;
+}
+#ordersRoot .order-repay-v81-cell b{
+  color:#1d1d1f!important;
+  font-size:18px!important;
+  line-height:1.1!important;
+  font-weight:950!important;
+}
+#ordersRoot .order-repay-v81-cell.debt b{color:#a7653f!important}
+#ordersRoot .order-repay-v81-action{
+  height:100%!important;
+  min-height:58px!important;
+  border:0!important;
+  border-radius:13px!important;
+  background:#202124!important;
+  color:#fff!important;
+  font-size:16px!important;
+  font-weight:950!important;
+  cursor:pointer!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.12)!important;
+}
+#ordersRoot .order-repay-v81-action:disabled{
+  background:#eef0ed!important;
+  color:#6b726c!important;
+  cursor:not-allowed!important;
+  box-shadow:none!important;
+}
+.order-repay-v81-mask{
+  position:fixed;
+  inset:0;
+  z-index:100200;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(20,23,21,.42);
+  backdrop-filter:blur(18px);
+}
+.order-repay-v81-mask.show{display:flex}
+.order-repay-v81-modal{
+  width:min(460px,94vw);
+  border:1px solid rgba(255,255,255,.78);
+  border-radius:22px;
+  background:rgba(255,255,255,.94);
+  box-shadow:0 28px 80px rgba(0,0,0,.24);
+  color:#1d1d1f;
+  overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;
+}
+.order-repay-v81-head{
+  padding:18px 18px 12px;
+  border-bottom:1px solid rgba(29,29,31,.08);
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.order-repay-v81-head h3{
+  margin:0 0 5px;
+  font-size:22px;
+  line-height:1.1;
+  font-weight:950;
+}
+.order-repay-v81-head p{
+  margin:0;
+  color:#667066;
+  font-size:13px;
+  font-weight:800;
+}
+.order-repay-v81-close{
+  width:36px;
+  height:36px;
+  border:1px solid rgba(29,29,31,.1);
+  border-radius:50%;
+  background:#fff;
+  color:#1d1d1f;
+  font-size:22px;
+  line-height:1;
+  cursor:pointer;
+}
+.order-repay-v81-body{padding:16px 18px 18px}
+.order-repay-v81-summary{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-bottom:14px;
+}
+.order-repay-v81-summary div{
+  border-radius:13px;
+  background:#f6f7f4;
+  padding:10px 12px;
+}
+.order-repay-v81-summary span{
+  display:block;
+  margin-bottom:4px;
+  color:#6b726c;
+  font-size:12px;
+  font-weight:800;
+}
+.order-repay-v81-summary b{
+  display:block;
+  font-size:17px;
+  line-height:1.15;
+  font-weight:950;
+}
+.order-repay-v81-field{margin-top:10px}
+.order-repay-v81-field label{
+  display:block;
+  margin-bottom:6px;
+  color:#606860;
+  font-size:12px;
+  font-weight:900;
+}
+.order-repay-v81-field input,
+.order-repay-v81-field select,
+.order-repay-v81-field textarea{
+  width:100%;
+  border:1px solid rgba(29,29,31,.12);
+  border-radius:13px;
+  background:#fff;
+  color:#1d1d1f;
+  font-size:15px;
+  font-weight:850;
+  outline:none;
+  box-sizing:border-box;
+}
+.order-repay-v81-field input,
+.order-repay-v81-field select{height:44px;padding:0 12px}
+.order-repay-v81-field textarea{height:72px;padding:10px 12px;resize:vertical}
+.order-repay-v81-actions{
+  margin-top:16px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.order-repay-v81-actions button{
+  height:44px;
+  border-radius:13px;
+  font-size:15px;
+  font-weight:950;
+  cursor:pointer;
+}
+.order-repay-v81-cancel{
+  border:1px solid rgba(29,29,31,.12);
+  background:#fff;
+  color:#1d1d1f;
+}
+.order-repay-v81-confirm{
+  border:1px solid #202124;
+  background:#202124;
+  color:#fff;
+}
+@media(max-width:760px){
+  #ordersRoot .order-repay-v81-strip{grid-template-columns:1fr 1fr!important}
+  #ordersRoot .order-repay-v81-action{grid-column:1 / -1!important}
+}
+</style>
+
+<script>
+/* ===== V81：订单详情直接还款，不改底层订单/库存框架 ===== */
+(function(){
+  var activeOrderRepayV81 = "";
+
+  function numOrderRepayV81(v){ return Number(v || 0) || 0; }
+  function moneyOrderRepayV81(v){
+    return typeof money === "function" ? money(v) : numOrderRepayV81(v).toFixed(2);
+  }
+  function escOrderRepayV81(v){
+    return typeof esc === "function" ? esc(v) : String(v ?? "").replace(/[&<>"']/g, function(m){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];
+    });
+  }
+  function orderKeyRepayV81(order){
+    return String((order && (order.orderNo || order.billNo || order.id)) || "");
+  }
+  function orderRowsRepayV81(){
+    return (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders : [];
+  }
+  function buyerRowsRepayV81(){
+    return (typeof cashierCustomers !== "undefined" && Array.isArray(cashierCustomers)) ? cashierCustomers : [];
+  }
+  function findOrderRepayV81(key){
+    var want = String(key || "");
+    return orderRowsRepayV81().find(function(order){ return orderKeyRepayV81(order) === want; }) || null;
+  }
+  function selectedOrderRepayV81(){
+    try{
+      var selected = typeof currentSelectedOrderRecord === "function" ? currentSelectedOrderRecord() : null;
+      return selected ? findOrderRepayV81(orderKeyRepayV81(selected)) : null;
+    }catch(err){
+      return null;
+    }
+  }
+  function isVoidRepayV81(order){
+    return !!(order && (order.voided || order.status === "已作废" || order.displayStatus === "已作废"));
+  }
+  function paidRepayV81(order){
+    if(typeof buyerV47PaidAmount === "function") return numOrderRepayV81(buyerV47PaidAmount(order));
+    return numOrderRepayV81(order && order.paid);
+  }
+  function debtRepayV81(order){
+    if(typeof buyerV47DebtAmount === "function") return numOrderRepayV81(buyerV47DebtAmount(order));
+    return Math.max(numOrderRepayV81(order && order.debt), 0);
+  }
+  function paymentsRepayV81(order){
+    return Array.isArray(order && order.payments) ? order.payments : [];
+  }
+  function findBuyerRepayV81(order){
+    if(!order) return null;
+    return buyerRowsRepayV81().find(function(buyer){
+      return buyer && (buyer.id === order.customerId || buyer.name === order.customerName);
+    }) || null;
+  }
+  function setOrderTextRepayV81(order){
+    if(!order) return;
+    var lines = (order.lines || []).map(function(i, idx){
+      return (idx + 1) + ". " + (i.name || i.goodsName || "") + "｜" + (i.owner || "") + (i.batchNo || "") + "｜" + (i.type || "") + "｜" + numOrderRepayV81(i.qty) + (i.unit || "件") + "｜" + numOrderRepayV81(i.weight) + "斤｜" + moneyOrderRepayV81(i.price) + "元/" + ((i.type || "") === "定装" ? "件" : "斤") + "｜" + moneyOrderRepayV81(i.amount);
+    });
+    var text = [
+      "仓頡订单",
+      "订单号：" + orderKeyRepayV81(order),
+      "客户：" + (order.customerName || ""),
+      "时间：" + (order.time || ""),
+      "----------------",
+      lines.join("\n"),
+      "----------------",
+      "总数量：" + numOrderRepayV81(order.totalQty),
+      "总重量：" + numOrderRepayV81(order.totalWeight) + "斤",
+      "原金额：" + moneyOrderRepayV81(order.originalAmount || order.totalAmount),
+      "优惠：" + moneyOrderRepayV81(order.discount || 0) + (order.discountNote ? "（" + order.discountNote + "）" : ""),
+      "应收金额：" + moneyOrderRepayV81(order.totalAmount),
+      "实收/已还：" + moneyOrderRepayV81(paidRepayV81(order)),
+      "欠款：" + moneyOrderRepayV81(debtRepayV81(order))
+    ].join("\n");
+    if(order.orderRemark || order.remark) text += "\n订单备注：" + (order.orderRemark || order.remark);
+    var pays = paymentsRepayV81(order);
+    if(pays.length){
+      text += "\n----------------\n还款记录：";
+      pays.forEach(function(pay, idx){
+        text += "\n" + (idx + 1) + ". " + (pay.time || "") + "｜" + moneyOrderRepayV81(pay.amount) + "｜" + (pay.method || "") + (pay.remark ? "｜" + pay.remark : "");
+      });
+    }
+    order.text = text;
+  }
+  function refreshOrderRepayV81(order){
+    try{
+      var buyer = findBuyerRepayV81(order);
+      if(buyer && typeof recalcBuyerV47Debt === "function") recalcBuyerV47Debt(buyer.id);
+    }catch(err){}
+    try{ if(typeof renderOrdersCenter === "function") renderOrdersCenter(); }catch(err){}
+    try{ if(typeof renderBuyerV47 === "function") renderBuyerV47(); }catch(err){}
+    try{ if(typeof renderCashierCustomers === "function") renderCashierCustomers(); }catch(err){}
+    try{ if(typeof renderReportsStep1 === "function") renderReportsStep1(); }catch(err){}
+    try{ if(typeof renderOwnerStep1 === "function") renderOwnerStep1(); }catch(err){}
+    try{ if(typeof tudou2SaveNow === "function") setTimeout(tudou2SaveNow, 0); }catch(err){}
+  }
+  function ensureOrderRepayV81Dom(){
+    if(document.getElementById("orderRepayV81Mask")) return;
+    var mask = document.createElement("div");
+    mask.id = "orderRepayV81Mask";
+    mask.className = "order-repay-v81-mask";
+    mask.innerHTML = '<div class="order-repay-v81-modal">'
+      + '<div class="order-repay-v81-head"><div><h3>订单还款</h3><p id="orderRepayV81Sub">记录该订单的本次还款</p></div><button class="order-repay-v81-close" type="button" onclick="closeOrderRepayV81()">×</button></div>'
+      + '<div class="order-repay-v81-body">'
+      + '<input id="orderRepayV81OrderNo" type="hidden">'
+      + '<div class="order-repay-v81-summary"><div><span>订单</span><b id="orderRepayV81No">-</b></div><div><span>客户</span><b id="orderRepayV81Buyer">-</b></div><div><span>订单金额</span><b id="orderRepayV81Total">0.00</b></div><div><span>剩余欠款</span><b id="orderRepayV81Debt">0.00</b></div></div>'
+      + '<div class="order-repay-v81-field"><label>本次还款</label><input id="orderRepayV81Amount" type="number" min="0" step="0.01" inputmode="decimal"></div>'
+      + '<div class="order-repay-v81-field"><label>收款方式</label><select id="orderRepayV81Method"><option value="现金">现金</option><option value="微信">微信</option><option value="支付宝">支付宝</option><option value="银行卡">银行卡</option><option value="其他">其他</option></select></div>'
+      + '<div class="order-repay-v81-field"><label>备注</label><textarea id="orderRepayV81Remark" placeholder="可不填"></textarea></div>'
+      + '<div class="order-repay-v81-actions"><button class="order-repay-v81-cancel" type="button" onclick="closeOrderRepayV81()">取消</button><button class="order-repay-v81-confirm" type="button" onclick="confirmOrderRepayV81()">确认还款</button></div>'
+      + '</div></div>';
+    mask.addEventListener("click", function(ev){ if(ev.target === mask) window.closeOrderRepayV81(); });
+    document.body.appendChild(mask);
+  }
+  function decorateOrderDetailRepayV81(order){
+    var box = document.getElementById("ordersDetailBody");
+    if(!box || !order || isVoidRepayV81(order)) return;
+    if(box.querySelector(".order-repay-v81-strip")) return;
+    var debt = debtRepayV81(order);
+    var strip = document.createElement("div");
+    strip.className = "order-repay-v81-strip";
+    strip.innerHTML = '<div class="order-repay-v81-cell"><span>订单金额</span><b>'+moneyOrderRepayV81(order.totalAmount || 0)+'</b></div>'
+      + '<div class="order-repay-v81-cell"><span>已收/已还</span><b>'+moneyOrderRepayV81(paidRepayV81(order))+'</b></div>'
+      + '<div class="order-repay-v81-cell debt"><span>剩余欠款</span><b>'+moneyOrderRepayV81(debt)+'</b></div>'
+      + '<button class="order-repay-v81-action" type="button" '+(debt > 0 ? 'onclick="openOrderRepayV81()"' : "disabled")+'>'+(debt > 0 ? "还款" : "已结清")+'</button>';
+    var grid = box.querySelector(".order-info-grid");
+    if(grid && grid.parentNode) grid.parentNode.insertBefore(strip, grid.nextSibling);
+  }
+  function ensureOrderRepayButtonV81(){
+    var actions = document.querySelector("#ordersRoot .orders-detail-actions");
+    if(!actions) return;
+    var order = selectedOrderRepayV81();
+    var debt = debtRepayV81(order);
+    var btn = document.getElementById("orderRepayV81Btn");
+    if(!order || isVoidRepayV81(order) || debt <= 0){
+      if(btn) btn.remove();
+      return;
+    }
+    if(!btn){
+      btn = document.createElement("button");
+      btn.id = "orderRepayV81Btn";
+      btn.type = "button";
+      btn.className = "btn-blue";
+      btn.textContent = "还款";
+      btn.onclick = function(){ window.openOrderRepayV81(); };
+      var edit = document.getElementById("orderEditStep1Btn");
+      if(edit && edit.nextSibling) actions.insertBefore(btn, edit.nextSibling);
+      else actions.insertBefore(btn, actions.firstChild);
+    }
+  }
+  window.openOrderRepayV81 = function(orderNo){
+    ensureOrderRepayV81Dom();
+    var order = orderNo ? findOrderRepayV81(orderNo) : selectedOrderRepayV81();
+    if(!order){
+      if(typeof toast === "function") toast("请先选择一张订单");
+      return;
+    }
+    if(isVoidRepayV81(order)){
+      if(typeof toast === "function") toast("已作废订单不能还款");
+      return;
+    }
+    var debt = debtRepayV81(order);
+    if(debt <= 0){
+      if(typeof toast === "function") toast("该订单已结清");
+      return;
+    }
+    activeOrderRepayV81 = orderKeyRepayV81(order);
+    document.getElementById("orderRepayV81OrderNo").value = activeOrderRepayV81;
+    document.getElementById("orderRepayV81No").textContent = activeOrderRepayV81;
+    document.getElementById("orderRepayV81Buyer").textContent = order.customerName || "-";
+    document.getElementById("orderRepayV81Total").textContent = moneyOrderRepayV81(order.totalAmount || 0);
+    document.getElementById("orderRepayV81Debt").textContent = moneyOrderRepayV81(debt);
+    document.getElementById("orderRepayV81Amount").value = debt.toFixed(2);
+    document.getElementById("orderRepayV81Remark").value = "";
+    document.getElementById("orderRepayV81Mask").classList.add("show");
+    setTimeout(function(){ document.getElementById("orderRepayV81Amount")?.focus(); }, 30);
+  };
+  window.closeOrderRepayV81 = function(){
+    var mask = document.getElementById("orderRepayV81Mask");
+    if(mask) mask.classList.remove("show");
+  };
+  window.confirmOrderRepayV81 = function(){
+    var orderNo = document.getElementById("orderRepayV81OrderNo")?.value || activeOrderRepayV81;
+    var order = findOrderRepayV81(orderNo);
+    if(!order){
+      alert("没有找到对应订单。");
+      return;
+    }
+    var amount = numOrderRepayV81(document.getElementById("orderRepayV81Amount")?.value);
+    var debtBefore = debtRepayV81(order);
+    if(amount <= 0){
+      alert("请输入正确的还款金额。");
+      return;
+    }
+    if(amount > debtBefore){
+      alert("还款金额不能大于该订单剩余欠款。");
+      return;
+    }
+    var pay = {
+      id:"pay_order_" + Date.now(),
+      time:new Date().toLocaleString("zh-CN",{hour12:false}),
+      amount:amount,
+      method:document.getElementById("orderRepayV81Method")?.value || "现金",
+      remark:(document.getElementById("orderRepayV81Remark")?.value || "").trim(),
+      orderNo:orderNo
+    };
+    if(!Array.isArray(order.payments)) order.payments = [];
+    order.payments.push(pay);
+    order.paid = numOrderRepayV81(order.paid) + amount;
+    order.debt = Math.max(0, debtBefore - amount);
+    if(order.debt <= 0){
+      order.status = "已结清";
+      order.displayStatus = "已结清";
+    }else{
+      order.status = "部分还款";
+      order.displayStatus = "部分还款";
+    }
+    var buyer = findBuyerRepayV81(order);
+    if(buyer){
+      if(!Array.isArray(buyer.payments)) buyer.payments = [];
+      buyer.payments.push(Object.assign({}, pay));
+      if(typeof recalcBuyerV47Debt === "function") recalcBuyerV47Debt(buyer.id);
+      else buyer.debt = Math.max(numOrderRepayV81(buyer.debt) - amount, 0);
+    }
+    setOrderTextRepayV81(order);
+    window.closeOrderRepayV81();
+    refreshOrderRepayV81(order);
+    if(typeof toast === "function") toast("订单还款已记录");
+  };
+
+  var oldRenderOrderDetailRepayV81 = typeof window.renderOrderDetail === "function" ? window.renderOrderDetail : null;
+  if(oldRenderOrderDetailRepayV81 && !oldRenderOrderDetailRepayV81.__orderRepayV81Wrapped){
+    window.renderOrderDetail = function(order){
+      var result = oldRenderOrderDetailRepayV81.apply(this, arguments);
+      setTimeout(function(){
+        var realOrder = order ? findOrderRepayV81(orderKeyRepayV81(order)) || order : null;
+        decorateOrderDetailRepayV81(realOrder);
+        ensureOrderRepayButtonV81();
+      }, 0);
+      return result;
+    };
+    window.renderOrderDetail.__orderRepayV81Wrapped = true;
+  }
+  var oldRenderOrdersCenterRepayV81 = typeof window.renderOrdersCenter === "function" ? window.renderOrdersCenter : null;
+  if(oldRenderOrdersCenterRepayV81 && !oldRenderOrdersCenterRepayV81.__orderRepayV81Wrapped){
+    window.renderOrdersCenter = function(){
+      var result = oldRenderOrdersCenterRepayV81.apply(this, arguments);
+      setTimeout(function(){
+        decorateOrderDetailRepayV81(selectedOrderRepayV81());
+        ensureOrderRepayButtonV81();
+      }, 0);
+      return result;
+    };
+    window.renderOrdersCenter.__orderRepayV81Wrapped = true;
+  }
+  setTimeout(function(){
+    ensureOrderRepayV81Dom();
+    decorateOrderDetailRepayV81(selectedOrderRepayV81());
+    ensureOrderRepayButtonV81();
+  }, 0);
+})();
+</script>
+
 </body>
 </html>
