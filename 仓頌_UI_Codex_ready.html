@@ -23340,5 +23340,347 @@ body.show-cashier .cashier-buyer-tree-section-v82{
 })();
 </script>
 
+<script>
+/* ===== V83：收银码单/售卖同步库存件数和斤数 ===== */
+(function(){
+  var LOCK = "_stockLockV83";
+
+  function nStockV83(v){ return Number(v || 0) || 0; }
+  function rowsStockV83(){ return (typeof batches !== "undefined" && Array.isArray(batches)) ? batches : []; }
+  function currentRowsStockV83(){ return (typeof currentCodeBillItems !== "undefined" && Array.isArray(currentCodeBillItems)) ? currentCodeBillItems : []; }
+  function savedRowsStockV83(){ return (typeof savedCodeBills !== "undefined" && Array.isArray(savedCodeBills)) ? savedCodeBills : []; }
+  function batchNoStockV83(b){ return String((b && (b.no || b.batchNo)) || ""); }
+  function itemNameStockV83(item){ return String((item && (item.name || item.goodsName || item.productName)) || ""); }
+  function lineNameStockV83(line){ return String((line && (line.name || line.goodsName || line.productName)) || ""); }
+  function lineBatchNoStockV83(line){ return String((line && (line.batchNo || line.no)) || ""); }
+  function lineOwnerStockV83(line){ return String((line && (line.owner || line.batchOwner || line.ownerName)) || ""); }
+  function linePackStockV83(line){ return String((line && (line.pack || line.type)) || ""); }
+  function isFinalBillStockV83(bill){
+    var st = String((bill && (bill.status || bill.displayStatus)) || "");
+    return !!(bill && (bill.orderNo || st === "已下单" || st === "已收银" || st === "已赊欠" || st === "已结清" || st === "已作废"));
+  }
+  function lineQtyWeightStockV83(line){
+    var qty = nStockV83(line && line.qty);
+    var weight = nStockV83(line && line.weight);
+    if(!weight && linePackStockV83(line) === "定装"){
+      weight = qty * nStockV83(line && line.spec);
+    }
+    return {qty:qty, weight:weight};
+  }
+  function findBatchByLineStockV83(line){
+    if(!line) return null;
+    if(line.batchId){
+      var byId = rowsStockV83().find(function(b){ return b && b.id === line.batchId; });
+      if(byId) return byId;
+    }
+    var owner = lineOwnerStockV83(line);
+    var no = lineBatchNoStockV83(line);
+    if(owner || no){
+      var byMeta = rowsStockV83().find(function(b){
+        return (!owner || String(b.owner || b.ownerName || "") === owner) && (!no || batchNoStockV83(b) === no);
+      });
+      if(byMeta) return byMeta;
+    }
+    return null;
+  }
+  function findItemInBatchStockV83(batch, line){
+    if(!batch || !line) return null;
+    var items = Array.isArray(batch.items) ? batch.items : [];
+    return items.find(function(item){
+      return (line.batchItemId && String(item.id || "") === String(line.batchItemId)) ||
+        (line.goodsId && String(item.goodsId || "") === String(line.goodsId)) ||
+        (line.itemId && String(item.id || "") === String(line.itemId)) ||
+        (lineNameStockV83(line) && itemNameStockV83(item) === lineNameStockV83(line));
+    }) || null;
+  }
+  function findItemByLockStockV83(lock){
+    if(!lock) return null;
+    var batch = lock.batchId ? rowsStockV83().find(function(b){ return b && b.id === lock.batchId; }) : null;
+    if(!batch && (lock.owner || lock.batchNo)){
+      batch = rowsStockV83().find(function(b){
+        return (!lock.owner || String(b.owner || b.ownerName || "") === String(lock.owner)) &&
+          (!lock.batchNo || batchNoStockV83(b) === String(lock.batchNo));
+      }) || null;
+    }
+    if(!batch) return null;
+    return findItemInBatchStockV83(batch, lock) || null;
+  }
+  function findItemForLineStockV83(line){
+    var batch = findBatchByLineStockV83(line);
+    var item = findItemInBatchStockV83(batch, line);
+    if(item) return {batch:batch, item:item};
+    for(var bi=0; bi<rowsStockV83().length; bi++){
+      var b = rowsStockV83()[bi];
+      item = findItemInBatchStockV83(b, line);
+      if(item) return {batch:b, item:item};
+    }
+    return {batch:null, item:null};
+  }
+  function adjustItemStockV83(item, qtyDelta, weightDelta){
+    if(!item) return;
+    item.sold = Math.max(0, nStockV83(item.sold) + qtyDelta);
+    item.soldWeight = Math.max(0, nStockV83(item.soldWeight) + weightDelta);
+  }
+  function releaseLineStockV83(line){
+    if(!line || !line[LOCK]) return;
+    if(line[LOCK].final){
+      delete line[LOCK];
+      return;
+    }
+    var item = findItemByLockStockV83(line[LOCK]);
+    adjustItemStockV83(item, -nStockV83(line[LOCK].qty), -nStockV83(line[LOCK].weight));
+    delete line[LOCK];
+  }
+  function reserveLineStockV83(line, finalLock){
+    if(!line) return;
+    if(finalLock && line[LOCK] && line[LOCK].final) return;
+    releaseLineStockV83(line);
+    var amount = lineQtyWeightStockV83(line);
+    if(amount.qty <= 0 && amount.weight <= 0) return;
+    var found = findItemForLineStockV83(line);
+    if(!found.item) return;
+    adjustItemStockV83(found.item, amount.qty, amount.weight);
+    line.batchId = line.batchId || (found.batch && found.batch.id) || "";
+    line.batchItemId = line.batchItemId || found.item.id || found.item.goodsId || "";
+    line.goodsId = line.goodsId || found.item.goodsId || "";
+    line.owner = line.owner || (found.batch && (found.batch.owner || found.batch.ownerName)) || "";
+    line.batchNo = line.batchNo || (found.batch && batchNoStockV83(found.batch)) || "";
+    line[LOCK] = {
+      batchId:line.batchId,
+      batchItemId:line.batchItemId,
+      goodsId:line.goodsId,
+      name:lineNameStockV83(line),
+      owner:lineOwnerStockV83(line),
+      batchNo:lineBatchNoStockV83(line),
+      qty:amount.qty,
+      weight:amount.weight,
+      final:!!finalLock
+    };
+  }
+  function cloneLineStockV83(line){
+    var copy = Object.assign({}, line || {});
+    if(line && line[LOCK]) copy[LOCK] = Object.assign({}, line[LOCK]);
+    return copy;
+  }
+  function hydrateLineStockV83(dest, source){
+    if(!dest || !source) return;
+    ["goodsId","batchId","batchItemId","owner","batchNo","pack","spec","unit"].forEach(function(k){
+      if(source[k] !== undefined && source[k] !== "") dest[k] = source[k];
+    });
+    if(source[LOCK]) dest[LOCK] = Object.assign({}, source[LOCK]);
+  }
+  function releaseLinesStockV83(lines){
+    (Array.isArray(lines) ? lines : []).forEach(releaseLineStockV83);
+  }
+  function reserveLinesStockV83(lines, finalLock){
+    (Array.isArray(lines) ? lines : []).forEach(function(line){ reserveLineStockV83(line, finalLock); });
+  }
+  function markFinalLocksStockV83(lines){
+    (Array.isArray(lines) ? lines : []).forEach(function(line){
+      if(line && line[LOCK]) line[LOCK].final = true;
+    });
+  }
+  function snapshotSoldStockV83(){
+    var rows = [];
+    rowsStockV83().forEach(function(batch){
+      (batch.items || []).forEach(function(item){
+        rows.push({item:item, sold:nStockV83(item.sold), soldWeight:nStockV83(item.soldWeight)});
+      });
+    });
+    return rows;
+  }
+  function restoreSoldStockV83(snapshot){
+    (snapshot || []).forEach(function(row){
+      row.item.sold = row.sold;
+      row.item.soldWeight = row.soldWeight;
+    });
+  }
+  function attachSelectedBatchStockV83(goodsId, selectedBatchId){
+    if(!selectedBatchId) return;
+    var batch = rowsStockV83().find(function(b){ return b && b.id === selectedBatchId; });
+    if(!batch) return;
+    var item = (batch.items || []).find(function(i){ return i && String(i.goodsId || "") === String(goodsId || ""); });
+    if(!item) return;
+    var line = currentRowsStockV83().find(function(i){
+      return i && String(i.goodsId || "") === String(goodsId || "") &&
+        (String(i.batchId || "") === String(selectedBatchId) || (!i.batchId && (!i.batchNo || i.batchNo === batchNoStockV83(batch))));
+    }) || currentRowsStockV83().find(function(i){ return i && String(i.goodsId || "") === String(goodsId || ""); });
+    if(!line) return;
+    line.batchId = batch.id;
+    line.batchItemId = item.id || item.goodsId || "";
+    line.owner = batch.owner || batch.ownerName || line.owner || "";
+    line.batchNo = batchNoStockV83(batch) || line.batchNo || "";
+    line.goodsId = item.goodsId || line.goodsId || goodsId;
+    line.spec = line.spec || item.spec || "";
+    line.pack = line.pack || item.pack || "";
+  }
+  function refreshStockViewsV83(){
+    try{ if(typeof renderCashierProducts === "function") renderCashierProducts(); }catch(err){}
+    try{ if(typeof renderCashierBatches === "function") renderCashierBatches(); }catch(err){}
+    try{ if(typeof renderStockModule === "function") renderStockModule(); }catch(err){}
+    try{ if(typeof renderInventoryStep1 === "function") renderInventoryStep1(); }catch(err){}
+    try{ if(typeof renderInventoryView === "function") renderInventoryView(); }catch(err){}
+    try{ if(typeof renderOwnerStep1 === "function") renderOwnerStep1(); }catch(err){}
+    try{ if(typeof renderReportsStep1 === "function") renderReportsStep1(); }catch(err){}
+  }
+  function saveStockV83(){
+    try{ if(typeof tudou2SaveNow === "function") setTimeout(tudou2SaveNow, 0); }catch(err){}
+  }
+  function syncPendingSavedBillsStockV83(){
+    savedRowsStockV83().forEach(function(bill){
+      if(!bill || isFinalBillStockV83(bill)) return;
+      (bill.lines || []).forEach(function(line){ if(!line[LOCK]) reserveLineStockV83(line, false); });
+    });
+  }
+  function syncCurrentStockV83(){
+    reserveLinesStockV83(currentRowsStockV83(), false);
+  }
+  function afterMutationStockV83(){
+    syncPendingSavedBillsStockV83();
+    syncCurrentStockV83();
+    refreshStockViewsV83();
+    saveStockV83();
+  }
+
+  var oldAddProductStockV83 = typeof window.addProductToCodeBill === "function" ? window.addProductToCodeBill : null;
+  if(oldAddProductStockV83 && !oldAddProductStockV83.__stockSyncV83){
+    window.addProductToCodeBill = function(goodsId, selectedBatchId){
+      releaseLinesStockV83(currentRowsStockV83());
+      var result = oldAddProductStockV83.apply(this, arguments);
+      attachSelectedBatchStockV83(goodsId, selectedBatchId);
+      reserveLinesStockV83(currentRowsStockV83(), false);
+      refreshStockViewsV83();
+      saveStockV83();
+      return result;
+    };
+    window.addProductToCodeBill.__stockSyncV83 = true;
+  }
+
+  var oldUpdateStockV83 = typeof window.updateCodeBillItem === "function" ? window.updateCodeBillItem : null;
+  if(oldUpdateStockV83 && !oldUpdateStockV83.__stockSyncV83){
+    window.updateCodeBillItem = function(){
+      releaseLinesStockV83(currentRowsStockV83());
+      var result = oldUpdateStockV83.apply(this, arguments);
+      reserveLinesStockV83(currentRowsStockV83(), false);
+      refreshStockViewsV83();
+      saveStockV83();
+      return result;
+    };
+    window.updateCodeBillItem.__stockSyncV83 = true;
+  }
+
+  var oldRemoveStockV83 = typeof window.removeCodeBillItem === "function" ? window.removeCodeBillItem : null;
+  if(oldRemoveStockV83 && !oldRemoveStockV83.__stockSyncV83){
+    window.removeCodeBillItem = function(){
+      releaseLinesStockV83(currentRowsStockV83());
+      var result = oldRemoveStockV83.apply(this, arguments);
+      reserveLinesStockV83(currentRowsStockV83(), false);
+      refreshStockViewsV83();
+      saveStockV83();
+      return result;
+    };
+    window.removeCodeBillItem.__stockSyncV83 = true;
+  }
+
+  var oldOpenCodeBillStockV83 = typeof window.openCodeBillModal === "function" ? window.openCodeBillModal : null;
+  if(oldOpenCodeBillStockV83 && !oldOpenCodeBillStockV83.__stockSyncV83){
+    window.openCodeBillModal = function(){
+      reserveLinesStockV83(currentRowsStockV83(), false);
+      var before = currentRowsStockV83().map(cloneLineStockV83);
+      var result = oldOpenCodeBillStockV83.apply(this, arguments);
+      var bill = savedRowsStockV83().find(function(b){ return b && b.billNo === selectedBillCenterId; }) || savedRowsStockV83()[0];
+      if(bill && !isFinalBillStockV83(bill)){
+        (bill.lines || []).forEach(function(line, idx){ hydrateLineStockV83(line, before[idx]); });
+      }
+      refreshStockViewsV83();
+      saveStockV83();
+      return result;
+    };
+    window.openCodeBillModal.__stockSyncV83 = true;
+  }
+
+  var oldTakeBillStockV83 = typeof window.takeSavedBill === "function" ? window.takeSavedBill : null;
+  if(oldTakeBillStockV83 && !oldTakeBillStockV83.__stockSyncV83){
+    window.takeSavedBill = function(billNo){
+      var bill = savedRowsStockV83().find(function(b){ return b && b.billNo === billNo; });
+      var locks = bill && !isFinalBillStockV83(bill) ? (bill.lines || []).map(cloneLineStockV83) : [];
+      var result = oldTakeBillStockV83.apply(this, arguments);
+      currentRowsStockV83().forEach(function(line, idx){ hydrateLineStockV83(line, locks[idx]); });
+      refreshStockViewsV83();
+      saveStockV83();
+      return result;
+    };
+    window.takeSavedBill.__stockSyncV83 = true;
+  }
+
+  var oldDeleteBillStockV83 = typeof window.deleteSavedBill === "function" ? window.deleteSavedBill : null;
+  if(oldDeleteBillStockV83 && !oldDeleteBillStockV83.__stockSyncV83){
+    window.deleteSavedBill = function(billNo){
+      var bill = savedRowsStockV83().find(function(b){ return b && b.billNo === billNo; });
+      if(bill && !isFinalBillStockV83(bill)) releaseLinesStockV83(bill.lines || []);
+      var result = oldDeleteBillStockV83.apply(this, arguments);
+      refreshStockViewsV83();
+      saveStockV83();
+      return result;
+    };
+    window.deleteSavedBill.__stockSyncV83 = true;
+  }
+
+  var oldConfirmOrderStockV83 = typeof window.confirmOrderFromCodeBill === "function" ? window.confirmOrderFromCodeBill : null;
+  if(oldConfirmOrderStockV83 && !oldConfirmOrderStockV83.__stockSyncV83){
+    window.confirmOrderFromCodeBill = function(){
+      var beforeLines = currentRowsStockV83().map(cloneLineStockV83);
+      releaseLinesStockV83(currentRowsStockV83());
+      var baseline = snapshotSoldStockV83();
+      var result = oldConfirmOrderStockV83.apply(this, arguments);
+      restoreSoldStockV83(baseline);
+      var order = (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders[0] : null;
+      if(order && order.lines){
+        order.lines.forEach(function(line, idx){
+          hydrateLineStockV83(line, beforeLines[idx]);
+          delete line[LOCK];
+          reserveLineStockV83(line, true);
+          if(line[LOCK]) line[LOCK].final = true;
+        });
+      }else{
+        beforeLines.forEach(function(line){ delete line[LOCK]; reserveLineStockV83(line, true); if(line[LOCK]) line[LOCK].final = true; });
+      }
+      refreshStockViewsV83();
+      saveStockV83();
+      return result;
+    };
+    window.confirmOrderFromCodeBill.__stockSyncV83 = true;
+  }
+
+  var oldCompleteSettleStockV83 = typeof window.completeSettleOrder === "function" ? window.completeSettleOrder : null;
+  if(oldCompleteSettleStockV83 && !oldCompleteSettleStockV83.__stockSyncV83){
+    window.completeSettleOrder = function(){
+      var bill = savedRowsStockV83().find(function(b){ return b && b.billNo === pendingSettleBillNo; });
+      var beforeLines = bill ? (bill.lines || []).map(cloneLineStockV83) : [];
+      var hadLocks = beforeLines.some(function(line){ return !!line[LOCK]; });
+      var result = oldCompleteSettleStockV83.apply(this, arguments);
+      var order = (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders[0] : null;
+      if(order && order.lines){
+        order.lines.forEach(function(line, idx){ hydrateLineStockV83(line, beforeLines[idx]); });
+        if(hadLocks) markFinalLocksStockV83(order.lines);
+        else order.lines.forEach(function(line){ delete line[LOCK]; reserveLineStockV83(line, true); if(line[LOCK]) line[LOCK].final = true; });
+      }
+      refreshStockViewsV83();
+      saveStockV83();
+      return result;
+    };
+    window.completeSettleOrder.__stockSyncV83 = true;
+  }
+
+  setTimeout(function(){
+    syncPendingSavedBillsStockV83();
+    syncCurrentStockV83();
+    refreshStockViewsV83();
+  }, 0);
+
+  window.syncCashierStockV83 = afterMutationStockV83;
+})();
+</script>
+
 </body>
 </html>
