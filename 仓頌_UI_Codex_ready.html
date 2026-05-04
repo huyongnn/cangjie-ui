@@ -24639,5 +24639,227 @@ body.show-stock #stockRoot .stock-table td:nth-child(5)::before{content:"已售/
 })();
 </script>
 
+<style>
+/* ===== V89：修改订单可直接调整收银状态 ===== */
+#orderEditStep1PayStatusV89{
+  width:100%;
+  height:40px;
+  border:1px solid #d2d8cf;
+  border-radius:10px;
+  padding:0 10px;
+  background:#fff;
+  color:#1d1d1f;
+  font-weight:850;
+}
+.order-edit-step1-payhint-v89{
+  margin-top:6px;
+  color:#6b726c;
+  font-size:11px;
+  line-height:1.35;
+  font-weight:800;
+}
+.order-edit-step1-status-card-v89 b{
+  color:#1d1d1f;
+}
+.order-edit-step1-status-card-v89.debt b{
+  color:#a7653f;
+}
+.order-edit-step1-status-card-v89.cash b{
+  color:#23733b;
+}
+</style>
+
+<script>
+/* ===== V89：订单编辑支持收银/赊欠状态互转，并同步欠款 ===== */
+(function(){
+  function nV89(v){ return Number(v || 0) || 0; }
+  function moneyV89(v){ return typeof money === "function" ? money(v) : nV89(v).toFixed(2); }
+  function escV89(v){
+    return typeof esc === "function" ? esc(v) : String(v ?? "").replace(/[&<>"']/g, function(m){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];
+    });
+  }
+  function isTempBuyerV89(buyerId){
+    try{
+      var rows = (typeof cashierCustomers !== "undefined" && Array.isArray(cashierCustomers)) ? cashierCustomers : [];
+      var buyer = rows.find(function(c){ return c && c.id === buyerId; });
+      var name = String((buyer && buyer.name) || "");
+      return !buyer || buyer.id === "c1" || name === "临时客户" || name.startsWith("临时客户");
+    }catch(err){
+      return false;
+    }
+  }
+  function currentOrderV89(){
+    try{
+      var selected = typeof currentSelectedOrderRecord === "function" ? currentSelectedOrderRecord() : null;
+      var key = String((selected && (selected.orderNo || selected.billNo)) || "");
+      var rows = (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders : [];
+      return rows.find(function(order){ return String((order && (order.orderNo || order.billNo)) || "") === key; }) || selected || null;
+    }catch(err){
+      return null;
+    }
+  }
+  function lineAmountV89(line){
+    var type = line.type || line.pack || "";
+    return type === "定装" ? nV89(line.qty) * nV89(line.price) : nV89(line.weight) * nV89(line.price);
+  }
+  function editLinesV89(){
+    var order = currentOrderV89();
+    return ((order && order.lines) || []).map(function(line, idx){
+      var row = document.querySelector('[data-order-edit-line="'+idx+'"]');
+      var next = Object.assign({}, line);
+      if(row){
+        var qty = row.querySelector('[data-order-edit-field="qty"]');
+        var weight = row.querySelector('[data-order-edit-field="weight"]');
+        var price = row.querySelector('[data-order-edit-field="price"]');
+        next.qty = nV89(qty && qty.value);
+        next.weight = nV89(weight && weight.value);
+        next.price = nV89(price && price.value);
+        next.amount = lineAmountV89(next);
+      }
+      return next;
+    });
+  }
+  function editTotalV89(){
+    var lines = editLinesV89();
+    var original = lines.reduce(function(sum, line){ return sum + nV89(line.amount); }, 0);
+    var discount = Math.min(nV89(document.getElementById("orderEditStep1Discount")?.value), original);
+    return Math.max(original - discount, 0);
+  }
+  function currentModeV89(order){
+    var st = String((order && (order.displayStatus || order.status)) || "");
+    var total = nV89(order && order.totalAmount);
+    var paid = nV89(order && order.paid);
+    var debt = nV89(order && order.debt);
+    if(st === "已赊欠" || debt > 0){
+      return paid > 0 && paid < total ? "mixed" : "debt";
+    }
+    return "cash";
+  }
+  function syncPaidByModeV89(force){
+    var select = document.getElementById("orderEditStep1PayStatusV89");
+    var paid = document.getElementById("orderEditStep1Paid");
+    if(!select || !paid) return;
+    var total = editTotalV89();
+    if(select.value === "cash"){
+      paid.value = total.toFixed(2);
+      paid.readOnly = true;
+    }else if(select.value === "debt"){
+      paid.value = "0";
+      paid.readOnly = true;
+    }else{
+      paid.readOnly = false;
+      if(force && nV89(paid.value) >= total) paid.value = total > 0 ? Math.max(total / 2, 0).toFixed(2) : "0";
+    }
+  }
+  function decorateSummaryV89(){
+    var select = document.getElementById("orderEditStep1PayStatusV89");
+    var summary = document.getElementById("orderEditStep1Summary");
+    if(!select || !summary || summary.querySelector(".order-edit-step1-status-card-v89")) return;
+    var modeText = select.value === "cash" ? "收银结清" : (select.value === "mixed" ? "部分收款" : "赊欠记账");
+    var cls = select.value === "cash" ? "cash" : "debt";
+    summary.insertAdjacentHTML("beforeend", '<div class="order-edit-step1-status-card-v89 '+cls+'"><span>收银状态</span><b>'+escV89(modeText)+'</b></div><div><span>实收金额</span><b>'+moneyV89(nV89(document.getElementById("orderEditStep1Paid")?.value))+'</b></div>');
+  }
+  function refreshPreviewV89(forcePaid){
+    syncPaidByModeV89(forcePaid);
+    if(oldPreviewV89) oldPreviewV89();
+    decorateSummaryV89();
+  }
+  function enhanceOrderEditV89(){
+    var body = document.getElementById("orderEditStep1Body");
+    var grid = body && body.querySelector(".order-edit-step1-grid");
+    if(!grid || document.getElementById("orderEditStep1PayStatusV89")) return;
+    var order = currentOrderV89();
+    var field = document.createElement("div");
+    field.className = "order-edit-step1-field";
+    field.innerHTML = '<label>收银状态</label><select id="orderEditStep1PayStatusV89">'
+      + '<option value="cash">收银结清</option>'
+      + '<option value="debt">赊欠记账</option>'
+      + '<option value="mixed">部分收款</option>'
+      + '</select><div class="order-edit-step1-payhint-v89">选“赊欠记账”会把实收改为 0，并把应收金额同步为该买家欠款。</div>';
+    grid.insertBefore(field, grid.children[1] || null);
+    var select = document.getElementById("orderEditStep1PayStatusV89");
+    select.value = currentModeV89(order);
+    select.addEventListener("change", function(){ refreshPreviewV89(true); });
+    var paid = document.getElementById("orderEditStep1Paid");
+    if(paid){
+      paid.addEventListener("input", function(){
+        var sel = document.getElementById("orderEditStep1PayStatusV89");
+        if(sel && sel.value !== "mixed" && !paid.readOnly) sel.value = "mixed";
+      });
+    }
+    refreshPreviewV89(false);
+  }
+
+  var oldPreviewV89 = typeof window.previewOrderEditStep1 === "function" ? window.previewOrderEditStep1 : null;
+  if(oldPreviewV89 && !oldPreviewV89.__payModeV89){
+    window.previewOrderEditStep1 = function(){
+      syncPaidByModeV89(false);
+      var result = oldPreviewV89.apply(this, arguments);
+      decorateSummaryV89();
+      return result;
+    };
+    window.previewOrderEditStep1.__payModeV89 = true;
+  }
+
+  var oldSaveV89 = typeof window.saveOrderEditStep1 === "function" ? window.saveOrderEditStep1 : null;
+  if(oldSaveV89 && !oldSaveV89.__payModeV89){
+    window.saveOrderEditStep1 = function(){
+      var mode = document.getElementById("orderEditStep1PayStatusV89")?.value || "";
+      var customerId = document.getElementById("orderEditStep1Customer")?.value || "";
+      if((mode === "debt" || mode === "mixed") && isTempBuyerV89(customerId)){
+        alert("临时客户不能赊欠。请先把客户改成正式买家，再保存赊欠订单。");
+        return;
+      }
+      syncPaidByModeV89(true);
+      var result = oldSaveV89.apply(this, arguments);
+      var order = currentOrderV89();
+      if(order && mode){
+        if(mode === "cash"){
+          order.paid = nV89(order.totalAmount);
+          order.debt = 0;
+          order.status = "已收银";
+          order.displayStatus = "已收银";
+        }else if(mode === "debt"){
+          order.paid = 0;
+          order.debt = nV89(order.totalAmount);
+          order.status = "已赊欠";
+          order.displayStatus = "已赊欠";
+        }else if(mode === "mixed"){
+          order.paid = Math.min(nV89(order.paid), nV89(order.totalAmount));
+          order.debt = Math.max(nV89(order.totalAmount) - nV89(order.paid), 0);
+          order.status = order.debt > 0 ? "已赊欠" : "已收银";
+          order.displayStatus = order.status;
+        }
+        try{ if(typeof renderOrdersCenter === "function") renderOrdersCenter(); }catch(err){}
+        try{ if(typeof renderBuyerV47 === "function") renderBuyerV47(); }catch(err){}
+        try{ if(typeof renderCashierCustomers === "function") renderCashierCustomers(); }catch(err){}
+        try{ if(typeof tudou2SaveNow === "function") setTimeout(tudou2SaveNow, 0); }catch(err){}
+      }
+      return result;
+    };
+    window.saveOrderEditStep1.__payModeV89 = true;
+  }
+
+  var oldOpenSelectedV89 = typeof window.openSelectedOrderEditStep1 === "function" ? window.openSelectedOrderEditStep1 : null;
+  if(oldOpenSelectedV89 && !oldOpenSelectedV89.__payModeV89){
+    window.openSelectedOrderEditStep1 = function(){
+      var result = oldOpenSelectedV89.apply(this, arguments);
+      setTimeout(enhanceOrderEditV89, 0);
+      setTimeout(enhanceOrderEditV89, 80);
+      return result;
+    };
+    window.openSelectedOrderEditStep1.__payModeV89 = true;
+  }
+  document.addEventListener("click", function(ev){
+    var btn = ev.target && ev.target.closest ? ev.target.closest("#orderEditStep1Btn") : null;
+    if(!btn) return;
+    setTimeout(enhanceOrderEditV89, 0);
+    setTimeout(enhanceOrderEditV89, 80);
+  }, true);
+  setTimeout(enhanceOrderEditV89, 0);
+})();
+</script>
+
 </body>
 </html>
