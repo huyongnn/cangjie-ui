@@ -22750,10 +22750,12 @@ body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-right{
     return !!(order && (order.voided || order.status === "已作废" || order.displayStatus === "已作废"));
   }
   function paidRepayV81(order){
+    if(!order) return 0;
     if(typeof buyerV47PaidAmount === "function") return numOrderRepayV81(buyerV47PaidAmount(order));
     return numOrderRepayV81(order && order.paid);
   }
   function debtRepayV81(order){
+    if(!order) return 0;
     if(typeof buyerV47DebtAmount === "function") return numOrderRepayV81(buyerV47DebtAmount(order));
     return Math.max(numOrderRepayV81(order && order.debt), 0);
   }
@@ -22972,6 +22974,368 @@ body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-right{
     ensureOrderRepayV81Dom();
     decorateOrderDetailRepayV81(selectedOrderRepayV81());
     ensureOrderRepayButtonV81();
+  }, 0);
+})();
+</script>
+
+<style id="cangjieCashierBuyerTreeV82Style">
+/* ===== V82：收银台主买家/门店层级选择 ===== */
+body.show-cashier #cashierCustomer.cashier-buyer-tree-native-v82{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+body.show-cashier .cashier-buyer-tree-v82{
+  position:relative!important;
+  flex:1 1 190px!important;
+  min-width:0!important;
+  z-index:20!important;
+}
+body.show-cashier #cashierRoot .cashier-right,
+body.show-cashier #cashierRoot .order-head,
+body.show-cashier #cashierRoot .order-customer-row{
+  overflow:visible!important;
+}
+body.show-cashier #cashierRoot .order-head{
+  position:relative!important;
+  z-index:60!important;
+}
+body.show-cashier .cashier-buyer-tree-trigger-v82{
+  width:100%!important;
+  height:44px!important;
+  border:1px solid rgba(29,29,31,.12)!important;
+  border-radius:13px!important;
+  background:rgba(255,255,255,.88)!important;
+  color:#1d1d1f!important;
+  box-shadow:0 3px 12px rgba(0,0,0,.045)!important;
+  padding:0 12px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  font-size:14px!important;
+  font-weight:950!important;
+  cursor:pointer!important;
+}
+body.show-cashier .cashier-buyer-tree-trigger-v82 span{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+body.show-cashier .cashier-buyer-tree-trigger-v82 em{
+  flex:0 0 auto!important;
+  color:#6b726c!important;
+  font-style:normal!important;
+  font-size:12px!important;
+}
+body.show-cashier .cashier-buyer-tree-panel-v82{
+  position:absolute!important;
+  top:calc(100% + 8px)!important;
+  left:0!important;
+  right:0!important;
+  max-height:min(460px,58vh)!important;
+  overflow:auto!important;
+  padding:8px!important;
+  border:1px solid rgba(29,29,31,.1)!important;
+  border-radius:16px!important;
+  background:rgba(255,255,255,.96)!important;
+  backdrop-filter:blur(18px)!important;
+  box-shadow:0 20px 55px rgba(0,0,0,.18)!important;
+  display:none!important;
+}
+body.show-cashier .cashier-buyer-tree-v82.open .cashier-buyer-tree-panel-v82{
+  display:block!important;
+}
+body.show-cashier .cashier-buyer-tree-row-v82{
+  width:100%!important;
+  min-height:40px!important;
+  border:0!important;
+  border-radius:11px!important;
+  background:transparent!important;
+  color:#1d1d1f!important;
+  padding:7px 9px!important;
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:8px!important;
+  text-align:left!important;
+  cursor:pointer!important;
+}
+body.show-cashier .cashier-buyer-tree-row-v82:hover,
+body.show-cashier .cashier-buyer-tree-row-v82.active{
+  background:#f0f4ef!important;
+}
+body.show-cashier .cashier-buyer-tree-row-v82 .arrow{
+  width:18px!important;
+  height:18px!important;
+  border-radius:6px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  color:#6b726c!important;
+  font-size:12px!important;
+  font-weight:950!important;
+}
+body.show-cashier .cashier-buyer-tree-row-v82 .name{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  font-size:14px!important;
+  font-weight:950!important;
+}
+body.show-cashier .cashier-buyer-tree-row-v82 .meta{
+  color:#607066!important;
+  font-size:11px!important;
+  font-weight:850!important;
+  white-space:nowrap!important;
+}
+body.show-cashier .cashier-buyer-tree-row-v82.child{
+  margin-left:18px!important;
+  width:calc(100% - 18px)!important;
+  grid-template-columns:18px minmax(0,1fr) auto!important;
+}
+body.show-cashier .cashier-buyer-tree-row-v82.child .arrow{
+  color:#8b928b!important;
+}
+body.show-cashier .cashier-buyer-tree-row-v82.child .name:before{
+  content:"门店 ";
+  color:#6f8f7a!important;
+  font-size:10px!important;
+  font-weight:950!important;
+  margin-right:4px!important;
+}
+body.show-cashier .cashier-buyer-tree-row-v82.self .name:before{
+  content:"主买家 ";
+  color:#6e6e73!important;
+  font-size:10px!important;
+  font-weight:950!important;
+  margin-right:4px!important;
+}
+body.show-cashier .cashier-buyer-tree-row-v82.temp .name:before{
+  content:"";
+}
+body.show-cashier .cashier-buyer-tree-section-v82{
+  margin:5px 4px 3px!important;
+  color:#8a918a!important;
+  font-size:10px!important;
+  font-weight:950!important;
+}
+@media(max-width:980px){
+  body.show-cashier .cashier-buyer-tree-panel-v82{
+    position:fixed!important;
+    left:12px!important;
+    right:12px!important;
+    top:auto!important;
+    bottom:76px!important;
+    max-height:54vh!important;
+  }
+}
+</style>
+
+<script>
+/* ===== V82：收银台点击主买家展开门店，底层仍写入 cashierCustomer ===== */
+(function(){
+  var expandedBuyerTreeV82 = {};
+
+  function buyersTreeV82(){
+    return (typeof cashierCustomers !== "undefined" && Array.isArray(cashierCustomers)) ? cashierCustomers : [];
+  }
+  function escTreeV82(v){
+    return typeof esc === "function" ? esc(v) : String(v ?? "").replace(/[&<>"']/g, function(m){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];
+    });
+  }
+  function moneyTreeV82(v){ return typeof money === "function" ? money(v) : (Number(v || 0) || 0).toFixed(2); }
+  function isTempTreeV82(c){ return !c || c.id === "c1" || c.name === "临时客户" || String(c.name || "").startsWith("临时客户"); }
+  function isDisabledTreeV82(c){ return !!(c && c.disabled); }
+  function activeBuyersTreeV82(){
+    return buyersTreeV82().filter(function(c){ return c && (!isDisabledTreeV82(c) || isTempTreeV82(c)); });
+  }
+  function buyerByIdTreeV82(id){
+    return buyersTreeV82().find(function(c){ return c && c.id === id; }) || null;
+  }
+  function childrenTreeV82(parentId){
+    return activeBuyersTreeV82().filter(function(c){ return c && c.parentId === parentId; });
+  }
+  function currentIdTreeV82(){
+    var sel = document.getElementById("cashierCustomer");
+    return sel ? sel.value : "";
+  }
+  function labelTreeV82(c){
+    if(!c) return "选择买家";
+    var parent = c.parentId ? buyerByIdTreeV82(c.parentId) : null;
+    return parent ? parent.name + " / " + c.name : c.name;
+  }
+  function metaTreeV82(c, childCount){
+    var bits = [];
+    if(childCount) bits.push(childCount + "门店");
+    if(Number(c && c.debt || 0) > 0) bits.push("欠" + moneyTreeV82(c.debt));
+    return bits.join("｜");
+  }
+  function ensureTreeV82(){
+    var sel = document.getElementById("cashierCustomer");
+    if(!sel) return null;
+    var wrap = document.getElementById("cashierBuyerTreeV82");
+    if(!wrap){
+      wrap = document.createElement("div");
+      wrap.id = "cashierBuyerTreeV82";
+      wrap.className = "cashier-buyer-tree-v82";
+      wrap.innerHTML = '<button id="cashierBuyerTreeTriggerV82" class="cashier-buyer-tree-trigger-v82" type="button"><span>选择买家</span><em>⌄</em></button><div id="cashierBuyerTreePanelV82" class="cashier-buyer-tree-panel-v82"></div>';
+      sel.parentNode.insertBefore(wrap, sel);
+      wrap.querySelector("#cashierBuyerTreeTriggerV82").addEventListener("click", function(ev){
+        ev.preventDefault();
+        ev.stopPropagation();
+        renderTreeV82();
+        wrap.classList.toggle("open");
+      });
+    }
+    sel.classList.add("cashier-buyer-tree-native-v82");
+    return wrap;
+  }
+  function nativeOptionRefreshTreeV82(){
+    var sel = document.getElementById("cashierCustomer");
+    if(!sel) return;
+    var old = sel.value;
+    var active = activeBuyersTreeV82();
+    sel.innerHTML = active.map(function(c){
+      return '<option value="'+escTreeV82(c.id)+'">'+escTreeV82(c.name)+(Number(c.debt || 0) > 0 ? "｜欠" + moneyTreeV82(c.debt) : "")+'</option>';
+    }).join("");
+    if(active.some(function(c){ return c.id === old; })) sel.value = old;
+    else if(active[0]) sel.value = active[0].id;
+  }
+  function rowTreeV82(c, cls, arrow, meta){
+    var selected = c.id === currentIdTreeV82();
+    return '<div role="button" tabindex="0" class="cashier-buyer-tree-row-v82 '+cls+(selected ? ' active' : '')+'" data-buyer-tree-v82="'+escTreeV82(c.id)+'" onpointerdown="window.selectCashierBuyerTreeV82(\''+escTreeV82(c.id)+'\');return false;" onclick="window.selectCashierBuyerTreeV82(\''+escTreeV82(c.id)+'\');return false;">'
+      + '<span class="arrow">'+arrow+'</span>'
+      + '<span class="name">'+escTreeV82(c.name)+'</span>'
+      + '<span class="meta">'+escTreeV82(meta || "")+'</span>'
+      + '</div>';
+  }
+  function renderTreeV82(){
+    var wrap = ensureTreeV82();
+    if(!wrap) return;
+    nativeOptionRefreshTreeV82();
+    var sel = document.getElementById("cashierCustomer");
+    var selected = buyerByIdTreeV82(sel ? sel.value : "");
+    if(selected && selected.parentId) expandedBuyerTreeV82[selected.parentId] = true;
+    var trigger = document.getElementById("cashierBuyerTreeTriggerV82");
+    if(trigger){
+      trigger.querySelector("span").textContent = labelTreeV82(selected);
+      trigger.querySelector("em").textContent = wrap.classList.contains("open") ? "⌃" : "⌄";
+    }
+    var panel = document.getElementById("cashierBuyerTreePanelV82");
+    if(!panel) return;
+    var active = activeBuyersTreeV82();
+    var top = active.filter(function(c){ return !c.parentId; });
+    var html = "";
+    top.forEach(function(c){
+      var children = childrenTreeV82(c.id);
+      if(isTempTreeV82(c)) html += '<div class="cashier-buyer-tree-section-v82">临时</div>';
+      var cls = isTempTreeV82(c) ? "temp" : "parent";
+      var isExpanded = children.length ? expandedBuyerTreeV82[c.id] !== false : false;
+      var arrow = children.length ? (isExpanded ? "⌄" : "›") : "•";
+      html += rowTreeV82(c, cls, arrow, metaTreeV82(c, children.length));
+      if(children.length && isExpanded){
+        html += '<div role="button" tabindex="0" class="cashier-buyer-tree-row-v82 child self'+(c.id === currentIdTreeV82() ? ' active' : '')+'" data-buyer-tree-direct-v82="'+escTreeV82(c.id)+'" onpointerdown="window.pickCashierBuyerDirectV82(\''+escTreeV82(c.id)+'\');return false;" onclick="window.pickCashierBuyerDirectV82(\''+escTreeV82(c.id)+'\');return false;">'
+          + '<span class="arrow">✓</span><span class="name">'+escTreeV82(c.name)+'</span><span class="meta">选择主账</span></div>';
+        children.forEach(function(child){
+          html += rowTreeV82(child, "child", "↳", metaTreeV82(child, 0));
+        });
+      }
+    });
+    panel.innerHTML = html || '<div class="cashier-buyer-tree-section-v82">暂无可选买家</div>';
+  }
+  function applyBuyerTreeV82(buyer){
+    var sel = document.getElementById("cashierCustomer");
+    if(!buyer || !sel) return;
+    sel.value = buyer.id;
+    try{ if(typeof enforceTemporaryCustomerRule === "function") enforceTemporaryCustomerRule(); }catch(err){}
+    try{ if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill(); }catch(err){}
+    try{ if(typeof renderCashierProducts === "function") renderCashierProducts(); }catch(err){}
+    try{ if(typeof renderCashierCustomerTabsStep1 === "function") renderCashierCustomerTabsStep1(); }catch(err){}
+  }
+  function selectBuyerTreeV82(id){
+    var buyer = buyerByIdTreeV82(id);
+    var sel = document.getElementById("cashierCustomer");
+    if(!buyer || !sel) return;
+    var kids = childrenTreeV82(buyer.id);
+    if(kids.length && !buyer.parentId && !isTempTreeV82(buyer)){
+      expandedBuyerTreeV82[buyer.id] = expandedBuyerTreeV82[buyer.id] === false;
+      var keepOpen = document.getElementById("cashierBuyerTreeV82");
+      if(keepOpen) keepOpen.classList.add("open");
+      renderTreeV82();
+      setTimeout(function(){
+        var again = document.getElementById("cashierBuyerTreeV82");
+        if(again) again.classList.add("open");
+        renderTreeV82();
+      }, 0);
+      return;
+    }
+    applyBuyerTreeV82(buyer);
+    var wrap = document.getElementById("cashierBuyerTreeV82");
+    if(wrap) wrap.classList.remove("open");
+    renderTreeV82();
+  }
+  window.renderCashierBuyerTreeV82 = renderTreeV82;
+  window.selectCashierBuyerTreeV82 = selectBuyerTreeV82;
+  window.pickCashierBuyerDirectV82 = function(id){
+    var buyer = buyerByIdTreeV82(id);
+    var sel = document.getElementById("cashierCustomer");
+    if(!buyer || !sel) return;
+    applyBuyerTreeV82(buyer);
+    var wrap = document.getElementById("cashierBuyerTreeV82");
+    if(wrap) wrap.classList.remove("open");
+    renderTreeV82();
+  };
+
+  var oldRenderCashierCustomersTreeV82 = typeof window.renderCashierCustomers === "function" ? window.renderCashierCustomers : null;
+  window.renderCashierCustomers = function(){
+    if(oldRenderCashierCustomersTreeV82) oldRenderCashierCustomersTreeV82.apply(this, arguments);
+    renderTreeV82();
+  };
+
+  var oldHandleCustomerTreeV82 = typeof window.handleCustomerOrPayChange === "function" ? window.handleCustomerOrPayChange : null;
+  window.handleCustomerOrPayChange = function(){
+    if(oldHandleCustomerTreeV82) oldHandleCustomerTreeV82.apply(this, arguments);
+    setTimeout(renderTreeV82, 0);
+  };
+
+  document.addEventListener("click", function(ev){
+    var direct = ev.target && ev.target.closest ? ev.target.closest("[data-buyer-tree-direct-v82]") : null;
+    if(direct){
+      ev.preventDefault();
+      ev.stopPropagation();
+      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+      var sel = document.getElementById("cashierCustomer");
+      var buyerDirect = buyerByIdTreeV82(direct.getAttribute("data-buyer-tree-direct-v82"));
+      if(sel && buyerDirect) applyBuyerTreeV82(buyerDirect);
+      var wrapDirect = document.getElementById("cashierBuyerTreeV82");
+      if(wrapDirect) wrapDirect.classList.remove("open");
+      renderTreeV82();
+      return false;
+    }
+    var row = ev.target && ev.target.closest ? ev.target.closest("[data-buyer-tree-v82]") : null;
+    if(row){
+      ev.preventDefault();
+      ev.stopPropagation();
+      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+      selectBuyerTreeV82(row.getAttribute("data-buyer-tree-v82"));
+      return false;
+    }
+    var wrap = document.getElementById("cashierBuyerTreeV82");
+    if(wrap && !wrap.contains(ev.target)) wrap.classList.remove("open");
+  }, true);
+
+  setTimeout(function(){
+    buyersTreeV82().forEach(function(c){
+      if(c && typeof c.parentId === "undefined") c.parentId = "";
+      if(c && typeof c.disabled === "undefined") c.disabled = false;
+    });
+    renderTreeV82();
   }, 0);
 })();
 </script>
