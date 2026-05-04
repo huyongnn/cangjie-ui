@@ -24035,5 +24035,212 @@ body.show-cashier .cashier-buyer-tree-section-v82{
 })();
 </script>
 
+<script>
+/* ===== V87：下单必填斤数/单价；有码单未结时禁止停售对应货品 ===== */
+(function(){
+  function nV87(v){ return Number(v || 0) || 0; }
+  function batchesV87(){ return (typeof batches !== "undefined" && Array.isArray(batches)) ? batches : []; }
+  function currentLinesV87(){ return (typeof currentCodeBillItems !== "undefined" && Array.isArray(currentCodeBillItems)) ? currentCodeBillItems : []; }
+  function savedBillsV87(){ return (typeof savedCodeBills !== "undefined" && Array.isArray(savedCodeBills)) ? savedCodeBills : []; }
+  function nameV87(row){ return String((row && (row.name || row.goodsName || row.productName)) || ""); }
+  function ownerV87(row){ return String((row && (row.owner || row.ownerName || row.batchOwner)) || ""); }
+  function batchNoV87(row){ return String((row && (row.no || row.batchNo)) || ""); }
+  function packV87(line){ return String((line && (line.pack || line.type)) || ""); }
+  function isFixedV87(line){ return packV87(line) === "定装"; }
+  function isFinalOrVoidBillV87(bill){
+    var st = String((bill && (bill.status || bill.displayStatus)) || "");
+    return !!(bill && (bill.orderNo || bill.voided || st === "已作废" || st === "已下单" || st === "已收银" || st === "已赊欠" || st === "已结清"));
+  }
+  function pendingBillsV87(){
+    return savedBillsV87().filter(function(bill){
+      return bill && !isFinalOrVoidBillV87(bill) && Array.isArray(bill.lines) && bill.lines.length;
+    });
+  }
+  function lineLabelV87(line){
+    return nameV87(line) || "未命名货品";
+  }
+  function validateOrderLinesV87(lines){
+    var rows = Array.isArray(lines) ? lines : [];
+    for(var i=0; i<rows.length; i++){
+      var line = rows[i] || {};
+      if(nV87(line.qty) <= 0){
+        return {ok:false, message:"请先填写 " + lineLabelV87(line) + " 的件数。"};
+      }
+      if(!isFixedV87(line) && nV87(line.weight) <= 0){
+        return {ok:false, message:"请先填写 " + lineLabelV87(line) + " 的斤数。"};
+      }
+      if(nV87(line.price) <= 0){
+        return {ok:false, message:"请先填写 " + lineLabelV87(line) + " 的单价。"};
+      }
+    }
+    return {ok:true, message:""};
+  }
+  function alertGuardV87(message){
+    if(typeof toast === "function") toast(message);
+    alert(message);
+  }
+  function billForSettleV87(){
+    try{
+      var no = typeof pendingSettleBillNo !== "undefined" ? String(pendingSettleBillNo || "") : "";
+      if(!no) return null;
+      return savedBillsV87().find(function(bill){ return bill && String(bill.billNo || "") === no; }) || null;
+    }catch(err){
+      return null;
+    }
+  }
+  function batchByIdV87(batchId){
+    return batchesV87().find(function(b){ return b && String(b.id || "") === String(batchId || ""); }) || null;
+  }
+  function activeBatchV87(){
+    try{ return typeof activeBatch === "function" ? activeBatch() : null; }catch(err){ return null; }
+  }
+  function itemByIdV87(batch, itemId){
+    if(!batch) return null;
+    return (batch.items || []).find(function(item){ return item && String(item.id || item.goodsId || nameV87(item)) === String(itemId || ""); }) || null;
+  }
+  function itemByGoodsV87(batch, goodsId, goodsName){
+    if(!batch) return null;
+    return (batch.items || []).find(function(item){
+      return item && (
+        String(item.goodsId || "") === String(goodsId || "") ||
+        String(item.id || "") === String(goodsId || "") ||
+        (!!goodsName && nameV87(item) === String(goodsName))
+      );
+    }) || null;
+  }
+  function batchMatchesLineV87(batch, line){
+    if(!batch || !line) return false;
+    if(line.batchId && String(batch.id || "") === String(line.batchId)) return true;
+    var lineOwner = ownerV87(line);
+    var lineNo = batchNoV87(line);
+    return (!lineOwner || ownerV87(batch) === lineOwner) && (!lineNo || batchNoV87(batch) === lineNo);
+  }
+  function itemMatchesLineV87(item, line){
+    if(!item || !line) return false;
+    return (line.batchItemId && String(item.id || "") === String(line.batchItemId)) ||
+      (line.goodsId && String(item.goodsId || "") === String(line.goodsId)) ||
+      (line.itemId && String(item.id || "") === String(line.itemId)) ||
+      (!!nameV87(line) && nameV87(item) === nameV87(line));
+  }
+  function pendingLineForItemV87(batch, item){
+    if(!batch || !item) return null;
+    for(var bi=0; bi<pendingBillsV87().length; bi++){
+      var bill = pendingBillsV87()[bi];
+      for(var li=0; li<(bill.lines || []).length; li++){
+        var line = bill.lines[li];
+        if(batchMatchesLineV87(batch, line) && itemMatchesLineV87(item, line)){
+          return {bill:bill, line:line};
+        }
+      }
+    }
+    return null;
+  }
+  function pendingLineForBatchV87(batch){
+    if(!batch) return null;
+    var items = Array.isArray(batch.items) ? batch.items : [];
+    for(var i=0; i<items.length; i++){
+      var hit = pendingLineForItemV87(batch, items[i]);
+      if(hit) return hit;
+    }
+    return null;
+  }
+  function stopBlockedMessageV87(hit){
+    var billNo = hit && hit.bill && hit.bill.billNo ? "（码单 " + hit.bill.billNo + "）" : "";
+    return lineLabelV87(hit && hit.line) + " 还在码单中心未下单收银" + billNo + "，不能停售。请先完成收银、下单或处理该码单。";
+  }
+  function wrapOrderGuardV87(name, getLines){
+    var oldFn = window[name];
+    if(typeof oldFn !== "function" || oldFn.__requiredFieldsV87) return;
+    window[name] = function(){
+      var lines = getLines ? getLines() : [];
+      if(lines && lines.length){
+        var check = validateOrderLinesV87(lines);
+        if(!check.ok){
+          alertGuardV87(check.message);
+          return;
+        }
+      }
+      return oldFn.apply(this, arguments);
+    };
+    window[name].__requiredFieldsV87 = true;
+  }
+  wrapOrderGuardV87("openCodeBillModal", function(){ return currentLinesV87(); });
+  wrapOrderGuardV87("saveCodeBill", function(){ return currentLinesV87(); });
+  wrapOrderGuardV87("confirmOrderFromCodeBill", function(){ return currentLinesV87(); });
+  wrapOrderGuardV87("completeSettleOrder", function(){
+    var bill = billForSettleV87();
+    return bill && bill.lines ? bill.lines : [];
+  });
+
+  var oldToggleBatchDetailSaleV87 = window.toggleBatchDetailItemSaleStep1;
+  if(typeof oldToggleBatchDetailSaleV87 === "function" && !oldToggleBatchDetailSaleV87.__pendingStopGuardV87){
+    window.toggleBatchDetailItemSaleStep1 = function(itemId){
+      var batch = activeBatchV87();
+      var item = itemByIdV87(batch, itemId);
+      var alreadyStopped = typeof batchDetailItemStoppedStep1 === "function" ? batchDetailItemStoppedStep1(item) : !!(item && item.saleStopped);
+      var hit = !alreadyStopped ? pendingLineForItemV87(batch, item) : null;
+      if(hit){
+        alertGuardV87(stopBlockedMessageV87(hit));
+        return;
+      }
+      return oldToggleBatchDetailSaleV87.apply(this, arguments);
+    };
+    window.toggleBatchDetailItemSaleStep1.__pendingStopGuardV87 = true;
+  }
+
+  var oldStockToggleItemSaleV87 = window.stockToggleItemSaleStep1;
+  if(typeof oldStockToggleItemSaleV87 === "function" && !oldStockToggleItemSaleV87.__pendingStopGuardV87){
+    window.stockToggleItemSaleStep1 = function(batchId, goodsId){
+      var batch = batchByIdV87(batchId);
+      var item = itemByGoodsV87(batch, goodsId, "");
+      var batchStopped = typeof stockBatchStoppedStep1 === "function" ? stockBatchStoppedStep1(batch) : !!(batch && batch.saleStopped);
+      var itemStopped = !!(item && (item.saleStopped || item.saleStatus === "stopped" || item.salePaused));
+      var hit = (!batchStopped && !itemStopped) ? pendingLineForItemV87(batch, item) : null;
+      if(hit){
+        alertGuardV87(stopBlockedMessageV87(hit));
+        return;
+      }
+      return oldStockToggleItemSaleV87.apply(this, arguments);
+    };
+    window.stockToggleItemSaleStep1.__pendingStopGuardV87 = true;
+  }
+
+  var oldInventoryGoodsSaleV87 = window.toggleInventoryGoodsSaleStep1;
+  if(typeof oldInventoryGoodsSaleV87 === "function" && !oldInventoryGoodsSaleV87.__pendingStopGuardV87){
+    window.toggleInventoryGoodsSaleStep1 = function(batchId, goodsId, goodsName){
+      var batch = batchByIdV87(batchId);
+      var item = itemByGoodsV87(batch, goodsId, goodsName);
+      var itemStopped = typeof itemSaleStoppedStep1 === "function" ? itemSaleStoppedStep1(item) : !!(item && item.saleStopped);
+      var hit = !itemStopped ? pendingLineForItemV87(batch, item) : null;
+      if(hit){
+        alertGuardV87(stopBlockedMessageV87(hit));
+        return;
+      }
+      return oldInventoryGoodsSaleV87.apply(this, arguments);
+    };
+    window.toggleInventoryGoodsSaleStep1.__pendingStopGuardV87 = true;
+  }
+
+  ["toggleInventoryBatchSaleStep1","markInventoryBatchSoldOutStep1"].forEach(function(name){
+    var oldFn = window[name];
+    if(typeof oldFn !== "function" || oldFn.__pendingStopGuardV87) return;
+    window[name] = function(batchId){
+      var batch = batchByIdV87(batchId);
+      var stopped = !!(batch && (batch.saleStopped || batch.soldOut || batch.saleStatus === "stopped" || batch.saleStatus === "soldout"));
+      var hit = !stopped ? pendingLineForBatchV87(batch) : null;
+      if(hit){
+        alertGuardV87(stopBlockedMessageV87(hit));
+        return;
+      }
+      return oldFn.apply(this, arguments);
+    };
+    window[name].__pendingStopGuardV87 = true;
+  });
+
+  window.validateCashierOrderLinesV87 = validateOrderLinesV87;
+  window.pendingCodeBillLineForItemV87 = pendingLineForItemV87;
+})();
+</script>
+
 </body>
 </html>
