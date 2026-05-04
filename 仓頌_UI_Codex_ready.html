@@ -23955,5 +23955,85 @@ body.show-cashier .cashier-buyer-tree-section-v82{
 })();
 </script>
 
+<script>
+/* ===== V86：订单完成后强制回到临时客户，避免下一单沿用上个买家 ===== */
+(function(){
+  function buyersV86(){
+    return (typeof cashierCustomers !== "undefined" && Array.isArray(cashierCustomers)) ? cashierCustomers : [];
+  }
+  function tempBuyerV86(){
+    var list = buyersV86();
+    var temp = list.find(function(c){ return c && (c.id === "c1" || c.name === "临时客户" || String(c.name || "").startsWith("临时客户")); });
+    if(temp) return temp;
+    temp = {id:"c1", name:"临时客户", debt:0, payments:[]};
+    try{ list.unshift(temp); }catch(err){}
+    return temp;
+  }
+  function orderKeysV86(){
+    try{
+      return ((typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders : [])
+        .filter(function(o){ return o && !o.voided && o.status !== "已作废" && o.displayStatus !== "已作废"; })
+        .map(function(o){ return String(o.orderNo || o.billNo || o.time || ""); })
+        .sort()
+        .join("|");
+    }catch(err){
+      return "";
+    }
+  }
+  function resetCashierBuyerToTempV86(){
+    var temp = tempBuyerV86();
+    try{ currentCodeBillItems = []; }catch(err){}
+    try{ selectedBuyerV47Id = temp.id || "c1"; }catch(err){}
+    try{
+      window.cashierBillSessionsStep1 = [{
+        id:"temp_after_order_" + Date.now(),
+        customerId:temp.id || "c1",
+        name:"临时客户",
+        items:[],
+        orderRemark:""
+      }];
+    }catch(err){}
+    try{
+      if(typeof renderCashierCustomers === "function") renderCashierCustomers();
+      var sel = document.getElementById("cashierCustomer");
+      if(sel) sel.value = temp.id || "c1";
+    }catch(err){}
+    try{
+      var pay = document.getElementById("cashierPayMode");
+      if(pay) pay.value = "cash";
+    }catch(err){}
+    try{
+      var paid = document.getElementById("cashierPaidAmount");
+      if(paid) paid.value = "";
+      var remark = document.getElementById("cashierOrderRemarkStep1");
+      if(remark) remark.value = "";
+    }catch(err){}
+    try{ if(typeof clearCashierDiscountFields === "function") clearCashierDiscountFields(); }catch(err){}
+    try{ if(typeof enforceTemporaryCustomerRule === "function") enforceTemporaryCustomerRule(); }catch(err){}
+    try{ if(typeof renderCashierBuyerTreeV82 === "function") renderCashierBuyerTreeV82(); }catch(err){}
+    try{ if(typeof renderBuyerV47 === "function") renderBuyerV47(); }catch(err){}
+    try{ if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill(); }catch(err){}
+    try{ if(typeof renderCashierCustomerTabsStep1 === "function") renderCashierCustomerTabsStep1(); }catch(err){}
+    try{ if(typeof renderCashierProducts === "function") renderCashierProducts(); }catch(err){}
+    try{ if(typeof tudou2SaveNow === "function") setTimeout(tudou2SaveNow, 0); }catch(err){}
+  }
+  window.resetCashierBuyerToTempV86 = resetCashierBuyerToTempV86;
+
+  ["confirmOrderFromCodeBill","completeSettleOrder","checkoutCurrentOrder"].forEach(function(name){
+    var oldFn = window[name];
+    if(typeof oldFn !== "function" || oldFn.__resetBuyerTempV86) return;
+    window[name] = function(){
+      var beforeKeys = orderKeysV86();
+      var result = oldFn.apply(this, arguments);
+      setTimeout(function(){
+        if(orderKeysV86() !== beforeKeys) resetCashierBuyerToTempV86();
+      }, 80);
+      return result;
+    };
+    window[name].__resetBuyerTempV86 = true;
+  });
+})();
+</script>
+
 </body>
 </html>
