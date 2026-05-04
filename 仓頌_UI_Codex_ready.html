@@ -17031,7 +17031,7 @@ body.show-inbound #inboundRoot button{
   }
   function ensureTopConfirmInboundStep1(){
     ensureTopConfirmInboundStep1Style();
-    var actions = document.querySelector(".detail-actions");
+    var actions = document.querySelector(".detail-actions") || document.querySelector("#inboundRoot .tools") || document.querySelector(".right-panel .tools");
     if(!actions) return;
     var btn = document.getElementById("topConfirmInboundStep1Btn");
     var batch = currentBatchForTopConfirmStep1();
