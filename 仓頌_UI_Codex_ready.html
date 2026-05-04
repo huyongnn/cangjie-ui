@@ -23682,5 +23682,108 @@ body.show-cashier .cashier-buyer-tree-section-v82{
 })();
 </script>
 
+<script>
+/* ===== V84：库存只在下单后同步，码单草稿不预占 ===== */
+(function(){
+  var LOCK = "_stockLockV83";
+
+  function nStockV84(v){ return Number(v || 0) || 0; }
+  function batchesStockV84(){ return (typeof batches !== "undefined" && Array.isArray(batches)) ? batches : []; }
+  function currentStockV84(){ return (typeof currentCodeBillItems !== "undefined" && Array.isArray(currentCodeBillItems)) ? currentCodeBillItems : []; }
+  function savedStockV84(){ return (typeof savedCodeBills !== "undefined" && Array.isArray(savedCodeBills)) ? savedCodeBills : []; }
+  function batchNoStockV84(b){ return String((b && (b.no || b.batchNo)) || ""); }
+  function nameStockV84(row){ return String((row && (row.name || row.goodsName || row.productName)) || ""); }
+  function isFinalBillStockV84(bill){
+    var st = String((bill && (bill.status || bill.displayStatus)) || "");
+    return !!(bill && (bill.orderNo || st === "已下单" || st === "已收银" || st === "已赊欠" || st === "已结清" || st === "已作废"));
+  }
+  function findItemByLockStockV84(lock){
+    if(!lock) return null;
+    var batch = lock.batchId ? batchesStockV84().find(function(b){ return b && b.id === lock.batchId; }) : null;
+    if(!batch && (lock.owner || lock.batchNo)){
+      batch = batchesStockV84().find(function(b){
+        return (!lock.owner || String(b.owner || b.ownerName || "") === String(lock.owner)) &&
+          (!lock.batchNo || batchNoStockV84(b) === String(lock.batchNo));
+      }) || null;
+    }
+    if(!batch) return null;
+    return (batch.items || []).find(function(item){
+      return (lock.batchItemId && String(item.id || "") === String(lock.batchItemId)) ||
+        (lock.goodsId && String(item.goodsId || "") === String(lock.goodsId)) ||
+        (lock.name && nameStockV84(item) === String(lock.name));
+    }) || null;
+  }
+  function releaseDraftLineStockV84(line){
+    if(!line || !line[LOCK]) return;
+    if(line[LOCK].final){
+      delete line[LOCK];
+      return;
+    }
+    var item = findItemByLockStockV84(line[LOCK]);
+    if(item){
+      item.sold = Math.max(0, nStockV84(item.sold) - nStockV84(line[LOCK].qty));
+      item.soldWeight = Math.max(0, nStockV84(item.soldWeight) - nStockV84(line[LOCK].weight));
+    }
+    delete line[LOCK];
+  }
+  function releaseDraftLocksStockV84(){
+    currentStockV84().forEach(releaseDraftLineStockV84);
+    savedStockV84().forEach(function(bill){
+      if(!bill || isFinalBillStockV84(bill)) return;
+      (bill.lines || []).forEach(releaseDraftLineStockV84);
+    });
+  }
+  function refreshStockV84(){
+    try{ if(typeof renderCashierProducts === "function") renderCashierProducts(); }catch(err){}
+    try{ if(typeof renderCashierBatches === "function") renderCashierBatches(); }catch(err){}
+    try{ if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill(); }catch(err){}
+    try{ if(typeof renderBillCenter === "function") renderBillCenter(); }catch(err){}
+    try{ if(typeof renderStockModule === "function") renderStockModule(); }catch(err){}
+    try{ if(typeof renderInventoryStep1 === "function") renderInventoryStep1(); }catch(err){}
+    try{ if(typeof renderInventoryView === "function") renderInventoryView(); }catch(err){}
+  }
+  function saveStockV84(){
+    try{ if(typeof tudou2SaveNow === "function") setTimeout(tudou2SaveNow, 0); }catch(err){}
+  }
+  function draftOnlyStockV84(fn){
+    return function(){
+      releaseDraftLocksStockV84();
+      var result = fn.apply(this, arguments);
+      releaseDraftLocksStockV84();
+      refreshStockV84();
+      saveStockV84();
+      return result;
+    };
+  }
+  ["addProductToCodeBill","updateCodeBillItem","removeCodeBillItem","openCodeBillModal","takeSavedBill","deleteSavedBill"].forEach(function(name){
+    var oldFn = window[name];
+    if(typeof oldFn !== "function" || oldFn.__stockAfterOrderOnlyV84) return;
+    window[name] = draftOnlyStockV84(oldFn);
+    window[name].__stockAfterOrderOnlyV84 = true;
+  });
+
+  ["confirmOrderFromCodeBill","completeSettleOrder"].forEach(function(name){
+    var oldFn = window[name];
+    if(typeof oldFn !== "function" || oldFn.__stockAfterOrderOnlyV84) return;
+    window[name] = function(){
+      releaseDraftLocksStockV84();
+      var result = oldFn.apply(this, arguments);
+      refreshStockV84();
+      saveStockV84();
+      return result;
+    };
+    window[name].__stockAfterOrderOnlyV84 = true;
+  });
+
+  window.releaseDraftStockLocksV84 = function(){
+    releaseDraftLocksStockV84();
+    refreshStockV84();
+    saveStockV84();
+  };
+
+  setTimeout(window.releaseDraftStockLocksV84, 0);
+})();
+</script>
+
 </body>
 </html>
