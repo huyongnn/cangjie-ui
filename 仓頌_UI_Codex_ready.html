@@ -4210,6 +4210,62 @@ body.batch-create-mode #inboundRoot .app{
 .v53-batch-save{background:#2f8e40;color:#fff;}
 
 </style>
+<script src="./storage.js"></script>
+<script>
+/* ===== V1_FINAL_LOCKED：唯一初始化数据源锁定 ===== */
+(function(){
+  var FINAL_VERSION = "V1_FINAL_LOCKED";
+  window.system_version = FINAL_VERSION;
+  var VERSION_KEY = "cangjie_system_version";
+  var SEED_KEY = "cangjie_seed_source";
+  var REVISION_KEY = "cangjie_seed_revision";
+
+  function seed(){
+    return window.CANGJIE_FINAL_LOCKED_STORAGE || null;
+  }
+  function seedLocalStorage(){
+    var data = seed();
+    return data && data.system_version === FINAL_VERSION && data.localStorage ? data.localStorage : null;
+  }
+  function writeSeed(){
+    var localData = seedLocalStorage();
+    if(!localData) return false;
+    try{
+      localStorage.clear();
+      sessionStorage.clear();
+      Object.keys(localData).forEach(function(key){
+        localStorage.setItem(key, String(localData[key]));
+      });
+      localStorage.setItem(VERSION_KEY, FINAL_VERSION);
+      localStorage.setItem(SEED_KEY, "storage.js");
+      localStorage.setItem(REVISION_KEY, String((seed() && seed().seed_revision) || ""));
+      return true;
+    }catch(err){
+      console.error("V1_FINAL_LOCKED 初始化失败：", err);
+      return false;
+    }
+  }
+  function ensureLockedSeed(){
+    var hasPrimaryData = false;
+    try{ hasPrimaryData = !!localStorage.getItem("tudou2_v57_persistent_data"); }catch(err){}
+    var version = "";
+    var source = "";
+    var revision = "";
+    var expectedRevision = "";
+    try{
+      version = localStorage.getItem(VERSION_KEY) || "";
+      source = localStorage.getItem(SEED_KEY) || "";
+      revision = localStorage.getItem(REVISION_KEY) || "";
+      expectedRevision = String((seed() && seed().seed_revision) || "");
+    }catch(err){}
+    if(version !== FINAL_VERSION || source !== "storage.js" || revision !== expectedRevision || !hasPrimaryData){
+      writeSeed();
+    }
+  }
+  window.cangjieResetToFinalLockedSeed = writeSeed;
+  ensureLockedSeed();
+})();
+</script>
 </head>
 <body>
 
@@ -4357,7 +4413,10 @@ body.batch-create-mode #inboundRoot .app{
     <main class="cashier-center">
       <header class="cashier-top">
         <div>
-          <h1>收银开单</h1>
+          <div class="cashier-title-print-v91">
+            <h1>收银开单</h1>
+            <button id="printLastReceiptV91" class="receipt-print-btn-v91" type="button" disabled onclick="printLastOrderReceiptV91()">暂无上一单可打印</button>
+          </div>
           <p>码单是客户核对凭证；下单后才同步销量、订单和客户欠款。</p>
         </div>
         <div class="cashier-top-tools">
@@ -12921,7 +12980,8 @@ function goBackToBatchEditFromOverview(){
       + '<button class="v41-nav-btn'+cls("ownersStep1")+'" data-page="ownersStep1">货主</button>'
       + '<button class="v41-nav-btn" data-page="buyers">买家管理</button>'
       + '<button class="v41-nav-btn'+cls("reports")+'" data-page="reports">报表</button>'
-      + '<button class="v41-nav-btn'+cls("configStep1")+'" data-config-direct="1">配置</button>';
+      + '<button class="v41-nav-btn'+cls("configStep1")+'" data-config-direct="1">配置</button>'
+      + '<button class="v41-nav-btn'+cls("profileV92")+'" data-page="profileV92">个人中心</button>';
   }
   function scheduleNavStep1(active){
     rebuildNavStep1(active);
@@ -13205,7 +13265,8 @@ function goBackToBatchEditFromOverview(){
       + '<button class="v41-nav-btn" data-page="ownersStep1">货主</button>'
       + '<button class="v41-nav-btn" data-page="buyers">买家管理</button>'
       + '<button class="v41-nav-btn" data-page="reports">报表</button>'
-      + '<button class="v41-nav-btn" data-config-direct="1">配置</button>';
+      + '<button class="v41-nav-btn" data-config-direct="1">配置</button>'
+      + '<button class="v41-nav-btn" data-page="profileV92">个人中心</button>';
   }
 
   window.openFullBatchEditStep1 = function(){
@@ -13348,7 +13409,8 @@ body.show-inbound #inboundRoot .cat-panel .cat{
       + '<button class="v41-nav-btn'+cls("ownersStep1")+'" data-page="ownersStep1">货主</button>'
       + '<button class="v41-nav-btn" data-page="buyers">买家管理</button>'
       + '<button class="v41-nav-btn'+cls("reports")+'" data-page="reports">报表</button>'
-      + '<button class="v41-nav-btn'+cls("configStep1")+'" data-config-direct="1">配置</button>';
+      + '<button class="v41-nav-btn'+cls("configStep1")+'" data-config-direct="1">配置</button>'
+      + '<button class="v41-nav-btn'+cls("profileV92")+'" data-page="profileV92">个人中心</button>';
   }
 
   function normalizePage(page){
@@ -13356,6 +13418,7 @@ body.show-inbound #inboundRoot .cat-panel .cat{
     if(page === "inventory") return "inventoryStep1";
     if(page === "owner" || page === "owners") return "ownersStep1";
     if(page === "config" || page === "settings" || page === "connection") return "configStep1";
+    if(page === "profile" || page === "personalCenter") return "profileV92";
     if(page === "inbound") return "stock";
     return page || "cashier";
   }
@@ -13363,7 +13426,7 @@ body.show-inbound #inboundRoot .cat-panel .cat{
   function stableNav(active){
     var nav = document.getElementById("globalUnifiedNavV41");
     if(!nav) return;
-    var expectedLabels = ["收银","批次","库存","订单","货主","买家管理","报表","配置"];
+    var expectedLabels = ["收银","批次","库存","订单","货主","买家管理","报表","配置","个人中心"];
     var labels = Array.from(nav.querySelectorAll(".v41-nav-btn")).map(function(btn){
       return (btn.textContent || "").trim();
     });
@@ -13391,6 +13454,7 @@ body.show-inbound #inboundRoot .cat-panel .cat{
       "show-inbound",
       "show-stock",
       "show-orders",
+      "show-profile-v92",
       "inventory-mode",
       "batch-create-mode",
       "batch-overview-mode"
@@ -13411,7 +13475,7 @@ body.show-inbound #inboundRoot .cat-panel .cat{
     }
     if(page === "reports"){
       if(typeof ensureReportsStep1Dom === "function") ensureReportsStep1Dom();
-      ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","configStep1Root","inventoryView"].forEach(hideRoot);
+      ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","configStep1Root","profileCenterRootV92","inventoryView"].forEach(hideRoot);
       showRoot("reportsStep1Root");
       setBodyMode("reports");
       stableNav("reports");
@@ -13420,7 +13484,7 @@ body.show-inbound #inboundRoot .cat-panel .cat{
     }
     if(page === "configStep1"){
       if(typeof ensureConfigStep1Dom === "function") ensureConfigStep1Dom();
-      ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","reportsStep1Root","inventoryView"].forEach(hideRoot);
+      ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","reportsStep1Root","profileCenterRootV92","inventoryView"].forEach(hideRoot);
       showRoot("configStep1Root");
       setBodyMode("configStep1");
       stableNav("configStep1");
@@ -13428,7 +13492,18 @@ body.show-inbound #inboundRoot .cat-panel .cat{
       return;
     }
 
-    ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","reportsStep1Root","configStep1Root","inventoryView"].forEach(hideRoot);
+    if(page === "profileV92"){
+      if(typeof window.showProfileCenterV92 === "function"){
+        window.showProfileCenterV92();
+      }else{
+        ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","reportsStep1Root","configStep1Root","inventoryView"].forEach(hideRoot);
+        showRoot("profileCenterRootV92");
+        stableNav("profileV92");
+      }
+      return;
+    }
+
+    ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","reportsStep1Root","configStep1Root","profileCenterRootV92","inventoryView"].forEach(hideRoot);
 
     if(page === "ownersStep1"){
       if(typeof ensureOwnerStep1Dom === "function") ensureOwnerStep1Dom();
@@ -13479,6 +13554,7 @@ body.show-inbound #inboundRoot .cat-panel .cat{
 
   function currentStablePage(){
     if(document.body.classList.contains("inventory-mode")) return "inventoryStep1";
+    if(document.body.classList.contains("show-profile-v92")) return "profileV92";
     if(document.getElementById("ownerStep1Root")?.style.display === "block") return "ownersStep1";
     if(document.getElementById("configStep1Root")?.style.display === "block") return "configStep1";
     if(document.getElementById("reportsStep1Root")?.style.display === "block") return "reports";
@@ -17407,9 +17483,11 @@ body.show-inbound #inboundRoot button{
       + '<button class="v41-nav-btn'+cls("ownersStep1")+'" data-page="ownersStep1">货主</button>'
       + '<button class="v41-nav-btn'+cls("buyers")+'" data-page="buyers">买家管理</button>'
       + '<button class="v41-nav-btn'+cls("reports")+'" data-page="reports">报表</button>'
-      + '<button class="v41-nav-btn'+cls("configStep1")+'" data-config-direct="1">配置</button>';
+      + '<button class="v41-nav-btn'+cls("configStep1")+'" data-config-direct="1">配置</button>'
+      + '<button class="v41-nav-btn'+cls("profileV92")+'" data-page="profileV92">个人中心</button>';
   }
   function currentPageForConfigNavStep1(){
+    if(document.body.classList.contains("show-profile-v92")) return "profileV92";
     if(document.getElementById("configStep1Root")?.style.display === "block") return "configStep1";
     if(document.getElementById("reportsStep1Root")?.style.display === "block") return "reports";
     if(document.getElementById("ownerStep1Root")?.style.display === "block") return "ownersStep1";
@@ -17423,7 +17501,7 @@ body.show-inbound #inboundRoot button{
     if(!nav) return;
     active = active || currentPageForConfigNavStep1();
     var labels = Array.from(nav.querySelectorAll(".v41-nav-btn")).map(function(btn){ return (btn.textContent || "").trim(); });
-    var expected = ["收银","批次","库存","订单","货主","买家管理","报表","配置"];
+    var expected = ["收银","批次","库存","订单","货主","买家管理","报表","配置","个人中心"];
     var wrong = labels.length !== expected.length || expected.some(function(label, idx){ return labels[idx] !== label; });
     var activeBtn = nav.querySelector(".v41-nav-btn.active");
     if(wrong || !activeBtn || activeBtn.getAttribute("data-page") !== active){
@@ -17436,6 +17514,7 @@ body.show-inbound #inboundRoot button{
   }
   function routeGlobalNavStep1(page){
     if(page === "config" || page === "settings" || page === "connection") page = "configStep1";
+    if(page === "profile" || page === "personalCenter") page = "profileV92";
     if(page === "inventory") page = "inventoryStep1";
     if(page === "owner" || page === "owners") page = "ownersStep1";
     if(page === "batch" || page === "inbound") page = "stock";
@@ -17450,15 +17529,19 @@ body.show-inbound #inboundRoot button{
     if(page === "config" || page === "settings" || page === "connection") page = "configStep1";
     if(page === "configStep1"){
       if(typeof ensureConfigStep1Dom === "function") ensureConfigStep1Dom();
-      ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","reportsStep1Root","inventoryView"].forEach(function(id){
+      ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","reportsStep1Root","profileCenterRootV92","inventoryView"].forEach(function(id){
         var el = document.getElementById(id);
         if(el) el.style.setProperty("display", "none", "important");
       });
       var root = document.getElementById("configStep1Root");
       if(root) root.style.setProperty("display", "block", "important");
-      document.body.classList.remove("show-cashier","show-inbound","show-stock","show-orders","inventory-mode","batch-create-mode","batch-overview-mode","reports-mode-step1");
+      document.body.classList.remove("show-cashier","show-inbound","show-stock","show-orders","show-profile-v92","inventory-mode","batch-create-mode","batch-overview-mode","reports-mode-step1");
       forceConfigNavStep1("configStep1");
       try{ if(typeof renderConfigStep1 === "function") renderConfigStep1(); }catch(err){}
+      return;
+    }
+    if(page === "profileV92"){
+      if(typeof window.showProfileCenterV92 === "function") window.showProfileCenterV92();
       return;
     }
     hideConfigRootStep1();
@@ -17747,7 +17830,7 @@ body.show-inbound #inboundRoot button{
   }
   function clearModesNavFinalStep1(){
     document.body.classList.remove(
-      "show-cashier","show-inbound","show-stock","show-orders",
+      "show-cashier","show-inbound","show-stock","show-orders","show-profile-v92",
       "inventory-mode","batch-create-mode","batch-overview-mode",
       "reports-mode-step1","buyers-mode-step1"
     );
@@ -17763,7 +17846,7 @@ body.show-inbound #inboundRoot button{
     }catch(err){}
   }
   function openBuyersNavFinalStep1(){
-    ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","reportsStep1Root","configStep1Root","inventoryView"].forEach(hideRootNavFinalStep1);
+    ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","reportsStep1Root","configStep1Root","profileCenterRootV92","inventoryView"].forEach(hideRootNavFinalStep1);
     clearModesNavFinalStep1();
     document.body.classList.add("buyers-mode-step1");
     if(typeof openBuyerManagerV47 === "function"){
@@ -17776,6 +17859,7 @@ body.show-inbound #inboundRoot button{
   }
   window.routeTudou2NavFinalStep1 = function(page){
     if(page === "config" || page === "settings" || page === "connection") page = "configStep1";
+    if(page === "profile" || page === "personalCenter") page = "profileV92";
     if(page === "inventory") page = "inventoryStep1";
     if(page === "owners" || page === "owner") page = "ownersStep1";
     if(page === "batch" || page === "inbound") page = "stock";
@@ -17790,21 +17874,28 @@ body.show-inbound #inboundRoot button{
     }
     if(page === "reports"){
       if(typeof ensureReportsStep1Dom === "function") ensureReportsStep1Dom();
-      ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","configStep1Root","inventoryView"].forEach(hideRootNavFinalStep1);
+      ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","configStep1Root","profileCenterRootV92","inventoryView"].forEach(hideRootNavFinalStep1);
       showRootNavFinalStep1("reportsStep1Root");
       clearModesNavFinalStep1();
       document.body.classList.add("reports-mode-step1");
       setActiveNavFinalStep1("reports");
+      setTimeout(function(){ setActiveNavFinalStep1("reports"); }, 0);
+      setTimeout(function(){ setActiveNavFinalStep1("reports"); }, 120);
       try{ if(typeof renderReportsStep1 === "function") renderReportsStep1(); }catch(err){}
       return false;
     }
     if(page === "configStep1"){
       if(typeof ensureConfigStep1Dom === "function") ensureConfigStep1Dom();
-      ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","reportsStep1Root","inventoryView"].forEach(hideRootNavFinalStep1);
+      ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","reportsStep1Root","profileCenterRootV92","inventoryView"].forEach(hideRootNavFinalStep1);
       showRootNavFinalStep1("configStep1Root");
       clearModesNavFinalStep1();
       setActiveNavFinalStep1("configStep1");
       try{ if(typeof renderConfigStep1 === "function") renderConfigStep1(); }catch(err){}
+      return false;
+    }
+    if(page === "profileV92"){
+      if(typeof window.showProfileCenterV92 === "function") window.showProfileCenterV92();
+      setTimeout(function(){ setActiveNavFinalStep1("profileV92"); }, 0);
       return false;
     }
     if(typeof showAppPage === "function"){
@@ -25020,6 +25111,1751 @@ body.show-stock #stockRoot .stock-table td:nth-child(5)::before{content:"已售/
   }, true);
 
   setTimeout(function(){ stabilizeOrdersV90(selectedOrderV90()); }, 0);
+})();
+</script>
+
+<style>
+/* ===== V91：只补小票打印入口与打印区域 ===== */
+.cashier-title-print-v91{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  flex-wrap:nowrap!important;
+  max-width:100%;
+}
+.cashier-title-print-v91 h1{
+  flex:0 0 auto!important;
+}
+.receipt-print-btn-v91{
+  height:34px;
+  border:1px solid #d8ddd3;
+  border-radius:10px;
+  background:#fff!important;
+  color:#1f2023!important;
+  padding:0 12px;
+  font-size:13px;
+  font-weight:950;
+  cursor:pointer;
+  white-space:nowrap;
+  flex:0 1 auto;
+}
+.receipt-print-btn-v91:disabled{
+  background:#e1e5dd!important;
+  color:#7b847b!important;
+  cursor:not-allowed;
+}
+#cashierRoot #printLastReceiptV91.receipt-print-btn-v91{
+  background:#fff!important;
+  color:#1f2023!important;
+  border:1px solid #d8ddd3!important;
+}
+#cashierRoot #printLastReceiptV91.receipt-print-btn-v91:disabled{
+  background:#e1e5dd!important;
+  color:#7b847b!important;
+}
+#receiptPrintAreaV91{
+  display:none;
+}
+@page{
+  size:60mm 80mm;
+  margin:0;
+}
+@media print{
+  body.receipt-printing-v91 *{
+    visibility:hidden!important;
+  }
+  body.receipt-printing-v91 #receiptPrintAreaV91,
+  body.receipt-printing-v91 #receiptPrintAreaV91 *{
+    visibility:visible!important;
+  }
+  body.receipt-printing-v91 #receiptPrintAreaV91{
+    display:block!important;
+    position:absolute!important;
+    left:0!important;
+    top:0!important;
+    width:60mm!important;
+    padding:0!important;
+    margin:0!important;
+    background:#fff!important;
+    color:#000!important;
+    font-family:"PingFang SC","Microsoft YaHei",Arial,sans-serif!important;
+    font-size:12px!important;
+    line-height:1.45!important;
+  }
+  body.receipt-printing-v91 .receipt-v91{
+    width:60mm;
+    min-height:80mm;
+    padding:4mm 3mm;
+  }
+  body.receipt-printing-v91 .receipt-v91 h1,
+  body.receipt-printing-v91 .receipt-v91 h2{
+    margin:0;
+    text-align:center;
+    color:#000!important;
+  }
+  body.receipt-printing-v91 .receipt-v91 h1{font-size:16px;}
+  body.receipt-printing-v91 .receipt-v91 h2{font-size:14px;margin-top:3px;}
+  body.receipt-printing-v91 .receipt-v91 .line{
+    border-top:1px dashed #000;
+    margin:8px 0;
+  }
+  body.receipt-printing-v91 .receipt-v91 table{
+    width:100%;
+    min-width:0!important;
+    border-collapse:collapse;
+  }
+  body.receipt-printing-v91 .receipt-v91 th,
+  body.receipt-printing-v91 .receipt-v91 td{
+    border:0;
+    padding:2px 0;
+    font-size:10px;
+    text-align:left;
+    vertical-align:top;
+    background:#fff!important;
+    color:#000!important;
+  }
+  body.receipt-printing-v91 .receipt-v91 .right{text-align:right;}
+  body.receipt-printing-v91 .receipt-v91 .center{text-align:center;}
+}
+</style>
+
+<script>
+/* ===== V91：收银上一单小票 + 订单详情小票打印 ===== */
+(function(){
+  var activeOrderPrintV91 = null;
+
+  function nV91(v){ return Number(v || 0) || 0; }
+  function eV91(v){
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function(m){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];
+    });
+  }
+  function mV91(v){
+    try{ return typeof money === "function" ? money(v) : nV91(v).toFixed(2); }catch(err){ return nV91(v).toFixed(2); }
+  }
+  function keyV91(order){
+    return String((order && (order.orderNo || order.billNo || order.id)) || "");
+  }
+  function ordersV91(){
+    try{ return (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders : []; }catch(err){ return []; }
+  }
+  function fullOrderV91(order){
+    var key = keyV91(order);
+    if(!key) return order || null;
+    return ordersV91().find(function(row){ return keyV91(row) === key; }) || order || null;
+  }
+  function isPrintableOrderV91(order){
+    if(!order) return false;
+    var st = String(order.displayStatus || order.status || "");
+    if(order.voided || st === "已作废" || st === "未下单" || st === "待处理") return false;
+    return !!(order.orderNo || order.billNo || (Array.isArray(order.lines) && order.lines.length));
+  }
+  function latestOrderV91(){
+    return ordersV91().find(isPrintableOrderV91) || null;
+  }
+  function statusV91(order){
+    var st = String((order && (order.displayStatus || order.status)) || "");
+    if(st === "已下单") return nV91(order && order.debt) > 0 ? "已赊欠" : "已收银";
+    if(!st) return nV91(order && order.debt) > 0 ? "已赊欠" : "已收银";
+    return st;
+  }
+  function paidV91(order){
+    try{ if(typeof buyerV47PaidAmount === "function") return nV91(buyerV47PaidAmount(order)); }catch(err){}
+    return nV91(order && order.paid);
+  }
+  function debtV91(order){
+    try{ if(typeof buyerV47DebtAmount === "function") return nV91(buyerV47DebtAmount(order)); }catch(err){}
+    var direct = nV91(order && order.debt);
+    if(direct > 0) return direct;
+    return statusV91(order).indexOf("赊欠") >= 0 ? Math.max(0, nV91(order && order.totalAmount) - paidV91(order)) : 0;
+  }
+  function remarkV91(order){
+    return (order && (order.orderRemark || order.remark)) || "";
+  }
+  function merchantV91(){
+    var defaults = {
+      title:"仓颉商户",
+      name:"未设置商户名称",
+      address:"未设置商户地址",
+      phone:"未设置联系电话"
+    };
+    try{
+      var raw = localStorage.getItem("cangjieMerchantProfileV92");
+      var data = raw ? JSON.parse(raw) : {};
+      return {
+        title:data.title || defaults.title,
+        name:data.name || defaults.name,
+        address:data.address || defaults.address,
+        phone:data.phone || defaults.phone
+      };
+    }catch(err){
+      return defaults;
+    }
+  }
+  function ensurePrintAreaV91(){
+    var box = document.getElementById("receiptPrintAreaV91");
+    if(!box){
+      box = document.createElement("div");
+      box.id = "receiptPrintAreaV91";
+      document.body.appendChild(box);
+    }
+    return box;
+  }
+  function receiptHtmlV91(order, title){
+    order = fullOrderV91(order);
+    var lines = Array.isArray(order && order.lines) ? order.lines : [];
+    var discount = nV91(order && order.discount);
+    var total = nV91(order && order.totalAmount);
+    var paid = paidV91(order);
+    var debt = debtV91(order);
+    var merchant = merchantV91();
+    var rows = lines.map(function(i, idx){
+      var qty = nV91(i.qty);
+      var weight = nV91(i.weight);
+      var price = nV91(i.price);
+      var amount = nV91(i.amount || (String(i.type || "").indexOf("定装") >= 0 ? qty * price : weight * price));
+      return '<tr><td colspan="4">'+(idx+1)+'. '+eV91(i.name || "")+'</td></tr>'
+        + '<tr><td>'+eV91(qty + (i.unit || "件"))+'</td><td>'+eV91(weight+"斤")+'</td><td>'+mV91(price)+'</td><td class="right">'+mV91(amount)+'</td></tr>';
+    }).join("") || '<tr><td colspan="4">暂无商品明细</td></tr>';
+    var payLine = debt > 0 ? '<div>赊欠金额：'+mV91(debt)+'</div>' : '<div>实收金额：'+mV91(paid || total)+'</div>';
+    return '<div class="receipt-v91">'
+      + '<h1>仓颉</h1><h2>'+eV91(title || "销售小票")+'</h2>'
+      + '<div class="line"></div>'
+      + '<div>商户抬头：'+eV91(merchant.title)+'</div>'
+      + '<div>商户名称：'+eV91(merchant.name)+'</div>'
+      + '<div>商户地址：'+eV91(merchant.address)+'</div>'
+      + '<div>联系电话：'+eV91(merchant.phone)+'</div>'
+      + '<div class="line"></div>'
+      + '<div>订单号：'+eV91((order && (order.orderNo || order.billNo)) || "")+'</div>'
+      + '<div>客户名称：'+eV91((order && order.customerName) || "")+'</div>'
+      + '<div>下单时间：'+eV91((order && order.time) || "")+'</div>'
+      + '<div>收银状态：'+eV91(statusV91(order))+'</div>'
+      + '<div>收银员：'+eV91((order && (order.cashierName || order.cashierPhone || order.cashierRole)) ? ((order.cashierName || order.cashierRole || "管理员") + (order.cashierPhone ? " " + order.cashierPhone : "")) : "管理员")+'</div>'
+      + '<div class="line"></div>'
+      + '<table><thead><tr><th>件数</th><th>斤数</th><th>单价</th><th class="right">金额</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      + '<div class="line"></div>'
+      + '<div>优惠金额：'+mV91(discount)+'</div>'
+      + ((order && order.discountNote) ? '<div>优惠备注：'+eV91(order.discountNote)+'</div>' : '')
+      + '<div>应收金额：'+mV91(total)+'</div>'
+      + payLine
+      + (remarkV91(order) ? '<div>订单备注：'+eV91(remarkV91(order))+'</div>' : '')
+      + '<div class="line"></div>'
+      + '<div class="center">谢谢惠顾</div>'
+      + '</div>';
+  }
+  function doPrintV91(order, title){
+    order = fullOrderV91(order);
+    if(!isPrintableOrderV91(order)){
+      alert("暂无可打印订单。");
+      return;
+    }
+    ensurePrintAreaV91().innerHTML = receiptHtmlV91(order, title);
+    document.body.classList.add("receipt-printing-v91");
+    setTimeout(function(){ window.print(); }, 30);
+  }
+  function cleanupPrintV91(){
+    document.body.classList.remove("receipt-printing-v91");
+  }
+  window.addEventListener("afterprint", cleanupPrintV91);
+
+  window.refreshLastOrderPrintV91 = function(){
+    var btn = document.getElementById("printLastReceiptV91");
+    if(!btn) return;
+    var order = latestOrderV91();
+    if(!order){
+      btn.textContent = "暂无上一单可打印";
+      btn.disabled = true;
+      return;
+    }
+    btn.disabled = false;
+    btn.textContent = "打印上一单｜" + (order.customerName || "") + "｜" + ((order.orderNo || order.billNo) || "") + "｜¥" + mV91(order.totalAmount || 0);
+  };
+  window.printLastOrderReceiptV91 = function(){
+    doPrintV91(latestOrderV91(), "销售小票");
+  };
+  window.printSelectedOrderReceiptV91 = function(){
+    doPrintV91(activeOrderPrintV91, "订单小票");
+  };
+
+  function syncOrderPrintButtonV91(order){
+    var actions = document.querySelector("#ordersRoot .orders-detail-actions");
+    if(!actions) return;
+    activeOrderPrintV91 = fullOrderV91(order || (typeof currentSelectedOrderRecord === "function" ? currentSelectedOrderRecord() : null));
+    var btn = document.getElementById("orderPrintReceiptV91");
+    if(!btn){
+      btn = document.createElement("button");
+      btn.id = "orderPrintReceiptV91";
+      btn.type = "button";
+      btn.className = "btn-green";
+      btn.onclick = function(){ window.printSelectedOrderReceiptV91(); };
+      actions.insertBefore(btn, actions.firstChild);
+    }
+    var ok = isPrintableOrderV91(activeOrderPrintV91);
+    btn.disabled = !ok;
+    btn.textContent = ok ? "打印订单" : "请选择订单后打印";
+  }
+
+  var oldRenderOrderDetailV91 = typeof window.renderOrderDetail === "function" ? window.renderOrderDetail : null;
+  if(oldRenderOrderDetailV91 && !oldRenderOrderDetailV91.__printV91){
+    window.renderOrderDetail = function(order){
+      var result = oldRenderOrderDetailV91.apply(this, arguments);
+      syncOrderPrintButtonV91(order);
+      return result;
+    };
+    window.renderOrderDetail.__printV91 = true;
+  }
+
+  ["pushCompletedOrder","confirmOrderFromCodeBill","completeSettleOrder","renderCashierAll","renderOrdersCenter"].forEach(function(name){
+    var old = window[name];
+    if(typeof old !== "function" || old.__printV91) return;
+    window[name] = function(){
+      var result = old.apply(this, arguments);
+      setTimeout(function(){
+        window.refreshLastOrderPrintV91();
+        syncOrderPrintButtonV91(activeOrderPrintV91);
+      }, 0);
+      return result;
+    };
+    window[name].__printV91 = true;
+  });
+
+  setTimeout(function(){
+    window.refreshLastOrderPrintV91();
+    syncOrderPrintButtonV91(typeof currentSelectedOrderRecord === "function" ? currentSelectedOrderRecord() : null);
+  }, 0);
+})();
+</script>
+
+<style>
+/* ===== V92：个人中心框架，只新增模块，不改原业务 ===== */
+#profileCenterRootV92{
+  display:none;
+  margin-left:74px;
+  width:calc(100vw - 74px);
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 80% 0%,rgba(111,143,122,.08),transparent 30%),
+    linear-gradient(135deg,#fafaf9 0%,#f1f2ef 100%);
+  color:#1f2a22;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;
+  box-sizing:border-box;
+  overflow:auto;
+}
+body.show-profile-v92 #profileCenterRootV92{
+  display:block!important;
+}
+body.show-cashier #profileCenterRootV92,
+body.show-stock #profileCenterRootV92,
+body.show-orders #profileCenterRootV92,
+body.show-inbound #profileCenterRootV92,
+body.inventory-mode #profileCenterRootV92,
+body.batch-overview-mode #profileCenterRootV92,
+body.batch-create-mode #profileCenterRootV92{
+  display:none!important;
+}
+body.account-blocked-v93 #cashierRoot,
+body.account-blocked-v93 #inboundRoot,
+body.account-blocked-v93 #stockRoot,
+body.account-blocked-v93 #ordersRoot,
+body.account-blocked-v93 #inventoryStep1Root,
+body.account-blocked-v93 #ownerStep1Root,
+body.account-blocked-v93 #reportsStep1Root,
+body.account-blocked-v93 #configStep1Root,
+body.account-blocked-v93 #inventoryView{
+  display:none!important;
+}
+body.account-blocked-v93 #profileCenterRootV92{
+  display:block!important;
+}
+.profile-v92-shell{
+  padding:16px;
+  min-height:100vh;
+  box-sizing:border-box;
+}
+.profile-v92-top{
+  background:#fff;
+  border:1px solid #edf0ea;
+  border-radius:24px;
+  padding:18px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  box-shadow:0 18px 42px rgba(31,42,34,.06);
+}
+.profile-v92-top h1{
+  margin:0;
+  font-size:28px;
+  line-height:1.15;
+  font-weight:950;
+}
+.profile-v92-top p{
+  margin:6px 0 0;
+  color:#667068;
+  font-size:13px;
+  line-height:1.5;
+  font-weight:800;
+}
+.profile-v92-status{
+  min-height:38px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  border:1px solid #d9e5d8;
+  background:#f1f8f1;
+  color:#376b42;
+  padding:0 14px;
+  font-size:13px;
+  font-weight:950;
+  white-space:nowrap;
+}
+.profile-v92-grid{
+  display:grid;
+  grid-template-columns:minmax(280px,420px) minmax(0,1fr);
+  gap:16px;
+  margin-top:16px;
+}
+.profile-v92-card{
+  background:#fff;
+  border:1px solid #edf0ea;
+  border-radius:24px;
+  padding:18px;
+  box-shadow:0 18px 42px rgba(31,42,34,.06);
+  min-width:0;
+}
+.profile-v92-card h2{
+  margin:0 0 12px;
+  font-size:22px;
+  font-weight:950;
+  line-height:1.2;
+}
+.profile-v92-card p{
+  margin:0 0 14px;
+  color:#667068;
+  font-size:13px;
+  line-height:1.5;
+  font-weight:800;
+}
+.profile-v92-tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-bottom:12px;
+}
+.profile-v92-tab{
+  height:40px;
+  border:0;
+  border-radius:12px;
+  background:#eef0ea;
+  color:#263028;
+  font-size:14px;
+  font-weight:950;
+  cursor:pointer;
+}
+.profile-v92-tab.active{
+  background:#1f2023;
+  color:#fff;
+}
+.profile-v92-form{
+  display:grid;
+  gap:12px;
+}
+.profile-v92-field label{
+  display:block;
+  margin:0 0 6px;
+  color:#3c473e;
+  font-size:13px;
+  font-weight:950;
+}
+.profile-v92-field input{
+  width:100%;
+  height:44px;
+  border:1px solid #d3d8cf;
+  border-radius:12px;
+  background:#fff;
+  padding:0 12px;
+  color:#1f2a22;
+  font-size:15px;
+  font-weight:800;
+  outline:none;
+  box-sizing:border-box;
+}
+.profile-v92-field input:focus{
+  border-color:#2f8e40;
+  box-shadow:0 0 0 3px rgba(47,142,64,.12);
+}
+.profile-v92-btn{
+  height:46px;
+  border:0;
+  border-radius:12px;
+  background:#1f2023;
+  color:#fff;
+  font-size:15px;
+  font-weight:950;
+  cursor:pointer;
+}
+.profile-v92-btn.secondary{
+  background:#2f8e40;
+}
+.profile-v92-info{
+  display:grid;
+  gap:10px;
+}
+.profile-v92-info-row{
+  border:1px solid #e5e8df;
+  border-radius:14px;
+  background:#fbfcf8;
+  padding:12px;
+}
+.profile-v92-info-row span{
+  display:block;
+  color:#667068;
+  font-size:12px;
+  font-weight:900;
+}
+.profile-v92-info-row b{
+  display:block;
+  margin-top:4px;
+  color:#1f2a22;
+  font-size:17px;
+  font-weight:950;
+  line-height:1.35;
+  overflow-wrap:anywhere;
+}
+.profile-v92-merchant-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.profile-v92-merchant-grid .wide{
+  grid-column:1 / -1;
+}
+#globalUnifiedNavV41 .v41-nav-btn.profile-v92-active{
+  background:#2f8e40!important;
+  color:#fff!important;
+}
+@media(max-width:980px){
+  #profileCenterRootV92{
+    margin-left:0;
+    width:100vw;
+  }
+  .profile-v92-grid{
+    grid-template-columns:1fr;
+  }
+  .profile-v92-top{
+    display:block;
+  }
+  .profile-v92-status{
+    margin-top:12px;
+  }
+}
+@media(max-width:640px){
+  .profile-v92-shell{
+    padding:12px;
+  }
+  .profile-v92-top,
+  .profile-v92-card{
+    border-radius:18px;
+    padding:14px;
+  }
+  .profile-v92-top h1{
+    font-size:24px;
+  }
+  .profile-v92-merchant-grid{
+    grid-template-columns:1fr;
+  }
+  .profile-v92-tabs{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+
+<script>
+/* ===== V92：个人中心 + 商户资料 localStorage + 导航入口 ===== */
+(function(){
+  var PROFILE_KEY = "cangjieMerchantProfileV92";
+  var LOGIN_KEY = "cangjieMerchantLoginV92";
+  var loginMode = "phone";
+
+  function eV92(v){
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function(m){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];
+    });
+  }
+  function readJsonV92(key, fallback){
+    try{
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    }catch(err){
+      return fallback;
+    }
+  }
+  function writeJsonV92(key, value){
+    localStorage.setItem(key, JSON.stringify(value || {}));
+  }
+  function merchantDefaultsV92(){
+    return {
+      title:"仓颉商户",
+      name:"未设置商户名称",
+      address:"未设置商户地址",
+      phone:"未设置联系电话"
+    };
+  }
+  function merchantV92(){
+    var saved = readJsonV92(PROFILE_KEY, {});
+    var d = merchantDefaultsV92();
+    return {
+      title:saved.title || d.title,
+      name:saved.name || d.name,
+      address:saved.address || d.address,
+      phone:saved.phone || d.phone
+    };
+  }
+  window.getCangjieMerchantProfileV92 = merchantV92;
+
+  function ensureProfileDomV92(){
+    if(document.getElementById("profileCenterRootV92")) return;
+    var root = document.createElement("div");
+    root.id = "profileCenterRootV92";
+    root.innerHTML = '<div class="profile-v92-shell">'
+      + '<header class="profile-v92-top"><div><h1>个人中心</h1><p>用于后续小程序 / App 登录商家面板；当前版本先保存本机商户资料并联动打印小票。</p></div><div id="profileLoginStatusV92" class="profile-v92-status">未登录</div></header>'
+      + '<section class="profile-v92-grid">'
+      + '<div class="profile-v92-card"><h2>商家登录</h2><p>当前为前端模拟登录，不接入短信验证码或微信授权。</p>'
+      + '<div class="profile-v92-tabs"><button id="profilePhoneTabV92" class="profile-v92-tab active" type="button" data-login-mode-v92="phone">手机号登录</button><button id="profileWechatTabV92" class="profile-v92-tab" type="button" data-login-mode-v92="wechat">微信号登录</button></div>'
+      + '<div class="profile-v92-form"><div class="profile-v92-field"><label>手机号</label><input id="profilePhoneV92" inputmode="tel" placeholder="请输入手机号"></div><div class="profile-v92-field"><label>微信号</label><input id="profileWechatV92" placeholder="请输入微信号"></div><button id="profileLoginBtnV92" class="profile-v92-btn" type="button">登录</button></div>'
+      + '<div id="profileLoginCardV92" class="profile-v92-info" style="margin-top:14px"></div></div>'
+      + '<div class="profile-v92-card"><h2>商户资料设置</h2><p>保存后会写入本机资料，并在打印小票上显示。</p>'
+      + '<div class="profile-v92-form profile-v92-merchant-grid"><div class="profile-v92-field"><label>商户抬头</label><input id="merchantTitleV92" placeholder="例如：仓颉商户"></div><div class="profile-v92-field"><label>商户名称</label><input id="merchantNameV92" placeholder="请输入商户名称"></div><div class="profile-v92-field wide"><label>商户地址</label><input id="merchantAddressV92" placeholder="请输入商户地址"></div><div class="profile-v92-field"><label>联系电话</label><input id="merchantPhoneV92" inputmode="tel" placeholder="请输入联系电话"></div><div class="profile-v92-field"><label>&nbsp;</label><button id="merchantSaveBtnV92" class="profile-v92-btn secondary" type="button">保存商户资料</button></div></div>'
+      + '<div id="merchantProfileCardV92" class="profile-v92-info" style="margin-top:14px"></div></div>'
+      + '</section></div>';
+    document.body.appendChild(root);
+    document.getElementById("profilePhoneTabV92").addEventListener("click", function(){ window.setProfileLoginModeV92("phone"); });
+    document.getElementById("profileWechatTabV92").addEventListener("click", function(){ window.setProfileLoginModeV92("wechat"); });
+    document.getElementById("profileLoginBtnV92").addEventListener("click", function(){ window.simulateMerchantLoginV92(); });
+    document.getElementById("merchantSaveBtnV92").addEventListener("click", function(){ window.saveMerchantProfileV92(); });
+  }
+
+  function renderProfileV92(){
+    ensureProfileDomV92();
+    var login = readJsonV92(LOGIN_KEY, {});
+    var merchant = merchantV92();
+    var status = document.getElementById("profileLoginStatusV92");
+    if(status) status.textContent = login.loggedIn ? "已登录：" + (login.mode === "wechat" ? (login.wechat || "微信号") : (login.phone || "手机号")) : "未登录";
+    var phone = document.getElementById("profilePhoneV92");
+    var wechat = document.getElementById("profileWechatV92");
+    if(phone && !phone.value) phone.value = login.phone || "";
+    if(wechat && !wechat.value) wechat.value = login.wechat || "";
+    ["title","name","address","phone"].forEach(function(key){
+      var id = key === "title" ? "merchantTitleV92" : key === "name" ? "merchantNameV92" : key === "address" ? "merchantAddressV92" : "merchantPhoneV92";
+      var el = document.getElementById(id);
+      if(el) el.value = merchant[key] === merchantDefaultsV92()[key] ? "" : merchant[key];
+    });
+    var loginCard = document.getElementById("profileLoginCardV92");
+    if(loginCard){
+      loginCard.innerHTML = login.loggedIn
+        ? '<div class="profile-v92-info-row"><span>当前商家</span><b>'+eV92(login.mode === "wechat" ? (login.wechat || "微信号商家") : (login.phone || "手机号商家"))+'</b></div><div class="profile-v92-info-row"><span>登录方式</span><b>'+eV92(login.mode === "wechat" ? "微信号登录" : "手机号登录")+'</b></div>'
+        : '<div class="profile-v92-info-row"><span>当前商家</span><b>请先模拟登录</b></div>';
+    }
+    var merchantCard = document.getElementById("merchantProfileCardV92");
+    if(merchantCard){
+      merchantCard.innerHTML = '<div class="profile-v92-info-row"><span>当前商户抬头</span><b>'+eV92(merchant.title)+'</b></div>'
+        + '<div class="profile-v92-info-row"><span>当前商户名称</span><b>'+eV92(merchant.name)+'</b></div>'
+        + '<div class="profile-v92-info-row"><span>当前商户地址</span><b>'+eV92(merchant.address)+'</b></div>'
+        + '<div class="profile-v92-info-row"><span>当前联系电话</span><b>'+eV92(merchant.phone)+'</b></div>';
+    }
+  }
+
+  window.setProfileLoginModeV92 = function(mode){
+    loginMode = mode === "wechat" ? "wechat" : "phone";
+    var phoneTab = document.getElementById("profilePhoneTabV92");
+    var wechatTab = document.getElementById("profileWechatTabV92");
+    if(phoneTab) phoneTab.classList.toggle("active", loginMode === "phone");
+    if(wechatTab) wechatTab.classList.toggle("active", loginMode === "wechat");
+  };
+  window.simulateMerchantLoginV92 = function(){
+    var phone = (document.getElementById("profilePhoneV92")?.value || "").trim();
+    var wechat = (document.getElementById("profileWechatV92")?.value || "").trim();
+    if(loginMode === "phone" && !phone){
+      alert("请先填写手机号。");
+      return;
+    }
+    if(loginMode === "wechat" && !wechat){
+      alert("请先填写微信号。");
+      return;
+    }
+    writeJsonV92(LOGIN_KEY, {loggedIn:true, mode:loginMode, phone:phone, wechat:wechat, time:new Date().toLocaleString("zh-CN",{hour12:false})});
+    renderProfileV92();
+    if(typeof toast === "function") toast("商家已登录");
+  };
+  window.saveMerchantProfileV92 = function(){
+    var data = {
+      title:(document.getElementById("merchantTitleV92")?.value || "").trim(),
+      name:(document.getElementById("merchantNameV92")?.value || "").trim(),
+      address:(document.getElementById("merchantAddressV92")?.value || "").trim(),
+      phone:(document.getElementById("merchantPhoneV92")?.value || "").trim()
+    };
+    writeJsonV92(PROFILE_KEY, data);
+    renderProfileV92();
+    if(typeof toast === "function") toast("商户资料已保存");
+  };
+
+  function hideRootV92(id){
+    var el = document.getElementById(id);
+    if(el) el.style.setProperty("display", "none", "important");
+  }
+  function injectProfileNavV92(active){
+    var nav = document.getElementById("globalUnifiedNavV41");
+    if(!nav) return;
+    var btn = nav.querySelector('[data-page="profileV92"],[data-profile-center-v92]');
+    if(!btn) return;
+    if(active){
+      Array.from(nav.querySelectorAll(".v41-nav-btn.active")).forEach(function(item){
+        item.classList.remove("active");
+      });
+    }
+    btn.classList.toggle("active", !!active);
+    btn.classList.toggle("profile-v92-active", !!active);
+  }
+  function currentProfileV92(){
+    return document.body.classList.contains("show-profile-v92");
+  }
+  function showProfileV92(){
+    ensureProfileDomV92();
+    ["cashierRoot","inboundRoot","stockRoot","ordersRoot","inventoryStep1Root","ownerStep1Root","reportsStep1Root","configStep1Root","inventoryView"].forEach(hideRootV92);
+    document.body.classList.remove("show-cashier","show-inbound","show-stock","show-orders","inventory-mode","batch-create-mode","batch-overview-mode","buyers-mode-step1");
+    document.body.classList.add("show-profile-v92");
+    document.getElementById("profileCenterRootV92").style.setProperty("display", "block", "important");
+    injectProfileNavV92(true);
+    setTimeout(function(){ injectProfileNavV92(true); }, 0);
+    setTimeout(function(){ injectProfileNavV92(true); }, 160);
+    renderProfileV92();
+  }
+  window.showProfileCenterV92 = showProfileV92;
+  var oldShowAppPageV92 = typeof window.showAppPage === "function" ? window.showAppPage : null;
+  window.showAppPage = function(page){
+    if(page === "profileV92" || page === "profile" || page === "personalCenter"){
+      showProfileV92();
+      return;
+    }
+    document.body.classList.remove("show-profile-v92");
+    hideRootV92("profileCenterRootV92");
+    var result;
+    if(typeof oldShowAppPageV92 === "function") result = oldShowAppPageV92.apply(this, arguments);
+    setTimeout(function(){ injectProfileNavV92(false); }, 0);
+    setTimeout(function(){ injectProfileNavV92(false); }, 160);
+    return result;
+  };
+  if(typeof window.stableTudou2NavStep1 === "function" && !window.stableTudou2NavStep1.__profileV92){
+    var oldStableNavV92 = window.stableTudou2NavStep1;
+    window.stableTudou2NavStep1 = function(active){
+      var result = oldStableNavV92.apply(this, arguments);
+      setTimeout(function(){ injectProfileNavV92(active === "profileV92" || currentProfileV92()); }, 0);
+      return result;
+    };
+    window.stableTudou2NavStep1.__profileV92 = true;
+  }
+  document.addEventListener("click", function(ev){
+    var btn = ev.target && ev.target.closest ? ev.target.closest("[data-profile-center-v92]") : null;
+    if(!btn) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+    showProfileV92();
+    return false;
+  }, true);
+  document.addEventListener("click", function(ev){
+    var btn = ev.target && ev.target.closest ? ev.target.closest("#globalUnifiedNavV41 [data-page],#globalUnifiedNavV41 [data-config-direct]") : null;
+    if(!btn) return;
+    if(btn.getAttribute("data-page") !== "profileV92") document.body.classList.remove("show-profile-v92");
+  }, false);
+  function bootV92(){
+    ensureProfileDomV92();
+    renderProfileV92();
+    injectProfileNavV92(currentProfileV92());
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootV92);
+  else bootV92();
+  setTimeout(bootV92, 300);
+  setTimeout(bootV92, 1000);
+})();
+</script>
+
+<style>
+/* ===== V93：员工账号与权限控制，附着在个人中心 ===== */
+.employee-v93-card{
+  grid-column:1 / -1;
+}
+.employee-v93-form{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr)) 140px;
+  gap:12px;
+  align-items:end;
+}
+.employee-v93-form select,
+.order-cashier-filter-v93{
+  width:100%;
+  height:44px;
+  border:1px solid #d3d8cf;
+  border-radius:12px;
+  background:#fff;
+  padding:0 12px;
+  color:#1f2a22;
+  font-size:15px;
+  font-weight:800;
+  outline:none;
+  box-sizing:border-box;
+}
+.employee-v93-table-wrap{
+  margin-top:14px;
+  border:1px solid #e5e8df;
+  border-radius:16px;
+  overflow:auto;
+}
+.employee-v93-table{
+  width:100%;
+  min-width:760px;
+  border-collapse:collapse;
+}
+.employee-v93-table th,
+.employee-v93-table td{
+  padding:11px 10px;
+  border-bottom:1px solid #e5e8df;
+  text-align:left;
+  font-size:13px;
+  font-weight:850;
+  vertical-align:middle;
+}
+.employee-v93-table th{
+  background:#eef1ed;
+  font-weight:950;
+}
+.employee-v93-table tr:last-child td{
+  border-bottom:0;
+}
+.employee-v93-status{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  padding:4px 9px;
+  font-size:12px;
+  font-weight:950;
+}
+.employee-v93-status.on{
+  background:#e8f7ec;
+  color:#23733b;
+}
+.employee-v93-status.off{
+  background:#f2e6e6;
+  color:#a52a2a;
+}
+.employee-v93-action{
+  height:32px;
+  border:0;
+  border-radius:9px;
+  background:#1f2023;
+  color:#fff;
+  padding:0 10px;
+  font-size:12px;
+  font-weight:950;
+  cursor:pointer;
+}
+.employee-v93-auth-warning{
+  margin-top:12px;
+  border:1px solid #f0d4d4;
+  background:#fff5f5;
+  color:#a52a2a;
+  border-radius:14px;
+  padding:12px;
+  font-size:14px;
+  font-weight:950;
+  line-height:1.5;
+}
+.account-v93-pill{
+  position:fixed;
+  right:18px;
+  top:18px;
+  z-index:90;
+  min-height:38px;
+  max-width:min(360px,calc(100vw - 110px));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid #d9e5d8;
+  background:rgba(255,255,255,.92);
+  color:#27442e;
+  border-radius:999px;
+  padding:0 14px;
+  box-shadow:0 14px 34px rgba(31,42,34,.08);
+  font-size:13px;
+  font-weight:950;
+  pointer-events:none;
+}
+.cashier-v93-card{
+  border:1px solid #e5e8df;
+  border-radius:12px;
+  background:#fbfcf8;
+  padding:10px 12px;
+}
+.cashier-v93-card span{
+  display:block;
+  color:#667068;
+  font-size:12px;
+  font-weight:900;
+}
+.cashier-v93-card b{
+  display:block;
+  margin-top:4px;
+  color:#1f2a22;
+  font-size:16px;
+  font-weight:950;
+}
+@media(max-width:980px){
+  .employee-v93-form{
+    grid-template-columns:1fr 1fr;
+  }
+}
+@media(max-width:640px){
+  .employee-v93-form{
+    grid-template-columns:1fr;
+  }
+  .account-v93-pill{
+    right:10px;
+    top:10px;
+    max-width:calc(100vw - 20px);
+  }
+}
+
+/* 个人中心统一为现有业务板块色调：浅灰页面底、白色卡片、仓颉绿主按钮 */
+#profileCenterRootV92{
+  background:#f4f5f2!important;
+}
+body.show-profile-v92 #cashierRoot,
+body.show-profile-v92 #inboundRoot,
+body.show-profile-v92 #stockRoot,
+body.show-profile-v92 #ordersRoot,
+body.show-profile-v92 #inventoryStep1Root,
+body.show-profile-v92 #ownerStep1Root,
+body.show-profile-v92 #reportsStep1Root,
+body.show-profile-v92 #configStep1Root,
+body.show-profile-v92 #inventoryView{
+  display:none!important;
+}
+#profileCenterRootV92 .profile-v92-top,
+#profileCenterRootV92 .profile-v92-card{
+  background:#fff;
+  border-color:#e5e8df;
+  box-shadow:0 18px 42px rgba(31,42,34,.06);
+}
+#profileCenterRootV92 .profile-v92-status{
+  background:#f7f8f4;
+  border-color:#d9ddd3;
+  color:#263028;
+}
+#profileCenterRootV92 .profile-v92-info-row,
+#profileCenterRootV92 .cashier-v93-card,
+#profileCenterRootV92 .employee-v93-table-wrap{
+  background:#fbfcf8;
+  border-color:#e5e8df;
+}
+#profileCenterRootV92 .profile-v92-field input,
+#profileCenterRootV92 .employee-v93-form select{
+  background:#fff;
+  border-color:#d3d8cf;
+}
+#profileCenterRootV92 .profile-v92-tab{
+  background:#eef0ea;
+}
+#profileCenterRootV92 .employee-v93-table th{
+  background:#eef1ed;
+}
+#profileCenterRootV92 .employee-v93-table td{
+  background:#fff;
+}
+#profileCenterRootV92 .profile-v92-tab.active,
+#profileCenterRootV92 .profile-v92-btn,
+#profileCenterRootV92 .profile-v92-btn.secondary,
+#profileCenterRootV92 #profileLoginBtnV92,
+#profileCenterRootV92 #merchantSaveBtnV92,
+#profileCenterRootV92 #addEmployeeBtnV94,
+#profileCenterRootV92 #addEmployeeBtnV93{
+  background:#1f2023!important;
+  color:#fff!important;
+}
+#profileCenterRootV92 .profile-v92-tab{
+  background:#eef0ea!important;
+  color:#263028!important;
+  border:0!important;
+}
+#globalUnifiedNavV41 .v41-nav-btn.profile-v92-active,
+#globalUnifiedNavV41 .v41-nav-btn[data-page="profileV92"].active{
+  background:#3f4444!important;
+  color:#fff!important;
+  border-color:rgba(255,255,255,.18)!important;
+}
+</style>
+
+<script>
+/* ===== V93：员工账号与权限控制 ===== */
+(function(){
+  // 临时降级：避免员工权限包装逻辑影响单文件启动；个人中心与商户小票联动保留。
+  return;
+  var EMP_KEY = "cangjieEmployeesV93";
+  var ACCOUNT_KEY = "cangjieCurrentAccountV93";
+  var ADMIN_KEY = "cangjieAdminAccountV93";
+  var ORDER_FILTER_KEY = "cangjieOrderCashierFilterV93";
+  var orderCashierFilterV93 = localStorage.getItem(ORDER_FILTER_KEY) || "all";
+
+  function nV93(v){ return Number(v || 0) || 0; }
+  function eV93(v){
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function(m){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];
+    });
+  }
+  function readV93(key, fallback){
+    try{
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    }catch(err){
+      return fallback;
+    }
+  }
+  function writeV93(key, value){
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+  function merchantV93(){
+    try{
+      if(typeof getCangjieMerchantProfileV92 === "function") return getCangjieMerchantProfileV92();
+    }catch(err){}
+    try{
+      return JSON.parse(localStorage.getItem("cangjieMerchantProfileV92") || "{}");
+    }catch(err){
+      return {};
+    }
+  }
+  function existingLoginV93(){
+    return readV93("cangjieMerchantLoginV92", {});
+  }
+  function ensureAdminV93(){
+    var admin = readV93(ADMIN_KEY, null);
+    if(admin && admin.role === "管理员") return admin;
+    var merchant = merchantV93();
+    var login = existingLoginV93();
+    admin = {
+      id:"admin",
+      role:"管理员",
+      name:"管理员",
+      phone:login.phone || merchant.phone || "",
+      wechat:login.wechat || "",
+      status:"启用"
+    };
+    writeV93(ADMIN_KEY, admin);
+    return admin;
+  }
+  function employeesV93(){
+    var rows = readV93(EMP_KEY, []);
+    return Array.isArray(rows) ? rows : [];
+  }
+  function saveEmployeesV93(rows){
+    writeV93(EMP_KEY, rows || []);
+  }
+  function currentAccountV93(){
+    var account = readV93(ACCOUNT_KEY, null);
+    if(account) return account;
+    var admin = ensureAdminV93();
+    return {
+      id:"admin",
+      role:"管理员",
+      name:admin.name || "管理员",
+      phone:admin.phone || "",
+      wechat:admin.wechat || "",
+      status:"启用",
+      authorized:true
+    };
+  }
+  function setAccountV93(account){
+    writeV93(ACCOUNT_KEY, account);
+    renderAccountBadgeV93();
+  }
+  function isBlockedV93(){
+    var account = currentAccountV93();
+    return !!(account && account.blocked);
+  }
+  function isAdminV93(){
+    return currentAccountV93().role === "管理员" && !isBlockedV93();
+  }
+  function isEmployeeEnabledV93(row){
+    return !!(row && row.status === "启用");
+  }
+  function findEmployeeV93(phone, wechat){
+    var p = String(phone || "").trim();
+    var w = String(wechat || "").trim();
+    return employeesV93().find(function(row){
+      return (p && row.phone === p) || (w && row.wechat === w);
+    }) || null;
+  }
+  function accountLabelV93(account){
+    account = account || currentAccountV93();
+    if(account.blocked) return "未授权账号：" + (account.phone || account.wechat || "未知账号");
+    return (account.name || account.role || "管理员") + (account.phone ? " " + account.phone : "");
+  }
+  function orderRowsV93(){
+    try{ return (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders : []; }catch(err){ return []; }
+  }
+  function orderCashierKeyV93(order){
+    if(order && order.cashierRole === "员工") return "emp:" + (order.cashierPhone || order.cashierName || "");
+    return "admin";
+  }
+  function stampOrderV93(order){
+    if(!order) return order;
+    var account = currentAccountV93();
+    order.cashierName = account.name || (account.role === "员工" ? "员工" : "管理员");
+    order.cashierPhone = account.phone || "";
+    order.cashierRole = account.role === "员工" ? "员工" : "管理员";
+    return order;
+  }
+  function employeeStatsV93(row){
+    var count = 0;
+    var paid = 0;
+    orderRowsV93().forEach(function(order){
+      if(String(order.cashierPhone || "") !== String(row.phone || "")) return;
+      count += 1;
+      paid += nV93(order.paid || order.totalAmount);
+    });
+    return {count:count, paid:paid};
+  }
+  function moneyV93(v){
+    try{ return typeof money === "function" ? money(v) : nV93(v).toFixed(2); }catch(err){ return nV93(v).toFixed(2); }
+  }
+  function ensureAccountBadgeV93(){
+    var badge = document.getElementById("currentAccountBadgeV93");
+    if(!badge){
+      badge = document.createElement("div");
+      badge.id = "currentAccountBadgeV93";
+      badge.className = "account-v93-pill";
+      document.body.appendChild(badge);
+    }
+    return badge;
+  }
+  function renderAccountBadgeV93(){
+    var badge = ensureAccountBadgeV93();
+    var account = currentAccountV93();
+    document.body.classList.toggle("account-blocked-v93", !!account.blocked);
+    if(account.blocked){
+      document.body.classList.add("show-profile-v92");
+      var profile = document.getElementById("profileCenterRootV92");
+      if(profile) profile.style.setProperty("display", "block", "important");
+    }
+    badge.textContent = "当前账号：" + accountLabelV93(account);
+    badge.style.display = document.body.classList.contains("show-profile-v92") ? "none" : "flex";
+    var profileStatus = document.getElementById("profileLoginStatusV92");
+    if(profileStatus) profileStatus.textContent = "当前账号：" + accountLabelV93(account);
+  }
+  function syncProfileVisibilityV93(){
+    var profile = document.getElementById("profileCenterRootV92");
+    if(!profile) return;
+    if(isBlockedV93()){
+      document.body.classList.add("show-profile-v92");
+      profile.style.setProperty("display", "block", "important");
+      return;
+    }
+    var businessMode = document.body.classList.contains("show-cashier")
+      || document.body.classList.contains("show-stock")
+      || document.body.classList.contains("show-orders")
+      || document.body.classList.contains("show-inbound")
+      || document.body.classList.contains("inventory-mode")
+      || document.body.classList.contains("batch-overview-mode")
+      || document.body.classList.contains("batch-create-mode");
+    if(businessMode){
+      document.body.classList.remove("show-profile-v92");
+      profile.style.setProperty("display", "none", "important");
+    }
+  }
+
+  function ensureEmployeeCardV93(){
+    var root = document.getElementById("profileCenterRootV92");
+    var grid = root && root.querySelector(".profile-v92-grid");
+    if(!grid || document.getElementById("employeeCardV93")) return;
+    var card = document.createElement("div");
+    card.id = "employeeCardV93";
+    card.className = "profile-v92-card employee-v93-card";
+    card.innerHTML = '<h2>员工账号管理</h2><p>管理员可新增员工账号、启用或停用权限；员工登录后订单会记录开单人。</p>'
+      + '<div id="employeeAuthWarningV93"></div>'
+      + '<div class="employee-v93-form">'
+      + '<div class="profile-v92-field"><label>员工姓名</label><input id="employeeNameV93" placeholder="请输入姓名"></div>'
+      + '<div class="profile-v92-field"><label>员工手机号</label><input id="employeePhoneV93" inputmode="tel" placeholder="请输入手机号"></div>'
+      + '<div class="profile-v92-field"><label>员工微信号，可选</label><input id="employeeWechatV93" placeholder="请输入微信号"></div>'
+      + '<div class="profile-v92-field"><label>员工状态</label><select id="employeeStatusV93"><option value="启用">启用</option><option value="停用">停用</option></select></div>'
+      + '<button id="addEmployeeBtnV93" class="profile-v92-btn secondary" type="button">新增员工</button>'
+      + '</div><div class="employee-v93-table-wrap"><table class="employee-v93-table"><thead><tr><th>员工姓名</th><th>手机号</th><th>微信号</th><th>状态</th><th>已开单数量</th><th>已收金额</th><th>操作</th></tr></thead><tbody id="employeeListV93"></tbody></table></div>';
+    grid.appendChild(card);
+    document.getElementById("addEmployeeBtnV93").addEventListener("click", addEmployeeV93);
+  }
+  function renderEmployeesV93(){
+    ensureEmployeeCardV93();
+    var warning = document.getElementById("employeeAuthWarningV93");
+    var form = document.querySelector("#employeeCardV93 .employee-v93-form");
+    var wrap = document.querySelector("#employeeCardV93 .employee-v93-table-wrap");
+    if(warning){
+      warning.innerHTML = isBlockedV93() ? '<div class="employee-v93-auth-warning">该账号尚未获得商家授权，请联系管理员开通权限。</div>' : "";
+    }
+    if(form) form.style.display = isAdminV93() ? "grid" : "none";
+    if(wrap) wrap.style.display = isAdminV93() ? "block" : "none";
+    var tbody = document.getElementById("employeeListV93");
+    if(!tbody) return;
+    var rows = employeesV93();
+    tbody.innerHTML = rows.map(function(row){
+      var stats = employeeStatsV93(row);
+      var next = row.status === "启用" ? "停用" : "启用";
+      return '<tr><td>'+eV93(row.name)+'</td><td>'+eV93(row.phone)+'</td><td>'+eV93(row.wechat || "-")+'</td>'
+        + '<td><span class="employee-v93-status '+(row.status === "启用" ? "on" : "off")+'">'+eV93(row.status)+'</span></td>'
+        + '<td>'+stats.count+'</td><td>'+moneyV93(stats.paid)+'</td>'
+        + '<td><button class="employee-v93-action" type="button" data-toggle-employee-v93="'+eV93(row.id)+'">'+next+'</button></td></tr>';
+    }).join("") || '<tr><td colspan="7">暂无员工账号</td></tr>';
+    tbody.querySelectorAll("[data-toggle-employee-v93]").forEach(function(btn){
+      btn.addEventListener("click", function(){ toggleEmployeeV93(btn.getAttribute("data-toggle-employee-v93")); });
+    });
+  }
+  function addEmployeeV93(){
+    if(!isAdminV93()){
+      alert("只有管理员可以新增员工账号。");
+      return;
+    }
+    var name = (document.getElementById("employeeNameV93")?.value || "").trim();
+    var phone = (document.getElementById("employeePhoneV93")?.value || "").trim();
+    var wechat = (document.getElementById("employeeWechatV93")?.value || "").trim();
+    var status = document.getElementById("employeeStatusV93")?.value || "启用";
+    if(!name || !phone){
+      alert("请填写员工姓名和手机号。");
+      return;
+    }
+    var rows = employeesV93();
+    var existing = rows.find(function(row){ return row.phone === phone || (wechat && row.wechat === wechat); });
+    if(existing){
+      existing.name = name;
+      existing.phone = phone;
+      existing.wechat = wechat;
+      existing.status = status;
+    }else{
+      rows.push({id:"emp_" + Date.now(), name:name, phone:phone, wechat:wechat, status:status});
+    }
+    saveEmployeesV93(rows);
+    ["employeeNameV93","employeePhoneV93","employeeWechatV93"].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.value = "";
+    });
+    renderEmployeesV93();
+    injectOrderCashierFilterV93();
+    if(typeof toast === "function") toast("员工账号已保存");
+  }
+  function toggleEmployeeV93(id){
+    var rows = employeesV93();
+    rows.forEach(function(row){
+      if(row.id === id) row.status = row.status === "启用" ? "停用" : "启用";
+    });
+    saveEmployeesV93(rows);
+    renderEmployeesV93();
+    injectOrderCashierFilterV93();
+  }
+
+  var oldSimLoginV93 = window.simulateMerchantLoginV92;
+  window.simulateMerchantLoginV92 = function(){
+    var mode = document.getElementById("profileWechatTabV92")?.classList.contains("active") ? "wechat" : "phone";
+    var phone = (document.getElementById("profilePhoneV92")?.value || "").trim();
+    var wechat = (document.getElementById("profileWechatV92")?.value || "").trim();
+    var admin = ensureAdminV93();
+    var isAdminLogin = (mode === "phone" && phone && phone === admin.phone) || (mode === "wechat" && wechat && wechat === admin.wechat);
+    if(isAdminLogin || (!phone && !wechat)){
+      setAccountV93({id:"admin", role:"管理员", name:admin.name || "管理员", phone:admin.phone || phone || "", wechat:admin.wechat || wechat || "", status:"启用", authorized:true});
+      if(typeof oldSimLoginV93 === "function") try{ oldSimLoginV93.apply(this, arguments); }catch(err){}
+      renderEmployeesV93();
+      return;
+    }
+    var employee = findEmployeeV93(phone, wechat);
+    if(employee && isEmployeeEnabledV93(employee)){
+      setAccountV93({id:employee.id, role:"员工", name:employee.name, phone:employee.phone, wechat:employee.wechat || "", status:employee.status, authorized:true});
+      localStorage.setItem("cangjieMerchantLoginV92", JSON.stringify({loggedIn:true, mode:mode, phone:employee.phone, wechat:employee.wechat || "", time:new Date().toLocaleString("zh-CN",{hour12:false})}));
+      if(typeof renderProfileV92 === "function") try{ renderProfileV92(); }catch(err){}
+      renderEmployeesV93();
+      if(typeof toast === "function") toast("员工已登录");
+      return;
+    }
+    setAccountV93({id:"blocked_" + Date.now(), role:"未授权", name:"未授权账号", phone:phone, wechat:wechat, blocked:true, authorized:false});
+    localStorage.setItem("cangjieMerchantLoginV92", JSON.stringify({loggedIn:false, mode:mode, phone:phone, wechat:wechat, blocked:true}));
+    if(typeof renderProfileV92 === "function") try{ renderProfileV92(); }catch(err){}
+    renderEmployeesV93();
+    alert("该账号尚未获得商家授权，请联系管理员开通权限");
+  };
+
+  var oldShowAppV93 = typeof window.showAppPage === "function" ? window.showAppPage : null;
+  window.showAppPage = function(page){
+    if(isBlockedV93() && !(page === "profileV92" || page === "profile" || page === "personalCenter")){
+      alert("该账号尚未获得商家授权，请联系管理员开通权限");
+      if(typeof oldShowAppV93 === "function") return oldShowAppV93.call(this, "profileV92");
+      return;
+    }
+    return oldShowAppV93 ? oldShowAppV93.apply(this, arguments) : undefined;
+  };
+
+  var oldPushCompletedOrderV93 = typeof window.pushCompletedOrder === "function" ? window.pushCompletedOrder : null;
+  if(oldPushCompletedOrderV93 && !oldPushCompletedOrderV93.__employeeV93){
+    window.pushCompletedOrder = function(bill){
+      stampOrderV93(bill);
+      return oldPushCompletedOrderV93.apply(this, arguments);
+    };
+    window.pushCompletedOrder.__employeeV93 = true;
+  }
+
+  var oldAllOrderRecordsV93 = typeof window.allOrderRecords === "function" ? window.allOrderRecords : null;
+  if(oldAllOrderRecordsV93 && !oldAllOrderRecordsV93.__employeeV93){
+    window.allOrderRecords = function(){
+      var rows = oldAllOrderRecordsV93.apply(this, arguments) || [];
+      var account = currentAccountV93();
+      if(account.role === "员工"){
+        return rows.filter(function(order){ return String(order.cashierPhone || "") === String(account.phone || ""); });
+      }
+      if(orderCashierFilterV93 && orderCashierFilterV93 !== "all"){
+        return rows.filter(function(order){ return orderCashierKeyV93(order) === orderCashierFilterV93; });
+      }
+      return rows;
+    };
+    window.allOrderRecords.__employeeV93 = true;
+  }
+
+  function injectOrderCashierFilterV93(){
+    var head = document.querySelector("#ordersRoot .orders-list-head");
+    if(!head) return;
+    var select = document.getElementById("orderCashierFilterV93");
+    if(!select){
+      select = document.createElement("select");
+      select.id = "orderCashierFilterV93";
+      select.className = "order-cashier-filter-v93";
+      select.addEventListener("change", function(){
+        orderCashierFilterV93 = select.value || "all";
+        localStorage.setItem(ORDER_FILTER_KEY, orderCashierFilterV93);
+        if(typeof renderOrdersCenter === "function") renderOrdersCenter();
+      });
+      var status = document.getElementById("ordersStatusFilter");
+      if(status && status.parentNode === head) head.insertBefore(select, status.nextSibling);
+      else head.appendChild(select);
+    }
+    var opts = '<option value="all">全部收银员</option><option value="admin">管理员本人</option>';
+    employeesV93().forEach(function(row){
+      opts += '<option value="emp:'+eV93(row.phone || row.name)+'">'+eV93(row.name + (row.phone ? " " + row.phone : ""))+'</option>';
+    });
+    select.innerHTML = opts;
+    select.value = orderCashierFilterV93;
+    select.style.display = isAdminV93() ? "block" : "none";
+  }
+  function decorateOrderCashierV93(order){
+    var grid = document.querySelector("#ordersDetailBody .order-info-grid");
+    if(!grid || !order || document.getElementById("orderCashierInfoV93")) return;
+    var card = document.createElement("div");
+    card.id = "orderCashierInfoV93";
+    card.className = "cashier-v93-card";
+    card.innerHTML = '<span>开单人</span><b>'+eV93((order.cashierName || order.cashierRole || "管理员") + (order.cashierPhone ? " " + order.cashierPhone : ""))+'</b>';
+    grid.appendChild(card);
+  }
+  var oldRenderOrderDetailV93 = typeof window.renderOrderDetail === "function" ? window.renderOrderDetail : null;
+  if(oldRenderOrderDetailV93 && !oldRenderOrderDetailV93.__employeeV93){
+    window.renderOrderDetail = function(order){
+      var result = oldRenderOrderDetailV93.apply(this, arguments);
+      decorateOrderCashierV93(order);
+      return result;
+    };
+    window.renderOrderDetail.__employeeV93 = true;
+  }
+  var oldRenderOrdersCenterV93 = typeof window.renderOrdersCenter === "function" ? window.renderOrdersCenter : null;
+  if(oldRenderOrdersCenterV93 && !oldRenderOrdersCenterV93.__employeeV93){
+    window.renderOrdersCenter = function(){
+      injectOrderCashierFilterV93();
+      var result = oldRenderOrdersCenterV93.apply(this, arguments);
+      injectOrderCashierFilterV93();
+      return result;
+    };
+    window.renderOrdersCenter.__employeeV93 = true;
+  }
+
+  var oldRenderProfileV93 = typeof window.renderProfileV92 === "function" ? window.renderProfileV92 : null;
+  if(oldRenderProfileV93 && !oldRenderProfileV93.__employeeV93){
+    window.renderProfileV92 = function(){
+      var result = oldRenderProfileV93.apply(this, arguments);
+      renderEmployeesV93();
+      renderAccountBadgeV93();
+      return result;
+    };
+    window.renderProfileV92.__employeeV93 = true;
+  }
+  function bootV93(){
+    ensureAdminV93();
+    if(!readV93(ACCOUNT_KEY, null)){
+      var admin = ensureAdminV93();
+      setAccountV93({id:"admin", role:"管理员", name:admin.name || "管理员", phone:admin.phone || "", wechat:admin.wechat || "", status:"启用", authorized:true});
+    }
+    if(typeof renderProfileV92 === "function") try{ renderProfileV92(); }catch(err){}
+    renderEmployeesV93();
+    renderAccountBadgeV93();
+    injectOrderCashierFilterV93();
+    syncProfileVisibilityV93();
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootV93);
+  else bootV93();
+  setTimeout(bootV93, 300);
+  setTimeout(bootV93, 1000);
+})();
+</script>
+
+<script>
+/* ===== V94：员工权限轻量版，不常驻监听 ===== */
+(function(){
+  var EMP_KEY = "cangjieEmployeesV94";
+  var ACCOUNT_KEY = "cangjieCurrentAccountV94";
+  var FILTER_KEY = "cangjieOrderCashierFilterV94";
+  var orderFilter = localStorage.getItem(FILTER_KEY) || "all";
+
+  function e(v){
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function(m){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];
+    });
+  }
+  function n(v){ return Number(v || 0) || 0; }
+  function moneyText(v){
+    try{ return typeof money === "function" ? money(v) : n(v).toFixed(2); }catch(err){ return n(v).toFixed(2); }
+  }
+  function read(key, fallback){
+    try{ var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }catch(err){ return fallback; }
+  }
+  function write(key, value){
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+  function merchant(){
+    try{ if(typeof getCangjieMerchantProfileV92 === "function") return getCangjieMerchantProfileV92(); }catch(err){}
+    return {};
+  }
+  function employees(){
+    var rows = read(EMP_KEY, []);
+    return Array.isArray(rows) ? rows : [];
+  }
+  function saveEmployees(rows){
+    write(EMP_KEY, rows || []);
+  }
+  function defaultAdmin(){
+    var m = merchant();
+    var oldLogin = read("cangjieMerchantLoginV92", {});
+    return {id:"admin", role:"管理员", name:"管理员", phone:oldLogin.phone || m.phone || "", wechat:oldLogin.wechat || "", status:"启用", authorized:true};
+  }
+  function account(){
+    return read(ACCOUNT_KEY, null) || defaultAdmin();
+  }
+  function setAccount(next){
+    write(ACCOUNT_KEY, next || defaultAdmin());
+    renderAccount();
+  }
+  function isBlocked(){
+    return !!(account() && account().blocked);
+  }
+  function isAdmin(){
+    var a = account();
+    return !a.blocked && a.role === "管理员";
+  }
+  function accountLabel(a){
+    a = a || account();
+    if(a.blocked) return "未授权账号：" + (a.phone || a.wechat || "未知账号");
+    return (a.name || a.role || "管理员") + (a.phone ? " " + a.phone : "");
+  }
+  function findEmployee(phone, wechat){
+    phone = String(phone || "").trim();
+    wechat = String(wechat || "").trim();
+    return employees().find(function(row){
+      return (phone && row.phone === phone) || (wechat && row.wechat === wechat);
+    }) || null;
+  }
+  function orderRows(){
+    try{ return Array.isArray(finalOrders) ? finalOrders : []; }catch(err){ return []; }
+  }
+  function orderKey(order){
+    if(order && order.cashierRole === "员工") return "emp:" + (order.cashierPhone || order.cashierName || "");
+    return "admin";
+  }
+  function stampOrder(order){
+    var a = account();
+    if(!order || a.blocked) return order;
+    order.cashierName = a.name || (a.role === "员工" ? "员工" : "管理员");
+    order.cashierPhone = a.phone || "";
+    order.cashierRole = a.role === "员工" ? "员工" : "管理员";
+    return order;
+  }
+  function stats(row){
+    var count = 0;
+    var paid = 0;
+    orderRows().forEach(function(order){
+      if(String(order.cashierPhone || "") !== String(row.phone || "")) return;
+      count += 1;
+      paid += n(order.paid || order.totalAmount);
+    });
+    return {count:count, paid:paid};
+  }
+
+  function ensureBadge(){
+    var badge = document.getElementById("currentAccountBadgeV94");
+    if(!badge){
+      badge = document.createElement("div");
+      badge.id = "currentAccountBadgeV94";
+      badge.className = "account-v93-pill";
+      document.body.appendChild(badge);
+    }
+    return badge;
+  }
+  function renderAccount(){
+    var a = account();
+    var badge = document.getElementById("currentAccountBadgeV94");
+    if(badge) badge.style.display = "none";
+    var status = document.getElementById("profileLoginStatusV92");
+    if(status) status.style.display = "inline-flex";
+    if(status) status.textContent = "当前账号：" + accountLabel(a);
+    document.body.classList.toggle("account-blocked-v93", !!a.blocked);
+    if(a.blocked){
+      var profile = document.getElementById("profileCenterRootV92");
+      if(profile) profile.style.setProperty("display", "block", "important");
+      document.body.classList.add("show-profile-v92");
+    }
+  }
+
+  function ensureEmployeeCard(){
+    var root = document.getElementById("profileCenterRootV92");
+    var grid = root && root.querySelector(".profile-v92-grid");
+    if(!grid || document.getElementById("employeeCardV94")) return;
+    var card = document.createElement("div");
+    card.id = "employeeCardV94";
+    card.className = "profile-v92-card employee-v93-card";
+    card.innerHTML = '<h2>员工账号管理</h2><p>管理员可新增员工账号、启用或停用权限；员工登录后订单会记录开单人。</p>'
+      + '<div id="employeeAuthWarningV94"></div>'
+      + '<div class="employee-v93-form" id="employeeFormV94">'
+      + '<div class="profile-v92-field"><label>员工姓名</label><input id="employeeNameV94" placeholder="请输入姓名"></div>'
+      + '<div class="profile-v92-field"><label>员工手机号</label><input id="employeePhoneV94" inputmode="tel" placeholder="请输入手机号"></div>'
+      + '<div class="profile-v92-field"><label>员工微信号，可选</label><input id="employeeWechatV94" placeholder="请输入微信号"></div>'
+      + '<div class="profile-v92-field"><label>员工状态</label><select id="employeeStatusV94"><option value="启用">启用</option><option value="停用">停用</option></select></div>'
+      + '<button id="addEmployeeBtnV94" class="profile-v92-btn secondary" type="button">新增员工</button>'
+      + '</div><div class="employee-v93-table-wrap" id="employeeTableWrapV94"><table class="employee-v93-table"><thead><tr><th>员工姓名</th><th>手机号</th><th>微信号</th><th>状态</th><th>已开单数量</th><th>已收金额</th><th>操作</th></tr></thead><tbody id="employeeListV94"></tbody></table></div>';
+    grid.appendChild(card);
+  }
+  function renderEmployees(){
+    ensureEmployeeCard();
+    var warning = document.getElementById("employeeAuthWarningV94");
+    if(warning) warning.innerHTML = isBlocked() ? '<div class="employee-v93-auth-warning">该账号尚未获得商家授权，请联系管理员开通权限。</div>' : "";
+    var form = document.getElementById("employeeFormV94");
+    var wrap = document.getElementById("employeeTableWrapV94");
+    if(form) form.style.display = isAdmin() ? "grid" : "none";
+    if(wrap) wrap.style.display = isAdmin() ? "block" : "none";
+    var tbody = document.getElementById("employeeListV94");
+    if(!tbody) return;
+    var rows = employees();
+    tbody.innerHTML = rows.map(function(row){
+      var st = stats(row);
+      var next = row.status === "启用" ? "停用" : "启用";
+      return '<tr><td>'+e(row.name)+'</td><td>'+e(row.phone)+'</td><td>'+e(row.wechat || "-")+'</td>'
+        + '<td><span class="employee-v93-status '+(row.status === "启用" ? "on" : "off")+'">'+e(row.status)+'</span></td>'
+        + '<td>'+st.count+'</td><td>'+moneyText(st.paid)+'</td>'
+        + '<td><button class="employee-v93-action" type="button" data-toggle-employee-v94="'+e(row.id)+'">'+next+'</button></td></tr>';
+    }).join("") || '<tr><td colspan="7">暂无员工账号</td></tr>';
+  }
+  function addEmployee(){
+    if(!isAdmin()){
+      alert("只有管理员可以新增员工账号。");
+      return;
+    }
+    var name = (document.getElementById("employeeNameV94")?.value || "").trim();
+    var phone = (document.getElementById("employeePhoneV94")?.value || "").trim();
+    var wechat = (document.getElementById("employeeWechatV94")?.value || "").trim();
+    var status = document.getElementById("employeeStatusV94")?.value || "启用";
+    if(!name || !phone){
+      alert("请填写员工姓名和手机号。");
+      return;
+    }
+    var rows = employees();
+    var hit = rows.find(function(row){ return row.phone === phone || (wechat && row.wechat === wechat); });
+    if(hit){
+      hit.name = name;
+      hit.phone = phone;
+      hit.wechat = wechat;
+      hit.status = status;
+    }else{
+      rows.push({id:"emp_" + Date.now(), name:name, phone:phone, wechat:wechat, status:status});
+    }
+    saveEmployees(rows);
+    ["employeeNameV94","employeePhoneV94","employeeWechatV94"].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.value = "";
+    });
+    renderEmployees();
+    injectOrderFilter();
+    if(typeof toast === "function") toast("员工账号已保存");
+  }
+  function toggleEmployee(id){
+    var rows = employees();
+    rows.forEach(function(row){
+      if(row.id === id) row.status = row.status === "启用" ? "停用" : "启用";
+    });
+    saveEmployees(rows);
+    renderEmployees();
+    injectOrderFilter();
+  }
+
+  var oldLogin = window.simulateMerchantLoginV92;
+  window.simulateMerchantLoginV92 = function(){
+    var mode = document.getElementById("profileWechatTabV92")?.classList.contains("active") ? "wechat" : "phone";
+    var phone = (document.getElementById("profilePhoneV92")?.value || "").trim();
+    var wechat = (document.getElementById("profileWechatV92")?.value || "").trim();
+    var admin = defaultAdmin();
+    var adminLogin = (phone && phone === admin.phone) || (wechat && wechat === admin.wechat);
+    if(adminLogin || (!phone && !wechat)){
+      setAccount({id:"admin", role:"管理员", name:"管理员", phone:phone || admin.phone || "", wechat:wechat || admin.wechat || "", status:"启用", authorized:true});
+      if(typeof oldLogin === "function") try{ oldLogin.apply(this, arguments); }catch(err){}
+      renderEmployees();
+      return;
+    }
+    var emp = findEmployee(phone, wechat);
+    if(emp && emp.status === "启用"){
+      setAccount({id:emp.id, role:"员工", name:emp.name, phone:emp.phone, wechat:emp.wechat || "", status:emp.status, authorized:true});
+      localStorage.setItem("cangjieMerchantLoginV92", JSON.stringify({loggedIn:true, mode:mode, phone:emp.phone, wechat:emp.wechat || "", time:new Date().toLocaleString("zh-CN",{hour12:false})}));
+      renderAccount();
+      renderEmployees();
+      if(typeof toast === "function") toast("员工已登录");
+      return;
+    }
+    setAccount({id:"blocked_" + Date.now(), role:"未授权", name:"未授权账号", phone:phone, wechat:wechat, blocked:true, authorized:false});
+    renderAccount();
+    renderEmployees();
+    alert("该账号尚未获得商家授权，请联系管理员开通权限");
+  };
+
+  var oldShow = typeof window.showAppPage === "function" ? window.showAppPage : null;
+  window.showAppPage = function(page){
+    if(isBlocked() && !(page === "profileV92" || page === "profile" || page === "personalCenter")){
+      alert("该账号尚未获得商家授权，请联系管理员开通权限");
+      return oldShow ? oldShow.call(this, "profileV92") : undefined;
+    }
+    var result = oldShow ? oldShow.apply(this, arguments) : undefined;
+    setTimeout(function(){
+      renderAccount();
+      if(page === "profileV92" || page === "profile" || page === "personalCenter") renderEmployees();
+      if(page === "orders") injectOrderFilter();
+    }, 0);
+    return result;
+  };
+
+  var oldPush = typeof window.pushCompletedOrder === "function" ? window.pushCompletedOrder : null;
+  if(oldPush && !oldPush.__employeeV94){
+    window.pushCompletedOrder = function(bill){
+      stampOrder(bill);
+      return oldPush.apply(this, arguments);
+    };
+    window.pushCompletedOrder.__employeeV94 = true;
+  }
+
+  var oldAllOrders = typeof window.allOrderRecords === "function" ? window.allOrderRecords : null;
+  if(oldAllOrders && !oldAllOrders.__employeeV94){
+    window.allOrderRecords = function(){
+      var rows = oldAllOrders.apply(this, arguments) || [];
+      var a = account();
+      if(a.role === "员工"){
+        return rows.filter(function(order){ return String(order.cashierPhone || "") === String(a.phone || ""); });
+      }
+      if(orderFilter && orderFilter !== "all"){
+        return rows.filter(function(order){ return orderKey(order) === orderFilter; });
+      }
+      return rows;
+    };
+    window.allOrderRecords.__employeeV94 = true;
+  }
+
+  function injectOrderFilter(){
+    var head = document.querySelector("#ordersRoot .orders-list-head");
+    if(!head) return;
+    var sel = document.getElementById("orderCashierFilterV94");
+    if(!sel){
+      sel = document.createElement("select");
+      sel.id = "orderCashierFilterV94";
+      sel.className = "order-cashier-filter-v93";
+      sel.addEventListener("change", function(){
+        orderFilter = sel.value || "all";
+        localStorage.setItem(FILTER_KEY, orderFilter);
+        if(typeof renderOrdersCenter === "function") renderOrdersCenter();
+      });
+      head.appendChild(sel);
+    }
+    var html = '<option value="all">全部收银员</option><option value="admin">管理员本人</option>';
+    employees().forEach(function(row){
+      html += '<option value="emp:'+e(row.phone || row.name)+'">'+e(row.name + (row.phone ? " " + row.phone : ""))+'</option>';
+    });
+    sel.innerHTML = html;
+    sel.value = orderFilter;
+    sel.style.display = isAdmin() ? "block" : "none";
+  }
+
+  function decorateOrder(order){
+    var grid = document.querySelector("#ordersDetailBody .order-info-grid");
+    if(!grid || !order || document.getElementById("orderCashierInfoV94")) return;
+    var card = document.createElement("div");
+    card.id = "orderCashierInfoV94";
+    card.className = "cashier-v93-card";
+    card.innerHTML = '<span>开单人</span><b>'+e((order.cashierName || order.cashierRole || "管理员") + (order.cashierPhone ? " " + order.cashierPhone : ""))+'</b>';
+    grid.appendChild(card);
+  }
+  var oldDetail = typeof window.renderOrderDetail === "function" ? window.renderOrderDetail : null;
+  if(oldDetail && !oldDetail.__employeeV94){
+    window.renderOrderDetail = function(order){
+      var result = oldDetail.apply(this, arguments);
+      decorateOrder(order);
+      return result;
+    };
+    window.renderOrderDetail.__employeeV94 = true;
+  }
+  var oldCenter = typeof window.renderOrdersCenter === "function" ? window.renderOrdersCenter : null;
+  if(oldCenter && !oldCenter.__employeeV94){
+    window.renderOrdersCenter = function(){
+      var result = oldCenter.apply(this, arguments);
+      injectOrderFilter();
+      return result;
+    };
+    window.renderOrdersCenter.__employeeV94 = true;
+  }
+
+  document.addEventListener("click", function(ev){
+    var addBtn = ev.target && ev.target.closest ? ev.target.closest("#addEmployeeBtnV94") : null;
+    if(addBtn){
+      ev.preventDefault();
+      addEmployee();
+      return;
+    }
+    var toggle = ev.target && ev.target.closest ? ev.target.closest("[data-toggle-employee-v94]") : null;
+    if(toggle){
+      ev.preventDefault();
+      toggleEmployee(toggle.getAttribute("data-toggle-employee-v94"));
+      return;
+    }
+    var profileBtn = ev.target && ev.target.closest ? ev.target.closest("[data-profile-center-v92]") : null;
+    if(profileBtn) setTimeout(function(){ renderEmployees(); renderAccount(); }, 0);
+    var nav = ev.target && ev.target.closest ? ev.target.closest("#globalUnifiedNavV41 [data-page]") : null;
+    if(nav && isBlocked()){
+      ev.preventDefault();
+      ev.stopPropagation();
+      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+      alert("该账号尚未获得商家授权，请联系管理员开通权限");
+      if(typeof window.showAppPage === "function") window.showAppPage("profileV92");
+    }
+  }, true);
+
+  function boot(){
+    if(!read(ACCOUNT_KEY, null)) setAccount(defaultAdmin());
+    renderAccount();
+    renderEmployees();
+    injectOrderFilter();
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+  setTimeout(boot, 300);
 })();
 </script>
 
