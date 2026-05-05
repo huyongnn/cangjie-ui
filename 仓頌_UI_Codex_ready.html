@@ -27207,6 +27207,48 @@ body.show-profile-v92 #inventoryView{
       return {data:null, error:err};
     }
   }
+  async function testReadCloud(){
+    console.log("开始读取云端数据");
+    var client = initSupabaseClient();
+    if(!client){
+      var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
+      console.log("读取结果:", null, initError);
+      var initEl = document.getElementById("commercialSyncReadStatusV1");
+      if(initEl) initEl.textContent = "读取失败：" + initError;
+      writeSyncLog("supabase_read", "同步失败", "Supabase 未初始化，测试读取未执行。");
+      return {data:null, error:initError};
+    }
+    var el = document.getElementById("commercialSyncReadStatusV1");
+    if(el) el.textContent = "读取中...";
+    try{
+      var result = await client
+        .from("test_orders")
+        .select("*")
+        .order("created_at", {ascending:false})
+        .limit(10);
+      console.log("读取结果:", result.data, result.error);
+      if(el){
+        el.textContent = result.error
+          ? "读取失败：" + result.error.message
+          : "读取成功：" + ((result.data || []).length) + " 条";
+      }
+      if(result.error){
+        updateSyncStatus("同步失败");
+        writeSyncLog("supabase_read", "同步失败", "Supabase 测试读取失败。", {error:result.error.message || String(result.error)});
+      }else{
+        updateSyncStatus("已连接", {lastSyncAt:now()});
+        writeSyncLog("supabase_read", "已连接", "Supabase 测试读取成功。", {count:(result.data || []).length});
+      }
+      return {data:result.data, error:result.error};
+    }catch(err){
+      var message = err && err.message ? err.message : String(err);
+      console.log("读取结果:", null, err);
+      if(el) el.textContent = "读取失败：" + message;
+      updateSyncStatus("同步失败");
+      writeSyncLog("supabase_read", "同步失败", "Supabase 测试读取异常。", {error:message});
+      return {data:null, error:err};
+    }
+  }
   function markDataUpdated(){
     var m = meta();
     m.dataUpdatedAt = now();
@@ -27332,6 +27374,7 @@ body.show-profile-v92 #inventoryView{
       + '<div id="commercialSyncGridV1" class="commercial-sync-v1-grid"></div>'
       + '<div class="commercial-sync-v1-actions"><button id="testCloudConnectionV1" class="commercial-sync-v1-btn" type="button">测试云连接</button><span id="commercialSyncConnectionStatusV1" class="commercial-sync-v1-status">未测试</span></div>'
       + '<div class="commercial-sync-v1-actions"><button id="testCloudInsertV1" class="commercial-sync-v1-btn" type="button" onclick="testInsert()">测试写入云端</button><span id="commercialSyncInsertStatusV1" class="commercial-sync-v1-status">未写入</span></div>'
+      + '<div class="commercial-sync-v1-actions"><button id="testCloudReadV1" class="commercial-sync-v1-btn" type="button" onclick="testReadCloud()">测试读取云端</button><span id="commercialSyncReadStatusV1" class="commercial-sync-v1-status">未读取</span></div>'
       + '<div class="commercial-sync-v1-note">未来云端集合：merchants / users / permissions / products / owners / customers / batches / inventory / orders / debts / printSettings / syncLogs。冲突时保留本地副本并生成 conflictLog。</div>';
     grid.appendChild(card);
   }
@@ -27376,6 +27419,7 @@ body.show-profile-v92 #inventoryView{
   window.initSupabaseClient = initSupabaseClient;
   window.testConnection = testConnection;
   window.testInsert = testInsert;
+  window.testReadCloud = testReadCloud;
 
   document.addEventListener("change", function(ev){
     var el = ev.target;
@@ -27392,6 +27436,12 @@ body.show-profile-v92 #inventoryView{
     if(insertBtn){
       ev.preventDefault();
       testInsert();
+      return;
+    }
+    var readBtn = ev.target && ev.target.closest ? ev.target.closest("#testCloudReadV1") : null;
+    if(readBtn){
+      ev.preventDefault();
+      testReadCloud();
       return;
     }
     if(ev.target && ev.target.closest && ev.target.closest("#profileCenterRootV92")) setTimeout(renderCommercialSyncPanel, 0);
