@@ -27451,9 +27451,38 @@ body.show-profile-v92 #inventoryView{
       cloud_created_at:now()
     };
   }
-  async function pushOrderToCloud(order){
-    var key = cloudOrderKey(order);
-    if(!key) return {data:null, error:"订单号为空"};
+  function latestLocalOrderForCloud(){
+    var raw = localStorage.getItem("tudou2_v57_persistent_data")
+      || localStorage.getItem("tudou2_data");
+    if(!raw){
+      console.log("没有本地数据");
+      return null;
+    }
+    var data;
+    try{
+      data = JSON.parse(raw);
+    }catch(err){
+      console.log("本地订单数据解析失败", err);
+      return null;
+    }
+    var source = "orders";
+    var orders = Array.isArray(data.orders) && data.orders.length ? data.orders : [];
+    if(!orders.length && Array.isArray(data.finalOrders) && data.finalOrders.length){
+      source = "finalOrders";
+      orders = data.finalOrders;
+    }
+    if(!orders.length){
+      console.log("没有订单");
+      return null;
+    }
+    return source === "finalOrders" ? orders[0] : orders[orders.length - 1];
+  }
+  async function pushLatestOrderToCloud(){
+    console.log("开始同步最新订单");
+    var lastOrder = latestLocalOrderForCloud();
+    if(!lastOrder) return {data:null, error:"没有订单"};
+    console.log("最新订单:", lastOrder);
+    var key = cloudOrderKey(lastOrder) || String(Date.now());
     var ledger = cloudOrderSyncLedger();
     if(ledger[key] && ledger[key].status === "success"){
       return {data:null, error:null, skipped:true, reason:"already_synced"};
@@ -27467,24 +27496,24 @@ body.show-profile-v92 #inventoryView{
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
       setCloudOrderSyncResult("订单已本地保存，云端订单同步失败", now());
-      if(typeof toast === "function") toast("订单已本地保存，云端订单同步失败");
+      if(typeof toast === "function") toast("订单已保存，云端同步失败");
       writeSyncLog("cloud_order_push", "同步失败", "订单已本地保存；Supabase 未初始化，单笔订单未同步。", {orderNo:key, error:initError});
       window.__cangjieCloudOrderSyncingV1[key] = false;
       return {data:null, error:initError};
     }
     try{
-      var row = buildCloudOrderRow(order);
+      var row = buildCloudOrderRow(lastOrder);
       var result = await client
         .from("orders")
         .insert([row])
         .select();
-      console.log("云端订单写入结果:", result.data, result.error);
+      console.log("订单写入结果:", result.data, result.error);
       if(result.error){
         var message = result.error.message || String(result.error);
         ledger[key] = {status:"failed", time:now(), error:message};
         saveCloudOrderSyncLedger(ledger);
         setCloudOrderSyncResult("订单已本地保存，云端订单同步失败", now());
-        if(typeof toast === "function") toast("订单已本地保存，云端订单同步失败");
+        if(typeof toast === "function") toast("订单已保存，云端同步失败");
         writeSyncLog("cloud_order_push", "同步失败", "订单已本地保存；单笔订单写入 orders 表失败。", {orderNo:key, error:message});
       }else{
         var cloudId = result.data && result.data[0] && result.data[0].id;
@@ -27501,20 +27530,12 @@ body.show-profile-v92 #inventoryView{
       ledger[key] = {status:"failed", time:now(), error:errText};
       saveCloudOrderSyncLedger(ledger);
       setCloudOrderSyncResult("订单已本地保存，云端订单同步失败", now());
-      if(typeof toast === "function") toast("订单已本地保存，云端订单同步失败");
+      if(typeof toast === "function") toast("订单已保存，云端同步失败");
       writeSyncLog("cloud_order_push", "同步失败", "订单已本地保存；单笔订单写入 orders 表异常。", {orderNo:key, error:errText});
       console.log("云端订单写入异常，本地已保存:", err);
       window.__cangjieCloudOrderSyncingV1[key] = false;
       return {data:null, error:err};
     }
-  }
-  function pushNewOrdersToCloud(beforeKeys, reason){
-    var ledger = cloudOrderSyncLedger();
-    completedOrdersForCloud().forEach(function(order){
-      var key = cloudOrderKey(order);
-      if(!key || beforeKeys[key] || (ledger[key] && ledger[key].status === "success")) return;
-      pushOrderToCloud(order);
-    });
   }
   function persistentData(){
     return readJson(PERSIST_KEY, {});
@@ -27929,7 +27950,6 @@ body.show-profile-v92 #inventoryView{
     if(typeof old !== "function" || old.__commercialSyncV1) return;
     window[name] = function(){
       for(var i=0;i<arguments.length;i++) stampOrder(arguments[i]);
-      var beforeCloudOrderKeys = cloudOrderKeySet();
       var beforeOrderFingerprint = orderAutoSyncFingerprint();
       var result = old.apply(this, arguments);
       setTimeout(function(){
@@ -27937,7 +27957,7 @@ body.show-profile-v92 #inventoryView{
         markDataUpdated();
         var afterOrderFingerprint = orderAutoSyncFingerprint();
         if(afterOrderFingerprint && afterOrderFingerprint !== beforeOrderFingerprint){
-          pushNewOrdersToCloud(beforeCloudOrderKeys, name);
+          pushLatestOrderToCloud();
           autoUploadBusinessSnapshotAfterOrder(name);
         }
       }, 0);
@@ -28008,7 +28028,7 @@ body.show-profile-v92 #inventoryView{
   window.buildCloudPayload = buildCloudPayload;
   window.buildBusinessSnapshot = buildBusinessSnapshot;
   window.pushBusinessSnapshot = pushBusinessSnapshot;
-  window.pushOrderToCloud = pushOrderToCloud;
+  window.pushLatestOrderToCloud = pushLatestOrderToCloud;
   window.readBusinessSnapshot = readBusinessSnapshot;
   window.readLatestBusinessSnapshot = readLatestBusinessSnapshot;
   window.restoreLatestBusinessSnapshotSafely = restoreLatestBusinessSnapshotSafely;
