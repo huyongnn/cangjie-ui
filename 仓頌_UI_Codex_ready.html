@@ -27500,6 +27500,124 @@ body.show-profile-v92 #inventoryView{
       return {data:null, error:err};
     }
   }
+  function backupLocalStorageBeforeCloudRestore(){
+    var key = "backup_before_cloud_restore_" + Date.now();
+    var backup = {
+      key:key,
+      createdAt:now(),
+      href:location.href,
+      localStorage:{}
+    };
+    try{
+      for(var i=0;i<localStorage.length;i++){
+        var name = localStorage.key(i);
+        backup.localStorage[name] = localStorage.getItem(name);
+      }
+      localStorage.setItem(key, JSON.stringify(backup));
+      localStorage.setItem("cangjie_last_cloud_restore_backup_key", key);
+    }catch(err){
+      console.error("生成云端恢复前备份失败：", err);
+      throw err;
+    }
+    return backup;
+  }
+  function applySnapshotPayloadToLocalStorage(row){
+    if(!row || !row.payload) throw new Error("云端快照 payload 为空");
+    var payload = row.payload || {};
+    var collections = payload.collections || {};
+    var current = readJson(PERSIST_KEY, {});
+    var next = Object.assign({}, current);
+    if(collections.products) next.goodsMaster = collections.products;
+    if(collections.owners) next.owners = collections.owners;
+    if(collections.customers) next.cashierCustomers = collections.customers;
+    if(collections.batches) next.batches = collections.batches;
+    if(collections.orders) next.finalOrders = collections.orders;
+    if(collections.debts){
+      next.repayments = collections.debts.repayments || next.repayments || [];
+      next.buyerV47Repayments = collections.debts.buyerRepayments || next.buyerV47Repayments || [];
+    }
+    next.restoredFromCloudSnapshotId = row.id || "";
+    next.restoredFromCloudAt = now();
+    localStorage.setItem(PERSIST_KEY, JSON.stringify(next));
+    if(collections.merchants) localStorage.setItem("cangjieMerchantProfileV92", JSON.stringify(collections.merchants));
+    if(collections.users) localStorage.setItem("cangjieEmployeesV93", JSON.stringify(collections.users));
+    var m = meta();
+    m.lastSyncAt = now();
+    m.cloudStatus = "已连接";
+    m.cloudUpdatedAt = row.cloud_updated_at || m.cloudUpdatedAt || "";
+    m.dataUpdatedAt = now();
+    m.syncVersion = Number(row.sync_version || m.syncVersion || 1);
+    saveMeta(m);
+    localStorage.setItem("cangjie_last_restored_cloud_snapshot_id", row.id || "");
+    localStorage.setItem("cangjie_last_restored_cloud_snapshot_at", now());
+  }
+  async function restoreLatestBusinessSnapshotSafely(){
+    console.log("开始安全恢复云端业务快照");
+    var status = document.getElementById("commercialSyncRestoreStatusV1");
+    function setRestoreText(text){
+      if(status) status.textContent = text || "未恢复";
+    }
+    var backup;
+    try{
+      backup = backupLocalStorageBeforeCloudRestore();
+    }catch(err){
+      var backupError = err && err.message ? err.message : String(err);
+      setRestoreText("备份失败：" + backupError);
+      writeSyncLog("business_snapshot_restore", "同步失败", "恢复前备份失败，已停止恢复。", {error:backupError});
+      return {data:null, error:err, backup:null};
+    }
+    var ok = confirm("此操作会用云端快照覆盖当前本地数据，系统已自动备份当前本地数据，是否继续？");
+    if(!ok){
+      setRestoreText("已取消恢复，已生成本地备份：" + backup.key);
+      writeSyncLog("business_snapshot_restore", "已取消", "用户取消云端恢复；本地备份已保留。", {backupKey:backup.key});
+      return {data:null, error:null, canceled:true, backup:backup};
+    }
+    var client = initSupabaseClient();
+    if(!client){
+      var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
+      setRestoreText("恢复失败：" + initError);
+      writeSyncLog("business_snapshot_restore", "同步失败", "Supabase 未初始化，未执行恢复。", {backupKey:backup.key});
+      return {data:null, error:initError, backup:backup};
+    }
+    var m = meta();
+    setRestoreText("恢复中...");
+    try{
+      var result = await client
+        .from("cloud_snapshots")
+        .select("*")
+        .eq("merchant_id", m.merchantId)
+        .eq("data_type", "full_snapshot")
+        .order("cloud_updated_at", {ascending:false})
+        .limit(1);
+      console.log("云端恢复读取结果:", result.data, result.error);
+      if(result.error){
+        var message = result.error.message || String(result.error);
+        setRestoreText("恢复失败：" + message);
+        updateSyncStatus("同步失败");
+        writeSyncLog("business_snapshot_restore", "同步失败", "读取云端快照失败，未覆盖本地数据。", {backupKey:backup.key, error:message});
+        return {data:result.data, error:result.error, backup:backup};
+      }
+      var row = (result.data || [])[0] || null;
+      if(!row){
+        setRestoreText("恢复失败：暂无云端快照");
+        writeSyncLog("business_snapshot_restore", "同步失败", "暂无可恢复的云端快照。", {backupKey:backup.key});
+        return {data:null, error:"暂无云端快照", backup:backup};
+      }
+      applySnapshotPayloadToLocalStorage(row);
+      setRestoreText("恢复成功，已生成本地备份");
+      writeSyncLog("business_snapshot_restore", "已连接", "已从云端快照恢复到本地；恢复前备份已保留。", {backupKey:backup.key, snapshotId:row.id});
+      alert("恢复成功，已生成本地备份");
+      setTimeout(function(){ location.reload(); }, 600);
+      return {data:row, error:null, backup:backup};
+    }catch(err){
+      var errText = err && err.message ? err.message : String(err);
+      console.log("云端恢复异常:", err);
+      setRestoreText("恢复失败：" + errText);
+      updateSyncStatus("同步失败");
+      writeSyncLog("business_snapshot_restore", "同步失败", "云端快照恢复异常。", {backupKey:backup.key, error:errText});
+      return {data:null, error:err, backup:backup};
+    }
+  }
   function pullCloudSnapshot(){
     updateSyncStatus("未连接");
     writeSyncLog("pull", "未连接", "云同步尚未接入真实服务，本次仅返回空快照占位。");
@@ -27579,6 +27697,7 @@ body.show-profile-v92 #inventoryView{
       + '<div class="commercial-sync-v1-actions"><button id="testCloudReadV1" class="commercial-sync-v1-btn" type="button" onclick="testReadCloud()">测试读取云端</button><span id="commercialSyncReadStatusV1" class="commercial-sync-v1-status">未读取</span></div>'
       + '<div class="commercial-sync-v1-actions"><button id="pushBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="pushBusinessSnapshot()">上传业务快照</button><button id="readBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="readBusinessSnapshot()">读取业务快照</button><span id="commercialSyncSnapshotStatusV1" class="commercial-sync-v1-status">未同步快照</span></div>'
       + '<div class="commercial-sync-v1-actions"><button id="readLatestBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="readLatestBusinessSnapshot()">读取云端快照</button></div><div id="commercialSyncSnapshotPreviewV1"></div>'
+      + '<div class="commercial-sync-v1-actions"><button id="restoreBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="restoreLatestBusinessSnapshotSafely()">从云端恢复到本地</button><span id="commercialSyncRestoreStatusV1" class="commercial-sync-v1-status">未恢复</span></div>'
       + '<div class="commercial-sync-v1-note">未来云端集合：merchants / users / permissions / products / owners / customers / batches / inventory / orders / debts / printSettings / syncLogs。正式快照表预留为 cloud_snapshots；读取快照只显示结果，不会自动覆盖本地数据。</div>';
     grid.appendChild(card);
   }
@@ -27619,6 +27738,7 @@ body.show-profile-v92 #inventoryView{
   window.pushBusinessSnapshot = pushBusinessSnapshot;
   window.readBusinessSnapshot = readBusinessSnapshot;
   window.readLatestBusinessSnapshot = readLatestBusinessSnapshot;
+  window.restoreLatestBusinessSnapshotSafely = restoreLatestBusinessSnapshotSafely;
   window.pullCloudSnapshot = pullCloudSnapshot;
   window.pushLocalChanges = pushLocalChanges;
   window.resolveSyncConflict = resolveSyncConflict;
@@ -27668,6 +27788,12 @@ body.show-profile-v92 #inventoryView{
     if(readLatestSnapshotBtn){
       ev.preventDefault();
       readLatestBusinessSnapshot();
+      return;
+    }
+    var restoreSnapshotBtn = ev.target && ev.target.closest ? ev.target.closest("#restoreBusinessSnapshotV1") : null;
+    if(restoreSnapshotBtn){
+      ev.preventDefault();
+      restoreLatestBusinessSnapshotSafely();
       return;
     }
     if(ev.target && ev.target.closest && ev.target.closest("#profileCenterRootV92")) setTimeout(renderCommercialSyncPanel, 0);
