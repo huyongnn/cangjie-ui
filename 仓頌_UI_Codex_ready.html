@@ -27052,6 +27052,8 @@ body.show-profile-v92 #inventoryView{
       autoSyncMode:"manual",
       lastAutoSyncAt:null,
       lastAutoSyncResult:"尚未自动上传",
+      lastCloudOrderSyncAt:null,
+      lastCloudOrderSyncResult:"尚未同步订单",
       cloudStatus:"未连接",
       dataUpdatedAt:now(),
       cloudUpdatedAt:"",
@@ -27088,6 +27090,8 @@ body.show-profile-v92 #inventoryView{
     merged.autoSyncMode = merged.autoSyncMode || "manual";
     if(typeof merged.lastAutoSyncAt === "undefined") merged.lastAutoSyncAt = null;
     merged.lastAutoSyncResult = merged.lastAutoSyncResult || "尚未自动上传";
+    if(typeof merged.lastCloudOrderSyncAt === "undefined") merged.lastCloudOrderSyncAt = null;
+    merged.lastCloudOrderSyncResult = merged.lastCloudOrderSyncResult || "尚未同步订单";
     return merged;
   }
   function saveMeta(next){
@@ -27368,6 +27372,149 @@ body.show-profile-v92 #inventoryView{
         console.log("自动上传业务快照失败，本地已保存:", err);
         return {data:null, error:err};
       });
+  }
+  function completedOrdersForCloud(){
+    var data = persistentData();
+    var orders = [];
+    if(typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) orders = finalOrders;
+    else if(Array.isArray(data.finalOrders)) orders = data.finalOrders;
+    return (orders || []).filter(function(order){
+      if(!order || typeof order !== "object") return false;
+      var status = String(order.status || order.displayStatus || "");
+      return status !== "待处理" && status !== "待处理订单" && status !== "码单" && status !== "已开码单";
+    });
+  }
+  function cloudOrderKey(order){
+    if(!order) return "";
+    return String(order.orderNo || order.billNo || order.id || "").trim();
+  }
+  function cloudOrderKeySet(){
+    var map = {};
+    completedOrdersForCloud().forEach(function(order){
+      var key = cloudOrderKey(order);
+      if(key) map[key] = true;
+    });
+    return map;
+  }
+  function cloudOrderSyncLedger(){
+    return readJson("cangjieCloudOrderSyncLedgerV1", {});
+  }
+  function saveCloudOrderSyncLedger(ledger){
+    writeJson("cangjieCloudOrderSyncLedgerV1", ledger || {});
+  }
+  function setCloudOrderSyncResult(resultText, atText){
+    var m = meta();
+    m.lastCloudOrderSyncAt = atText || now();
+    m.lastCloudOrderSyncResult = resultText || "尚未同步订单";
+    saveMeta(m);
+    renderCommercialSyncPanel();
+    return m;
+  }
+  function normalizeOrderItemsForCloud(order){
+    var items = order && (order.lines || order.items || order.goods || order.details);
+    if(!Array.isArray(items)) items = [];
+    return items.map(function(item, idx){
+      return {
+        index:item.index || idx + 1,
+        name:item.name || item.goodsName || "",
+        qty:Number(item.qty || item.count || 0),
+        weight:Number(item.weight || item.jin || 0),
+        price:Number(item.price || item.unitPrice || 0),
+        amount:Number(item.amount || item.total || 0),
+        owner:item.owner || "",
+        batchNo:item.batchNo || "",
+        unit:item.unit || "件",
+        type:item.type || item.pack || ""
+      };
+    });
+  }
+  function buildCloudOrderRow(order){
+    order = stampOrder(order || {});
+    var m = meta();
+    var account = currentAccount();
+    var total = Number(order.totalAmount || order.amount || order.receivable || 0);
+    var paid = Number(order.paid || order.paidAmount || order.realPaid || 0);
+    var debt = Number(order.debt || order.debtAmount || Math.max(total - paid, 0) || 0);
+    return {
+      merchant_id:m.merchantId,
+      order_no:cloudOrderKey(order),
+      customer_name:order.customerName || order.buyerName || order.customer || "",
+      employee_id:order.userId || m.userId || account.id || "admin",
+      employee_name:order.employeeName || order.cashierName || account.name || m.role || "管理员",
+      device_id:order.deviceId || m.deviceId,
+      total_amount:total,
+      paid_amount:paid,
+      debt_amount:debt,
+      status:order.status || order.displayStatus || "",
+      items_json:normalizeOrderItemsForCloud(order),
+      local_created_at:order.createdAt || order.time || now(),
+      cloud_created_at:now()
+    };
+  }
+  async function pushOrderToCloud(order){
+    var key = cloudOrderKey(order);
+    if(!key) return {data:null, error:"订单号为空"};
+    var ledger = cloudOrderSyncLedger();
+    if(ledger[key] && ledger[key].status === "success"){
+      return {data:null, error:null, skipped:true, reason:"already_synced"};
+    }
+    if(window.__cangjieCloudOrderSyncingV1 && window.__cangjieCloudOrderSyncingV1[key]){
+      return {data:null, error:null, skipped:true, reason:"in_flight"};
+    }
+    window.__cangjieCloudOrderSyncingV1 = window.__cangjieCloudOrderSyncingV1 || {};
+    window.__cangjieCloudOrderSyncingV1[key] = true;
+    var client = initSupabaseClient();
+    if(!client){
+      var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
+      setCloudOrderSyncResult("订单已本地保存，云端订单同步失败", now());
+      if(typeof toast === "function") toast("订单已本地保存，云端订单同步失败");
+      writeSyncLog("cloud_order_push", "同步失败", "订单已本地保存；Supabase 未初始化，单笔订单未同步。", {orderNo:key, error:initError});
+      window.__cangjieCloudOrderSyncingV1[key] = false;
+      return {data:null, error:initError};
+    }
+    try{
+      var row = buildCloudOrderRow(order);
+      var result = await client
+        .from("orders")
+        .insert([row])
+        .select();
+      console.log("云端订单写入结果:", result.data, result.error);
+      if(result.error){
+        var message = result.error.message || String(result.error);
+        ledger[key] = {status:"failed", time:now(), error:message};
+        saveCloudOrderSyncLedger(ledger);
+        setCloudOrderSyncResult("订单已本地保存，云端订单同步失败", now());
+        if(typeof toast === "function") toast("订单已本地保存，云端订单同步失败");
+        writeSyncLog("cloud_order_push", "同步失败", "订单已本地保存；单笔订单写入 orders 表失败。", {orderNo:key, error:message});
+      }else{
+        var cloudId = result.data && result.data[0] && result.data[0].id;
+        ledger[key] = {status:"success", time:now(), cloudId:cloudId || ""};
+        saveCloudOrderSyncLedger(ledger);
+        setCloudOrderSyncResult("云端订单同步成功：" + key, now());
+        updateSyncStatus("已连接", {lastSyncAt:now()});
+        writeSyncLog("cloud_order_push", "已连接", "订单完成后已单独写入 Supabase orders 表。", {orderNo:key, cloudId:cloudId});
+      }
+      window.__cangjieCloudOrderSyncingV1[key] = false;
+      return result;
+    }catch(err){
+      var errText = err && err.message ? err.message : String(err);
+      ledger[key] = {status:"failed", time:now(), error:errText};
+      saveCloudOrderSyncLedger(ledger);
+      setCloudOrderSyncResult("订单已本地保存，云端订单同步失败", now());
+      if(typeof toast === "function") toast("订单已本地保存，云端订单同步失败");
+      writeSyncLog("cloud_order_push", "同步失败", "订单已本地保存；单笔订单写入 orders 表异常。", {orderNo:key, error:errText});
+      console.log("云端订单写入异常，本地已保存:", err);
+      window.__cangjieCloudOrderSyncingV1[key] = false;
+      return {data:null, error:err};
+    }
+  }
+  function pushNewOrdersToCloud(beforeKeys, reason){
+    var ledger = cloudOrderSyncLedger();
+    completedOrdersForCloud().forEach(function(order){
+      var key = cloudOrderKey(order);
+      if(!key || beforeKeys[key] || (ledger[key] && ledger[key].status === "success")) return;
+      pushOrderToCloud(order);
+    });
   }
   function persistentData(){
     return readJson(PERSIST_KEY, {});
@@ -27782,6 +27929,7 @@ body.show-profile-v92 #inventoryView{
     if(typeof old !== "function" || old.__commercialSyncV1) return;
     window[name] = function(){
       for(var i=0;i<arguments.length;i++) stampOrder(arguments[i]);
+      var beforeCloudOrderKeys = cloudOrderKeySet();
       var beforeOrderFingerprint = orderAutoSyncFingerprint();
       var result = old.apply(this, arguments);
       setTimeout(function(){
@@ -27789,6 +27937,7 @@ body.show-profile-v92 #inventoryView{
         markDataUpdated();
         var afterOrderFingerprint = orderAutoSyncFingerprint();
         if(afterOrderFingerprint && afterOrderFingerprint !== beforeOrderFingerprint){
+          pushNewOrdersToCloud(beforeCloudOrderKeys, name);
           autoUploadBusinessSnapshotAfterOrder(name);
         }
       }, 0);
@@ -27833,7 +27982,9 @@ body.show-profile-v92 #inventoryView{
       ["自动同步", m.autoSyncEnabled ? "开启" : "关闭"],
       ["当前模式", autoSyncModeLabel(m.autoSyncMode)],
       ["最近一次自动上传时间", m.lastAutoSyncAt || "尚未自动上传"],
-      ["最近一次自动上传结果", m.lastAutoSyncResult || "尚未自动上传"]
+      ["最近一次自动上传结果", m.lastAutoSyncResult || "尚未自动上传"],
+      ["最近订单云同步时间", m.lastCloudOrderSyncAt || "尚未同步订单"],
+      ["最近订单云同步结果", m.lastCloudOrderSyncResult || "尚未同步订单"]
     ];
     box.innerHTML = fields.map(function(row){
       return '<div class="commercial-sync-v1-item"><span>'+e(row[0])+'</span><b>'+row[1]+'</b></div>';
@@ -27857,6 +28008,7 @@ body.show-profile-v92 #inventoryView{
   window.buildCloudPayload = buildCloudPayload;
   window.buildBusinessSnapshot = buildBusinessSnapshot;
   window.pushBusinessSnapshot = pushBusinessSnapshot;
+  window.pushOrderToCloud = pushOrderToCloud;
   window.readBusinessSnapshot = readBusinessSnapshot;
   window.readLatestBusinessSnapshot = readLatestBusinessSnapshot;
   window.restoreLatestBusinessSnapshotSafely = restoreLatestBusinessSnapshotSafely;

@@ -34,7 +34,7 @@ window.CANGJIE_FINAL_LOCKED_STORAGE = {
     "cangjie_system_version": "V1_FINAL_LOCKED",
     "cangjie_seed_source": "storage.js",
     "cangjie_seed_revision": "V1_FINAL_LOCKED_SYNC_001",
-    "cangjieCommercialSyncV1": "{\"merchantId\":\"mch_08230i\",\"userId\":\"admin\",\"deviceId\":\"dev_local_seed_7wgjwi\",\"role\":\"管理员\",\"syncVersion\":1,\"lastSyncAt\":\"\",\"syncEnabled\":false,\"autoSyncEnabled\":false,\"autoSyncMode\":\"manual\",\"lastAutoSyncAt\":null,\"lastAutoSyncResult\":\"尚未自动上传\",\"cloudStatus\":\"未连接\",\"dataUpdatedAt\":\"V1_FINAL_LOCKED_SYNC_001\",\"cloudUpdatedAt\":\"\",\"offlineAvailable\":true,\"conflictLogs\":[],\"syncLogs\":[{\"id\":\"sync_seed_001\",\"time\":\"V1_FINAL_LOCKED_SYNC_001\",\"type\":\"init\",\"status\":\"未连接\",\"message\":\"商用多设备同步架构底座已预留，当前仅使用本地离线缓存。\"}]}",
+    "cangjieCommercialSyncV1": "{\"merchantId\":\"mch_08230i\",\"userId\":\"admin\",\"deviceId\":\"dev_local_seed_7wgjwi\",\"role\":\"管理员\",\"syncVersion\":1,\"lastSyncAt\":\"\",\"syncEnabled\":false,\"autoSyncEnabled\":false,\"autoSyncMode\":\"manual\",\"lastAutoSyncAt\":null,\"lastAutoSyncResult\":\"尚未自动上传\",\"lastCloudOrderSyncAt\":null,\"lastCloudOrderSyncResult\":\"尚未同步订单\",\"cloudStatus\":\"未连接\",\"dataUpdatedAt\":\"V1_FINAL_LOCKED_SYNC_001\",\"cloudUpdatedAt\":\"\",\"offlineAvailable\":true,\"conflictLogs\":[],\"syncLogs\":[{\"id\":\"sync_seed_001\",\"time\":\"V1_FINAL_LOCKED_SYNC_001\",\"type\":\"init\",\"status\":\"未连接\",\"message\":\"商用多设备同步架构底座已预留，当前仅使用本地离线缓存。\"}]}",
     "cangjieCloudSchemaV1": "{\"merchants\":{\"key\":\"merchantId\",\"binds\":[\"merchantId\"],\"description\":\"商户资料与同步设置\"},\"users\":{\"key\":\"userId\",\"binds\":[\"merchantId\",\"userId\"],\"description\":\"管理员和员工账号\"},\"permissions\":{\"key\":\"permissionId\",\"binds\":[\"merchantId\",\"userId\"],\"description\":\"员工权限范围\"},\"products\":{\"key\":\"productId\",\"binds\":[\"merchantId\"],\"description\":\"商品基础资料\"},\"owners\":{\"key\":\"ownerId\",\"binds\":[\"merchantId\"],\"description\":\"货主资料\"},\"customers\":{\"key\":\"customerId\",\"binds\":[\"merchantId\"],\"description\":\"买家资料\"},\"batches\":{\"key\":\"batchId\",\"binds\":[\"merchantId\"],\"description\":\"批次资料\"},\"inventory\":{\"key\":\"inventoryId\",\"binds\":[\"merchantId\",\"batchId\",\"productId\"],\"description\":\"库存快照和变动\"},\"orders\":{\"key\":\"orderId\",\"binds\":[\"merchantId\",\"userId\",\"deviceId\"],\"requiredOrderFields\":[\"userId\",\"employeeName\",\"deviceId\",\"createdAt\"],\"description\":\"订单流水\"},\"debts\":{\"key\":\"debtId\",\"binds\":[\"merchantId\",\"customerId\"],\"description\":\"欠款与还款流水\"},\"printSettings\":{\"key\":\"printSettingId\",\"binds\":[\"merchantId\",\"deviceId\"],\"description\":\"打印配置\"},\"syncLogs\":{\"key\":\"syncLogId\",\"binds\":[\"merchantId\",\"deviceId\"],\"description\":\"同步、冲突和离线日志\"}}"
   },
   "sessionStorage": {},
@@ -55,6 +55,8 @@ window.CANGJIE_FINAL_LOCKED_STORAGE = {
       "autoSyncMode",
       "lastAutoSyncAt",
       "lastAutoSyncResult",
+      "lastCloudOrderSyncAt",
+      "lastCloudOrderSyncResult",
       "cloudStatus",
       "dataUpdatedAt"
     ],
