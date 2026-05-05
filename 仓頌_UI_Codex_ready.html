@@ -4211,6 +4211,7 @@ body.batch-create-mode #inboundRoot .app{
 
 </style>
 <script src="./storage.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
 /* ===== V1_FINAL_LOCKED：唯一初始化数据源锁定 ===== */
 (function(){
@@ -26911,6 +26912,36 @@ body.show-profile-v92 #inventoryView{
   font-weight:800;
   line-height:1.6;
 }
+.commercial-sync-v1-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+.commercial-sync-v1-btn{
+  height:38px;
+  border:0;
+  border-radius:12px;
+  background:#1f2023;
+  color:#fff;
+  padding:0 14px;
+  font-size:13px;
+  font-weight:950;
+  cursor:pointer;
+}
+.commercial-sync-v1-status{
+  min-height:34px;
+  display:inline-flex;
+  align-items:center;
+  border:1px solid #d9ddd3;
+  border-radius:999px;
+  background:#f7f8f4;
+  color:#263028;
+  padding:0 12px;
+  font-size:12px;
+  font-weight:900;
+}
 @media(max-width:980px){
   .commercial-sync-v1-grid{
     grid-template-columns:1fr 1fr;
@@ -26929,6 +26960,15 @@ body.show-profile-v92 #inventoryView{
   var META_KEY = "cangjieCommercialSyncV1";
   var SCHEMA_KEY = "cangjieCloudSchemaV1";
   var PERSIST_KEY = "tudou2_v57_persistent_data";
+  var SUPABASE_URL = "https://dsutthgfzyopkzpwawkb.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_JKxs11pjPZ2DbQVEi_1A1A_GPaWnn7r";
+  window.CANGJIE_SUPABASE_CONFIG = {
+    projectUrl:SUPABASE_URL,
+    anonKey:SUPABASE_ANON_KEY,
+    connected:false,
+    lastTestAt:"",
+    lastError:""
+  };
 
   function now(){
     return new Date().toISOString();
@@ -27061,6 +27101,68 @@ body.show-profile-v92 #inventoryView{
     renderCommercialSyncPanel();
     return m;
   }
+  function setConnectionText(text){
+    var el = document.getElementById("commercialSyncConnectionStatusV1");
+    if(el) el.textContent = text || "未测试";
+  }
+  function initSupabaseClient(){
+    if(window.cangjieSupabase) return window.cangjieSupabase;
+    if(!window.supabase || typeof window.supabase.createClient !== "function"){
+      window.CANGJIE_SUPABASE_CONFIG.lastError = "Supabase SDK 未加载";
+      setConnectionText("SDK 未加载");
+      return null;
+    }
+    try{
+      window.cangjieSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      return window.cangjieSupabase;
+    }catch(err){
+      window.CANGJIE_SUPABASE_CONFIG.lastError = err && err.message ? err.message : String(err);
+      setConnectionText("初始化失败");
+      return null;
+    }
+  }
+  async function testConnection(){
+    var client = initSupabaseClient();
+    if(!client){
+      console.log("连接测试:", null, window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化");
+      updateSyncStatus("同步失败");
+      writeSyncLog("supabase_test", "同步失败", "Supabase SDK 未加载或初始化失败。");
+      return {data:null, error:window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化"};
+    }
+    setConnectionText("同步中...");
+    updateSyncStatus("同步中");
+    try{
+      var result = await client
+        .from("test_connection")
+        .select("*")
+        .limit(1);
+      console.log("连接测试:", result.data, result.error);
+      window.CANGJIE_SUPABASE_CONFIG.lastTestAt = now();
+      if(result.error){
+        window.CANGJIE_SUPABASE_CONFIG.connected = false;
+        window.CANGJIE_SUPABASE_CONFIG.lastError = result.error.message || String(result.error);
+        updateSyncStatus("同步失败");
+        setConnectionText("连接失败：" + window.CANGJIE_SUPABASE_CONFIG.lastError);
+        writeSyncLog("supabase_test", "同步失败", "Supabase 连接测试失败。", {error:window.CANGJIE_SUPABASE_CONFIG.lastError});
+      }else{
+        window.CANGJIE_SUPABASE_CONFIG.connected = true;
+        window.CANGJIE_SUPABASE_CONFIG.lastError = "";
+        updateSyncStatus("已连接", {lastSyncAt:window.CANGJIE_SUPABASE_CONFIG.lastTestAt});
+        setConnectionText("已连接");
+        writeSyncLog("supabase_test", "已连接", "Supabase 连接测试成功。");
+      }
+      return result;
+    }catch(err){
+      var message = err && err.message ? err.message : String(err);
+      console.log("连接测试:", null, err);
+      window.CANGJIE_SUPABASE_CONFIG.connected = false;
+      window.CANGJIE_SUPABASE_CONFIG.lastError = message;
+      updateSyncStatus("同步失败");
+      setConnectionText("连接失败：" + message);
+      writeSyncLog("supabase_test", "同步失败", "Supabase 连接测试异常。", {error:message});
+      return {data:null, error:err};
+    }
+  }
   function markDataUpdated(){
     var m = meta();
     m.dataUpdatedAt = now();
@@ -27184,6 +27286,7 @@ body.show-profile-v92 #inventoryView{
     card.className = "profile-v92-card commercial-sync-v1-card";
     card.innerHTML = '<h2>数据同步</h2><p>商用多设备同步架构预留。当前不连接真实云端，系统继续使用 storage.js 作为本地离线缓存。</p>'
       + '<div id="commercialSyncGridV1" class="commercial-sync-v1-grid"></div>'
+      + '<div class="commercial-sync-v1-actions"><button id="testCloudConnectionV1" class="commercial-sync-v1-btn" type="button">测试云连接</button><span id="commercialSyncConnectionStatusV1" class="commercial-sync-v1-status">未测试</span></div>'
       + '<div class="commercial-sync-v1-note">未来云端集合：merchants / users / permissions / products / owners / customers / batches / inventory / orders / debts / printSettings / syncLogs。冲突时保留本地副本并生成 conflictLog。</div>';
     grid.appendChild(card);
   }
@@ -27225,12 +27328,20 @@ body.show-profile-v92 #inventoryView{
   window.resolveSyncConflict = resolveSyncConflict;
   window.writeSyncLog = writeSyncLog;
   window.updateSyncStatus = updateSyncStatus;
+  window.initSupabaseClient = initSupabaseClient;
+  window.testConnection = testConnection;
 
   document.addEventListener("change", function(ev){
     var el = ev.target;
     if(el && el.matches && el.matches("input,select,textarea")) setTimeout(markDataUpdated, 0);
   }, true);
   document.addEventListener("click", function(ev){
+    var testBtn = ev.target && ev.target.closest ? ev.target.closest("#testCloudConnectionV1") : null;
+    if(testBtn){
+      ev.preventDefault();
+      testConnection();
+      return;
+    }
     if(ev.target && ev.target.closest && ev.target.closest("#profileCenterRootV92")) setTimeout(renderCommercialSyncPanel, 0);
   }, true);
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", initCommercialSync);
