@@ -27503,16 +27503,16 @@ body.show-profile-v92 #inventoryView{
     var debt = Number(order.debtAmount || order.debt || Math.max(total - paid, 0) || 0);
     return {
       merchant_id:m.merchantId,
-      order_no:cloudOrderKey(order),
+      order_no:order.billNo || order.orderNo || order.id || String(Date.now()),
       customer_name:order.customerName || order.buyerName || order.customer || "未知客户",
       employee_id:order.employeeId || order.userId || m.userId || account.id || "admin",
-      employee_name:order.employeeName || order.cashierName || order.operator || account.name || m.role || "管理员",
+      employee_name:"管理员",
       device_id:order.deviceId || m.deviceId || "dev_local_seed",
       total_amount:total,
       paid_amount:paid,
       debt_amount:debt,
       status:order.status || order.displayStatus || "已收银",
-      items_json:normalizeOrderItemsForCloud(order),
+      items_json:Array.isArray(order.lines) ? order.lines : normalizeOrderItemsForCloud(order),
       local_created_at:order.createdAt || order.time || now(),
       cloud_created_at:now()
     };
