@@ -12453,6 +12453,60 @@ function goBackToBatchEditFromOverview(){
     return data;
   }
 
+  function orderPersistSignatureV57(data){
+    try{
+      var rows = [];
+      if(data && Array.isArray(data.orders) && data.orders.length) rows = data.orders;
+      if((!rows || !rows.length) && data && Array.isArray(data.finalOrders) && data.finalOrders.length) rows = data.finalOrders;
+      if(!rows || !rows.length) return "";
+      return JSON.stringify(rows.map(function(o){
+        return [
+          o && (o.orderNo || o.billNo || o.id || ""),
+          o && (o.status || o.displayStatus || ""),
+          o && (o.totalAmount || o.total || o.amount || 0),
+          o && (o.paidAmount || o.paid || 0),
+          o && (o.debtAmount || o.debt || 0),
+          o && (o.time || o.createdAt || "")
+        ].join("|");
+      }));
+    }catch(e){
+      return "";
+    }
+  }
+
+  function triggerCloudOrderSyncAfterPersistV57(data){
+    try{
+      var sig = orderPersistSignatureV57(data);
+      if(!sig) return;
+      var key = "cangjie_last_order_persist_signature_v1";
+      var prev = localStorage.getItem(key) || "";
+      if(prev === sig) return;
+      localStorage.setItem(key, sig);
+      console.log("订单完成触发");
+      setTimeout(async function(){
+        try{
+          if(typeof window.pushLatestOrderToCloud === "function"){
+            await window.pushLatestOrderToCloud();
+          }else{
+            console.log("订单云同步函数未就绪");
+          }
+        }catch(e){
+          console.error("云端同步异常:", e);
+        }
+      }, 0);
+    }catch(e){
+      console.error("云端同步异常:", e);
+    }
+  }
+
+  function rememberCurrentOrderPersistSignatureV57(){
+    try{
+      var data = collectTudou2DataV57();
+      var sig = orderPersistSignatureV57(data);
+      if(sig) localStorage.setItem("cangjie_last_order_persist_signature_v1", sig);
+    }catch(e){}
+  }
+
   function applyTudou2DataV57(data){
     if(!data || typeof data !== "object") return;
 
@@ -12479,6 +12533,7 @@ function goBackToBatchEditFromOverview(){
     try{
       var data = collectTudou2DataV57();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      triggerCloudOrderSyncAfterPersistV57(data);
       return true;
     }catch(e){
       console.error("仓頡保存失败：", e);
@@ -12612,6 +12667,7 @@ function goBackToBatchEditFromOverview(){
 
   function bootV57(){
     loadTudou2DataV57();
+    rememberCurrentOrderPersistSignatureV57();
     installAutoSaveV57();
     refreshAllViewsV57();
     addSaveButtonV57();
@@ -27491,7 +27547,7 @@ body.show-profile-v92 #inventoryView{
     console.log("开始同步订单");
     var lastOrder = latestLocalOrderForCloud();
     if(!lastOrder) return {data:null, error:"没有订单"};
-    console.log("最新订单:", lastOrder);
+    console.log("准备上传订单:", lastOrder);
     var key = cloudOrderKey(lastOrder) || String(Date.now());
     var ledger = cloudOrderSyncLedger();
     if(ledger[key] && ledger[key].status === "success"){
