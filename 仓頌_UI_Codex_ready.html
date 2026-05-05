@@ -27050,6 +27050,7 @@ body.show-profile-v92 #inventoryView{
       var client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
       window.CANGJIE_SUPABASE_CLIENT = client;
       window.cangjieSupabase = client;
+      console.log("当前 Supabase URL:", SUPABASE_URL);
       console.log("Supabase初始化成功", client);
       return client;
     }catch(err){
@@ -27476,6 +27477,11 @@ body.show-profile-v92 #inventoryView{
     renderCommercialSyncPanel();
     return m;
   }
+  function publicOrdersTable(client){
+    return (client && typeof client.schema === "function")
+      ? client.schema("public").from("orders")
+      : client.from("orders");
+  }
   function normalizeOrderItemsForCloud(order){
     var items = order && (order.lines || order.items || order.goods || order.details);
     if(!Array.isArray(items)) items = [];
@@ -27569,11 +27575,12 @@ body.show-profile-v92 #inventoryView{
     }
     try{
       var row = buildCloudOrderRow(lastOrder);
-      var result = await client
-        .from("orders")
+      var result = await publicOrdersTable(client)
         .insert([row])
         .select();
-      console.log("订单写入结果:", result.data, result.error);
+      console.log("订单写入结果:", JSON.stringify({data:result.data, error:result.error}));
+      var check = await publicOrdersTable(client).select("*");
+      console.log("数据库实际数据:", JSON.stringify(check));
       if(result.error){
         var message = result.error.message || String(result.error);
         ledger[key] = {status:"failed", time:now(), error:message};
