@@ -27051,6 +27051,7 @@ body.show-profile-v92 #inventoryView{
       autoSyncEnabled:false,
       autoSyncMode:"manual",
       lastAutoSyncAt:null,
+      lastAutoSyncResult:"尚未自动上传",
       cloudStatus:"未连接",
       dataUpdatedAt:now(),
       cloudUpdatedAt:"",
@@ -27086,6 +27087,7 @@ body.show-profile-v92 #inventoryView{
     merged.autoSyncEnabled = merged.autoSyncEnabled === true;
     merged.autoSyncMode = merged.autoSyncMode || "manual";
     if(typeof merged.lastAutoSyncAt === "undefined") merged.lastAutoSyncAt = null;
+    merged.lastAutoSyncResult = merged.lastAutoSyncResult || "尚未自动上传";
     return merged;
   }
   function saveMeta(next){
@@ -27149,6 +27151,7 @@ body.show-profile-v92 #inventoryView{
     m.autoSyncEnabled = checked === true;
     m.autoSyncMode = m.autoSyncEnabled ? "snapshot_upload_only" : "manual";
     if(typeof m.lastAutoSyncAt === "undefined") m.lastAutoSyncAt = null;
+    m.lastAutoSyncResult = m.lastAutoSyncResult || "尚未自动上传";
     saveMeta(m);
     setAutoSyncText(m.autoSyncEnabled ? "自动同步：开启（仅上传快照）" : "自动同步：关闭");
     renderCommercialSyncPanel();
@@ -27306,6 +27309,65 @@ body.show-profile-v92 #inventoryView{
     saveMeta(m);
     renderCommercialSyncPanel();
     return m;
+  }
+  function orderAutoSyncFingerprint(){
+    try{
+      var data = persistentData();
+      var orders = [];
+      if(typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) orders = finalOrders;
+      else if(Array.isArray(data.finalOrders)) orders = data.finalOrders;
+      return JSON.stringify((orders || []).map(function(o){
+        return [
+          o && (o.orderNo || o.billNo || o.id || ""),
+          o && (o.status || o.displayStatus || ""),
+          o && (o.totalAmount || o.amount || 0),
+          o && (o.time || o.createdAt || ""),
+          o && (o.updatedAt || o.savedAt || o.cloudUpdatedAt || "")
+        ].join("|");
+      }));
+    }catch(err){
+      return "";
+    }
+  }
+  function setAutoUploadResult(resultText, atText){
+    var m = meta();
+    m.lastAutoSyncAt = atText || now();
+    m.lastAutoSyncResult = resultText || "尚未自动上传";
+    saveMeta(m);
+    setAutoSyncText(m.autoSyncEnabled ? "自动同步：开启（仅上传快照）" : "自动同步：关闭");
+    renderCommercialSyncPanel();
+    return m;
+  }
+  function autoUploadBusinessSnapshotAfterOrder(reason){
+    var m = meta();
+    if(m.autoSyncEnabled !== true) return Promise.resolve({skipped:true, reason:"auto_sync_off"});
+    m.autoSyncMode = "snapshot_upload_only";
+    saveMeta(m);
+    setAutoUploadResult("自动上传中...", now());
+    return Promise.resolve()
+      .then(function(){ return pushBusinessSnapshot(); })
+      .then(function(result){
+        var hasError = result && result.error;
+        if(hasError){
+          var msg = result.error && result.error.message ? result.error.message : String(result.error);
+          setAutoUploadResult("云端同步失败，本地已保存", now());
+          if(typeof toast === "function") toast("云端同步失败，本地已保存");
+          writeSyncLog("auto_snapshot_push", "同步失败", "订单已本地保存；自动上传业务快照失败。", {reason:reason || "order_completed", error:msg});
+        }else{
+          var row = result && result.data && result.data[0];
+          setAutoUploadResult("自动上传成功" + (row && row.id ? "：" + row.id : ""), now());
+          writeSyncLog("auto_snapshot_push", "已连接", "订单完成后已自动上传业务快照。", {reason:reason || "order_completed", snapshotId:row && row.id});
+        }
+        return result;
+      })
+      .catch(function(err){
+        var msg = err && err.message ? err.message : String(err);
+        setAutoUploadResult("云端同步失败，本地已保存", now());
+        if(typeof toast === "function") toast("云端同步失败，本地已保存");
+        writeSyncLog("auto_snapshot_push", "同步失败", "订单已本地保存；自动上传业务快照异常。", {reason:reason || "order_completed", error:msg});
+        console.log("自动上传业务快照失败，本地已保存:", err);
+        return {data:null, error:err};
+      });
   }
   function persistentData(){
     return readJson(PERSIST_KEY, {});
@@ -27720,10 +27782,15 @@ body.show-profile-v92 #inventoryView{
     if(typeof old !== "function" || old.__commercialSyncV1) return;
     window[name] = function(){
       for(var i=0;i<arguments.length;i++) stampOrder(arguments[i]);
+      var beforeOrderFingerprint = orderAutoSyncFingerprint();
       var result = old.apply(this, arguments);
       setTimeout(function(){
         stampExistingOrders();
         markDataUpdated();
+        var afterOrderFingerprint = orderAutoSyncFingerprint();
+        if(afterOrderFingerprint && afterOrderFingerprint !== beforeOrderFingerprint){
+          autoUploadBusinessSnapshotAfterOrder(name);
+        }
       }, 0);
       return result;
     };
@@ -27765,7 +27832,8 @@ body.show-profile-v92 #inventoryView{
       ["本地更新时间", m.dataUpdatedAt || "未记录"],
       ["自动同步", m.autoSyncEnabled ? "开启" : "关闭"],
       ["当前模式", autoSyncModeLabel(m.autoSyncMode)],
-      ["最后自动同步时间", m.lastAutoSyncAt || "尚未自动同步"]
+      ["最近一次自动上传时间", m.lastAutoSyncAt || "尚未自动上传"],
+      ["最近一次自动上传结果", m.lastAutoSyncResult || "尚未自动上传"]
     ];
     box.innerHTML = fields.map(function(row){
       return '<div class="commercial-sync-v1-item"><span>'+e(row[0])+'</span><b>'+row[1]+'</b></div>';
