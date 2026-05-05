@@ -26978,11 +26978,32 @@ body.show-profile-v92 #inventoryView{
   var META_KEY = "cangjieCommercialSyncV1";
   var SCHEMA_KEY = "cangjieCloudSchemaV1";
   var PERSIST_KEY = "tudou2_v57_persistent_data";
-  var SUPABASE_URL = "https://dsutthgfzyopkzpwawkb.supabase.co";
-  var SUPABASE_ANON_KEY = "sb_publishable_JKxs11pjPZ2DbQVEi_1A1A_GPaWnn7r";
+  const SUPABASE_URL = "https://dsutthgfzyopkzpwawkb.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_JKxs11pjPZ2DbQVEi_1A1A_GPaWnn7r";
+  let supabaseInitError = "";
+  const supabase = (function(){
+    try{
+      if(!window.supabase || typeof window.supabase.createClient !== "function"){
+        supabaseInitError = "Supabase SDK 未加载";
+        return null;
+      }
+      if(!SUPABASE_KEY || SUPABASE_KEY.indexOf("sb_publishable_") !== 0){
+        supabaseInitError = "Supabase publishable key 无效";
+        return null;
+      }
+      var client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      window.CANGJIE_SUPABASE_CLIENT = client;
+      window.cangjieSupabase = client;
+      console.log("Supabase初始化成功", client);
+      return client;
+    }catch(err){
+      supabaseInitError = err && err.message ? err.message : String(err);
+      return null;
+    }
+  })();
   window.CANGJIE_SUPABASE_CONFIG = {
     projectUrl:SUPABASE_URL,
-    anonKey:SUPABASE_ANON_KEY,
+    anonKey:SUPABASE_KEY,
     connected:false,
     lastTestAt:"",
     lastError:""
@@ -27167,21 +27188,10 @@ body.show-profile-v92 #inventoryView{
     return m;
   }
   function initSupabaseClient(){
-    if(window.cangjieSupabase) return window.cangjieSupabase;
-    if(!window.supabase || typeof window.supabase.createClient !== "function"){
-      window.CANGJIE_SUPABASE_CONFIG.lastError = "Supabase SDK 未加载";
-      setConnectionText("SDK 未加载");
-      return null;
-    }
-    try{
-      window.cangjieSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      console.log("Supabase初始化完成");
-      return window.cangjieSupabase;
-    }catch(err){
-      window.CANGJIE_SUPABASE_CONFIG.lastError = err && err.message ? err.message : String(err);
-      setConnectionText("初始化失败");
-      return null;
-    }
+    if(supabase) return supabase;
+    window.CANGJIE_SUPABASE_CONFIG.lastError = supabaseInitError || "Supabase 未初始化";
+    setConnectionText(supabaseInitError === "Supabase SDK 未加载" ? "SDK 未加载" : "初始化失败");
+    return null;
   }
   async function testConnection(){
     var client = initSupabaseClient();
