@@ -27105,6 +27105,10 @@ body.show-profile-v92 #inventoryView{
     var el = document.getElementById("commercialSyncConnectionStatusV1");
     if(el) el.textContent = text || "未测试";
   }
+  function setInsertText(text){
+    var el = document.getElementById("commercialSyncInsertStatusV1");
+    if(el) el.textContent = text || "未写入";
+  }
   function initSupabaseClient(){
     if(window.cangjieSupabase) return window.cangjieSupabase;
     if(!window.supabase || typeof window.supabase.createClient !== "function"){
@@ -27160,6 +27164,44 @@ body.show-profile-v92 #inventoryView{
       updateSyncStatus("同步失败");
       setConnectionText("连接失败：" + message);
       writeSyncLog("supabase_test", "同步失败", "Supabase 连接测试异常。", {error:message});
+      return {data:null, error:err};
+    }
+  }
+  async function testInsert(){
+    var client = initSupabaseClient();
+    if(!client){
+      console.log("写入结果:", null, window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化");
+      setInsertText("写入失败：Supabase 未初始化");
+      writeSyncLog("supabase_insert", "同步失败", "Supabase 未初始化，测试写入未执行。");
+      return {data:null, error:window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化"};
+    }
+    setInsertText("写入中...");
+    updateSyncStatus("同步中");
+    try{
+      var result = await client
+        .from("test_orders")
+        .insert([
+          {content:"测试订单-" + Date.now()}
+        ])
+        .select();
+      console.log("写入结果:", result.data, result.error);
+      if(result.error){
+        var message = result.error.message || String(result.error);
+        setInsertText("写入失败：" + message);
+        updateSyncStatus("同步失败");
+        writeSyncLog("supabase_insert", "同步失败", "Supabase 测试写入失败。", {error:message});
+      }else{
+        setInsertText("写入成功：" + ((result.data && result.data[0] && result.data[0].id) || "已生成记录"));
+        updateSyncStatus("已连接", {lastSyncAt:now()});
+        writeSyncLog("supabase_insert", "已连接", "Supabase 测试订单写入成功。", {rows:result.data || []});
+      }
+      return result;
+    }catch(err){
+      var errText = err && err.message ? err.message : String(err);
+      console.log("写入结果:", null, err);
+      setInsertText("写入失败：" + errText);
+      updateSyncStatus("同步失败");
+      writeSyncLog("supabase_insert", "同步失败", "Supabase 测试写入异常。", {error:errText});
       return {data:null, error:err};
     }
   }
@@ -27287,6 +27329,7 @@ body.show-profile-v92 #inventoryView{
     card.innerHTML = '<h2>数据同步</h2><p>商用多设备同步架构预留。当前不连接真实云端，系统继续使用 storage.js 作为本地离线缓存。</p>'
       + '<div id="commercialSyncGridV1" class="commercial-sync-v1-grid"></div>'
       + '<div class="commercial-sync-v1-actions"><button id="testCloudConnectionV1" class="commercial-sync-v1-btn" type="button">测试云连接</button><span id="commercialSyncConnectionStatusV1" class="commercial-sync-v1-status">未测试</span></div>'
+      + '<div class="commercial-sync-v1-actions"><button id="testCloudInsertV1" class="commercial-sync-v1-btn" type="button">测试写入云端</button><span id="commercialSyncInsertStatusV1" class="commercial-sync-v1-status">未写入</span></div>'
       + '<div class="commercial-sync-v1-note">未来云端集合：merchants / users / permissions / products / owners / customers / batches / inventory / orders / debts / printSettings / syncLogs。冲突时保留本地副本并生成 conflictLog。</div>';
     grid.appendChild(card);
   }
@@ -27330,6 +27373,7 @@ body.show-profile-v92 #inventoryView{
   window.updateSyncStatus = updateSyncStatus;
   window.initSupabaseClient = initSupabaseClient;
   window.testConnection = testConnection;
+  window.testInsert = testInsert;
 
   document.addEventListener("change", function(ev){
     var el = ev.target;
@@ -27340,6 +27384,12 @@ body.show-profile-v92 #inventoryView{
     if(testBtn){
       ev.preventDefault();
       testConnection();
+      return;
+    }
+    var insertBtn = ev.target && ev.target.closest ? ev.target.closest("#testCloudInsertV1") : null;
+    if(insertBtn){
+      ev.preventDefault();
+      testInsert();
       return;
     }
     if(ev.target && ev.target.closest && ev.target.closest("#profileCenterRootV92")) setTimeout(renderCommercialSyncPanel, 0);
