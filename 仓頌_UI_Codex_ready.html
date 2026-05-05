@@ -27442,20 +27442,20 @@ body.show-profile-v92 #inventoryView{
     order = stampOrder(order || {});
     var m = meta();
     var account = currentAccount();
-    var total = Number(order.totalAmount || order.amount || order.receivable || 0);
-    var paid = Number(order.paid || order.paidAmount || order.realPaid || 0);
-    var debt = Number(order.debt || order.debtAmount || Math.max(total - paid, 0) || 0);
+    var total = Number(order.totalAmount || order.total || order.amount || order.receivable || 0);
+    var paid = Number(order.paidAmount || order.paid || order.realPaid || 0);
+    var debt = Number(order.debtAmount || order.debt || Math.max(total - paid, 0) || 0);
     return {
       merchant_id:m.merchantId,
       order_no:cloudOrderKey(order),
-      customer_name:order.customerName || order.buyerName || order.customer || "",
-      employee_id:order.userId || m.userId || account.id || "admin",
-      employee_name:order.employeeName || order.cashierName || account.name || m.role || "管理员",
-      device_id:order.deviceId || m.deviceId,
+      customer_name:order.customerName || order.buyerName || order.customer || "未知客户",
+      employee_id:order.employeeId || order.userId || m.userId || account.id || "admin",
+      employee_name:order.employeeName || order.cashierName || order.operator || account.name || m.role || "管理员",
+      device_id:order.deviceId || m.deviceId || "dev_local_seed",
       total_amount:total,
       paid_amount:paid,
       debt_amount:debt,
-      status:order.status || order.displayStatus || "",
+      status:order.status || order.displayStatus || "已收银",
       items_json:normalizeOrderItemsForCloud(order),
       local_created_at:order.createdAt || order.time || now(),
       cloud_created_at:now()
@@ -27488,7 +27488,7 @@ body.show-profile-v92 #inventoryView{
     return source === "finalOrders" ? orders[0] : orders[orders.length - 1];
   }
   async function pushLatestOrderToCloud(){
-    console.log("开始同步最新订单");
+    console.log("开始同步订单");
     var lastOrder = latestLocalOrderForCloud();
     if(!lastOrder) return {data:null, error:"没有订单"};
     console.log("最新订单:", lastOrder);
