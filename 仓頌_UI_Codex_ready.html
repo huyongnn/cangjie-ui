@@ -27428,6 +27428,78 @@ body.show-profile-v92 #inventoryView{
       return {data:null, error:err};
     }
   }
+  function renderSnapshotPreview(row){
+    var el = document.getElementById("commercialSyncSnapshotPreviewV1");
+    if(!el) return;
+    if(!row){
+      el.innerHTML = '<div class="commercial-sync-v1-note">暂无云端业务快照预览。</div>';
+      return;
+    }
+    var payload = row.payload || {};
+    var collections = payload.collections || {};
+    var size = 0;
+    try{ size = JSON.stringify(payload).length; }catch(err){}
+    var preview = [
+      "merchantId: " + (payload.merchantId || row.merchant_id || ""),
+      "products: " + ((collections.products || []).length || 0),
+      "owners: " + ((collections.owners || []).length || 0),
+      "customers: " + ((collections.customers || []).length || 0),
+      "batches: " + ((collections.batches || []).length || 0),
+      "orders: " + ((collections.orders || []).length || 0)
+    ].join("｜");
+    el.innerHTML = '<div class="commercial-sync-v1-grid">'
+      + '<div class="commercial-sync-v1-item"><span>快照ID</span><b>'+e(row.id || "")+'</b></div>'
+      + '<div class="commercial-sync-v1-item"><span>云端更新时间</span><b>'+e(row.cloud_updated_at || "")+'</b></div>'
+      + '<div class="commercial-sync-v1-item"><span>设备ID</span><b>'+e(row.device_id || "")+'</b></div>'
+      + '<div class="commercial-sync-v1-item"><span>数据大小</span><b>'+e(size + " 字符")+'</b></div>'
+      + '</div><div class="commercial-sync-v1-note">payload 预览：'+e(preview)+'</div>';
+  }
+  async function readLatestBusinessSnapshot(){
+    console.log("开始读取最新云端业务快照");
+    var client = initSupabaseClient();
+    if(!client){
+      var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
+      console.log("最新业务快照读取结果:", null, initError);
+      setSnapshotText("读取失败：" + initError);
+      renderSnapshotPreview(null);
+      writeSyncLog("business_snapshot_preview", "同步失败", "Supabase 未初始化，最新业务快照未读取。");
+      return {data:null, error:initError};
+    }
+    var m = meta();
+    setSnapshotText("读取中...");
+    try{
+      var result = await client
+        .from("cloud_snapshots")
+        .select("*")
+        .eq("merchant_id", m.merchantId)
+        .eq("data_type", "full_snapshot")
+        .order("cloud_updated_at", {ascending:false})
+        .limit(1);
+      console.log("最新业务快照读取结果:", result.data, result.error);
+      if(result.error){
+        var message = result.error.message || String(result.error);
+        setSnapshotText("读取失败：" + message);
+        renderSnapshotPreview(null);
+        updateSyncStatus("同步失败");
+        writeSyncLog("business_snapshot_preview", "同步失败", "最新业务快照读取失败。", {error:message});
+      }else{
+        var row = (result.data || [])[0] || null;
+        setSnapshotText(row ? "读取成功：" + row.id : "读取成功：暂无快照");
+        renderSnapshotPreview(row);
+        updateSyncStatus("已连接", {lastSyncAt:now()});
+        writeSyncLog("business_snapshot_preview", "已连接", "已读取最新业务快照预览；未覆盖本地数据。", {snapshotId:row && row.id});
+      }
+      return {data:result.data, error:result.error};
+    }catch(err){
+      var errText = err && err.message ? err.message : String(err);
+      console.log("最新业务快照读取结果:", null, err);
+      setSnapshotText("读取失败：" + errText);
+      renderSnapshotPreview(null);
+      updateSyncStatus("同步失败");
+      writeSyncLog("business_snapshot_preview", "同步失败", "最新业务快照读取异常。", {error:errText});
+      return {data:null, error:err};
+    }
+  }
   function pullCloudSnapshot(){
     updateSyncStatus("未连接");
     writeSyncLog("pull", "未连接", "云同步尚未接入真实服务，本次仅返回空快照占位。");
@@ -27506,6 +27578,7 @@ body.show-profile-v92 #inventoryView{
       + '<div class="commercial-sync-v1-actions"><button id="testCloudInsertV1" class="commercial-sync-v1-btn" type="button" onclick="testInsert()">测试写入云端</button><span id="commercialSyncInsertStatusV1" class="commercial-sync-v1-status">未写入</span></div>'
       + '<div class="commercial-sync-v1-actions"><button id="testCloudReadV1" class="commercial-sync-v1-btn" type="button" onclick="testReadCloud()">测试读取云端</button><span id="commercialSyncReadStatusV1" class="commercial-sync-v1-status">未读取</span></div>'
       + '<div class="commercial-sync-v1-actions"><button id="pushBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="pushBusinessSnapshot()">上传业务快照</button><button id="readBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="readBusinessSnapshot()">读取业务快照</button><span id="commercialSyncSnapshotStatusV1" class="commercial-sync-v1-status">未同步快照</span></div>'
+      + '<div class="commercial-sync-v1-actions"><button id="readLatestBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="readLatestBusinessSnapshot()">读取云端快照</button></div><div id="commercialSyncSnapshotPreviewV1"></div>'
       + '<div class="commercial-sync-v1-note">未来云端集合：merchants / users / permissions / products / owners / customers / batches / inventory / orders / debts / printSettings / syncLogs。正式快照表预留为 cloud_snapshots；读取快照只显示结果，不会自动覆盖本地数据。</div>';
     grid.appendChild(card);
   }
@@ -27545,6 +27618,7 @@ body.show-profile-v92 #inventoryView{
   window.buildBusinessSnapshot = buildBusinessSnapshot;
   window.pushBusinessSnapshot = pushBusinessSnapshot;
   window.readBusinessSnapshot = readBusinessSnapshot;
+  window.readLatestBusinessSnapshot = readLatestBusinessSnapshot;
   window.pullCloudSnapshot = pullCloudSnapshot;
   window.pushLocalChanges = pushLocalChanges;
   window.resolveSyncConflict = resolveSyncConflict;
@@ -27588,6 +27662,12 @@ body.show-profile-v92 #inventoryView{
     if(readSnapshotBtn){
       ev.preventDefault();
       readBusinessSnapshot();
+      return;
+    }
+    var readLatestSnapshotBtn = ev.target && ev.target.closest ? ev.target.closest("#readLatestBusinessSnapshotV1") : null;
+    if(readLatestSnapshotBtn){
+      ev.preventDefault();
+      readLatestBusinessSnapshot();
       return;
     }
     if(ev.target && ev.target.closest && ev.target.closest("#profileCenterRootV92")) setTimeout(renderCommercialSyncPanel, 0);
