@@ -27305,19 +27305,23 @@ body.show-profile-v92 #inventoryView{
   function buildBusinessSnapshot(){
     var payload = buildCloudPayload();
     var scoped = getMerchantScopedData();
+    var ts = Date.now();
+    var builtAt = now();
     return {
       merchant_id:payload.merchantId,
       device_id:payload.deviceId,
       data_type:"full_snapshot",
-      sync_version:payload.syncVersion || 1,
-      built_at:now(),
+      sync_version:ts,
+      cloud_updated_at:builtAt,
+      built_at:builtAt,
       payload:{
         merchantId:payload.merchantId,
         deviceId:payload.deviceId,
         userId:payload.userId,
         role:payload.role,
-        syncVersion:payload.syncVersion || 1,
+        syncVersion:ts,
         localUpdatedAt:payload.localUpdatedAt,
+        cloudUpdatedAt:builtAt,
         collections:{
           merchants:scoped.merchants,
           users:scoped.users,
@@ -27356,7 +27360,8 @@ body.show-profile-v92 #inventoryView{
           device_id:snapshot.device_id,
           data_type:snapshot.data_type,
           payload:snapshot.payload,
-          sync_version:snapshot.sync_version
+          sync_version:snapshot.sync_version,
+          cloud_updated_at:snapshot.cloud_updated_at
         }])
         .select();
       console.log("业务快照上传结果:", result.data, result.error);
@@ -27366,8 +27371,9 @@ body.show-profile-v92 #inventoryView{
         updateSyncStatus("同步失败");
         writeSyncLog("business_snapshot_push", "同步失败", "业务快照上传失败。", {error:message});
       }else{
-        setSnapshotText("上传成功：" + ((result.data && result.data[0] && result.data[0].id) || "已生成快照"));
-        updateSyncStatus("已连接", {lastSyncAt:now(), cloudUpdatedAt:now()});
+        var snapshotId = (result.data && result.data[0] && result.data[0].id) || "已生成快照";
+        setSnapshotText("业务快照上传成功：" + snapshotId);
+        updateSyncStatus("已连接", {lastSyncAt:snapshot.cloud_updated_at, cloudUpdatedAt:snapshot.cloud_updated_at});
         writeSyncLog("business_snapshot_push", "已连接", "业务完整快照已上传到 cloud_snapshots。", {rows:result.data || []});
       }
       return {data:result.data, error:result.error};
