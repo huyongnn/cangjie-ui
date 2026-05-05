@@ -27118,6 +27118,7 @@ body.show-profile-v92 #inventoryView{
     }
     try{
       window.cangjieSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      console.log("Supabase初始化完成");
       return window.cangjieSupabase;
     }catch(err){
       window.CANGJIE_SUPABASE_CONFIG.lastError = err && err.message ? err.message : String(err);
@@ -27168,6 +27169,7 @@ body.show-profile-v92 #inventoryView{
     }
   }
   async function testInsert(){
+    console.log("开始写入测试");
     var client = initSupabaseClient();
     if(!client){
       console.log("写入结果:", null, window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化");
@@ -27329,7 +27331,7 @@ body.show-profile-v92 #inventoryView{
     card.innerHTML = '<h2>数据同步</h2><p>商用多设备同步架构预留。当前不连接真实云端，系统继续使用 storage.js 作为本地离线缓存。</p>'
       + '<div id="commercialSyncGridV1" class="commercial-sync-v1-grid"></div>'
       + '<div class="commercial-sync-v1-actions"><button id="testCloudConnectionV1" class="commercial-sync-v1-btn" type="button">测试云连接</button><span id="commercialSyncConnectionStatusV1" class="commercial-sync-v1-status">未测试</span></div>'
-      + '<div class="commercial-sync-v1-actions"><button id="testCloudInsertV1" class="commercial-sync-v1-btn" type="button">测试写入云端</button><span id="commercialSyncInsertStatusV1" class="commercial-sync-v1-status">未写入</span></div>'
+      + '<div class="commercial-sync-v1-actions"><button id="testCloudInsertV1" class="commercial-sync-v1-btn" type="button" onclick="testInsert()">测试写入云端</button><span id="commercialSyncInsertStatusV1" class="commercial-sync-v1-status">未写入</span></div>'
       + '<div class="commercial-sync-v1-note">未来云端集合：merchants / users / permissions / products / owners / customers / batches / inventory / orders / debts / printSettings / syncLogs。冲突时保留本地副本并生成 conflictLog。</div>';
     grid.appendChild(card);
   }
