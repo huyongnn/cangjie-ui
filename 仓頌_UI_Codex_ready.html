@@ -29224,6 +29224,7 @@ body.show-profile-v92 #inventoryView{
     card.className = "profile-v92-card commercial-sync-v1-card";
     card.innerHTML = '<div class="sync-console-v1-head"><div><h2>RLS策略草案</h2><p>仅生成 SQL 草案；不连接数据库、不执行 ALTER TABLE、不启用 RLS。</p></div><span class="commercial-sync-v1-status">草案模式</span></div>'
       + '<div class="commercial-sync-v1-note">策略目标：orders / inventory / employees / cloud_snapshots 均按 merchant_id 隔离。执行前必须先完成登录态 merchant_id claim 方案，否则会影响现有同步。</div>'
+      + '<div class="commercial-sync-v1-note">展示内容：orders、inventory、employees、cloud_snapshots 的 enable/select/insert/update/delete policy，以及完整回滚 SQL。</div>'
       + '<pre id="rlsPolicyDraftSqlV1" style="margin-top:12px;max-height:520px;overflow:auto;white-space:pre-wrap;background:#111b16;color:#edf7ef;border-radius:10px;padding:14px;font-size:12px;line-height:1.55"></pre>';
     var after = document.getElementById("rlsPreflightPanelV1");
     if(after && after.parentNode === grid) grid.insertBefore(card, after.nextSibling);
