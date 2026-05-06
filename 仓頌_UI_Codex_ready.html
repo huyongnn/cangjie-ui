@@ -26729,13 +26729,15 @@ body.show-profile-v92 #inventoryView{
   var ACCOUNT_KEY = "cangjieCurrentAccountV94";
   var FILTER_KEY = "cangjieOrderCashierFilterV94";
   var orderFilter = localStorage.getItem(FILTER_KEY) || "all";
-  var PERMISSIONS = ["收银","订单","库存","批次","货主","买家管理","报表","配置"];
+  var NO_PERMISSION_TEXT = "当前账号无权限访问该模块，请联系主账号授权。";
+  var PERMISSIONS = ["收银","批次","库存","订单","货主","买家管理","报表","配置","个人中心"];
   var PAGE_PERMISSIONS = {
     cashier:"收银",
+    inbound:"批次",
+    batch:"批次",
     orders:"订单",
     inventoryStep1:"库存",
     stock:"库存",
-    inbound:"批次",
     ownerStep1:"货主",
     owner:"货主",
     buyersStep1:"买家管理",
@@ -26744,7 +26746,19 @@ body.show-profile-v92 #inventoryView{
     reportsStep1:"报表",
     reports:"报表",
     configStep1:"配置",
-    config:"配置"
+    config:"配置",
+    profileV92:"个人中心",
+    profile:"个人中心",
+    personalCenter:"个人中心",
+    "收银":"收银",
+    "批次":"批次",
+    "库存":"库存",
+    "订单":"订单",
+    "货主":"货主",
+    "买家管理":"买家管理",
+    "报表":"报表",
+    "配置":"配置",
+    "个人中心":"个人中心"
   };
 
   function e(v){
@@ -26769,8 +26783,8 @@ body.show-profile-v92 #inventoryView{
     return status === "停用" || status === "禁用" ? "禁用" : "启用";
   }
   function defaultPermissions(role){
-    if(role === "只读") return ["订单","库存","批次","货主","买家管理","报表"];
-    if(role === "收银员") return ["收银","订单","库存"];
+    if(role === "只读") return ["订单","库存","批次","货主","买家管理","报表","个人中心"];
+    if(role === "收银员") return ["收银","订单","库存","个人中心"];
     return allPermissions();
   }
   function normalizePermissions(perms, role){
@@ -26841,29 +26855,60 @@ body.show-profile-v92 #inventoryView{
     a = a || account();
     return isAdmin() ? allPermissions() : normalizePermissions(a.permissions, a.role);
   }
+  function hasPermission(name, a){
+    if(!name) return true;
+    a = a || account();
+    if(isAdmin()) return true;
+    return accountPermissions(a).indexOf(name) >= 0;
+  }
+  function canManageEmployees(){
+    var a = account();
+    return !a.blocked && (isAdmin() || hasPermission("配置", a));
+  }
   function pagePermission(page, label){
     page = String(page || "");
-    if(page === "profileV92" || page === "profile" || page === "personalCenter") return "";
     if(PAGE_PERMISSIONS[page]) return PAGE_PERMISSIONS[page];
     label = String(label || "").trim();
     return PAGE_PERMISSIONS[label] || label || "";
   }
   function canOpenPage(page, label){
     var a = account();
-    if(page === "profileV92" || page === "profile" || page === "personalCenter") return true;
+    if(page === "profileV92" || page === "profile" || page === "personalCenter"){
+      if(a.blocked) return true;
+      if(isAdmin()) return true;
+      return hasPermission("个人中心", a);
+    }
     if(a.blocked) return false;
     if(isAdmin()) return true;
     var perm = pagePermission(page, label);
-    return !perm || accountPermissions(a).indexOf(perm) >= 0;
+    return !perm || hasPermission(perm, a);
   }
   function applyNavPermissions(){
     var nav = document.getElementById("globalUnifiedNavV41");
     if(!nav) return;
-    Array.from(nav.querySelectorAll("[data-page]")).forEach(function(btn){
-      var page = btn.getAttribute("data-page") || "";
+    Array.from(nav.querySelectorAll("[data-page],[data-config-direct]")).forEach(function(btn){
+      var page = btn.getAttribute("data-page") || (btn.getAttribute("data-config-direct") === "1" ? "configStep1" : "");
       var allow = canOpenPage(page, btn.textContent || "");
       btn.style.display = allow ? "" : "none";
     });
+  }
+  function installNavPermissionGuard(){
+    if(typeof window.stableTudou2NavStep1 === "function" && !window.stableTudou2NavStep1.__employeePermissionV95){
+      var oldStable = window.stableTudou2NavStep1;
+      window.stableTudou2NavStep1 = function(active){
+        var result = oldStable.apply(this, arguments);
+        setTimeout(applyNavPermissions, 0);
+        setTimeout(applyNavPermissions, 80);
+        return result;
+      };
+      window.stableTudou2NavStep1.__employeePermissionV95 = true;
+    }
+    var nav = document.getElementById("globalUnifiedNavV41");
+    if(nav && !nav.__employeePermissionObserverV95 && typeof MutationObserver !== "undefined"){
+      var observer = new MutationObserver(function(){ setTimeout(applyNavPermissions, 0); });
+      observer.observe(nav, {childList:true});
+      nav.__employeePermissionObserverV95 = observer;
+    }
   }
   function accountLabel(a){
     a = a || account();
@@ -26896,6 +26941,8 @@ body.show-profile-v92 #inventoryView{
     order.employeeName = order.employeeName || employeeName;
     order.employeeRole = order.employeeRole || (isAdmin() ? "管理员" : a.role);
     order.userId = order.userId || employeeId;
+    order.employee_phone = order.employee_phone || a.phone || "";
+    order.employeePhone = order.employeePhone || a.phone || "";
     order.cashierName = employeeName;
     order.cashierPhone = a.phone || "";
     order.cashierRole = isAdmin() ? "管理员" : a.role;
@@ -26968,9 +27015,13 @@ body.show-profile-v92 #inventoryView{
     var form = document.getElementById("employeeFormV94");
     var wrap = document.getElementById("employeeTableWrapV94");
     var cloudActions = document.getElementById("employeeCloudActionsV95");
-    if(form) form.style.display = isAdmin() ? "grid" : "none";
-    if(wrap) wrap.style.display = isAdmin() ? "block" : "none";
-    if(cloudActions) cloudActions.style.display = isAdmin() ? "flex" : "none";
+    var canManage = canManageEmployees();
+    if(form) form.style.display = canManage ? "grid" : "none";
+    if(wrap) wrap.style.display = canManage ? "block" : "none";
+    if(cloudActions) cloudActions.style.display = canManage ? "flex" : "none";
+    if(warning && !isBlocked() && !canManage){
+      warning.innerHTML = '<div class="employee-v93-auth-warning">'+NO_PERMISSION_TEXT+'</div>';
+    }
     var tbody = document.getElementById("employeeListV94");
     if(!tbody) return;
     var rows = employees();
@@ -26986,8 +27037,8 @@ body.show-profile-v92 #inventoryView{
     }).join("") || '<tr><td colspan="9">暂无员工账号</td></tr>';
   }
   function addEmployee(){
-    if(!isAdmin()){
-      alert("只有管理员可以新增员工账号。");
+    if(!canManageEmployees()){
+      alert(NO_PERMISSION_TEXT);
       return;
     }
     var name = (document.getElementById("employeeNameV94")?.value || "").trim();
@@ -27025,6 +27076,10 @@ body.show-profile-v92 #inventoryView{
     if(typeof toast === "function") toast("员工账号已保存");
   }
   function toggleEmployee(id){
+    if(!canManageEmployees()){
+      alert(NO_PERMISSION_TEXT);
+      return;
+    }
     var rows = employees();
     rows.forEach(function(row){
       if(row.id === id) row.status = row.status === "启用" ? "禁用" : "启用";
@@ -27072,8 +27127,8 @@ body.show-profile-v92 #inventoryView{
       return oldShow ? oldShow.call(this, "profileV92") : undefined;
     }
     if(!canOpenPage(page, "")){
-      alert("当前账号没有该模块权限");
-      return oldShow ? oldShow.call(this, "profileV92") : undefined;
+      alert(NO_PERMISSION_TEXT);
+      return undefined;
     }
     var result = oldShow ? oldShow.apply(this, arguments) : undefined;
     setTimeout(function(){
@@ -27181,7 +27236,8 @@ body.show-profile-v92 #inventoryView{
     }
     var profileBtn = ev.target && ev.target.closest ? ev.target.closest("[data-profile-center-v92]") : null;
     if(profileBtn) setTimeout(function(){ renderEmployees(); renderAccount(); }, 0);
-    var nav = ev.target && ev.target.closest ? ev.target.closest("#globalUnifiedNavV41 [data-page]") : null;
+    var nav = ev.target && ev.target.closest ? ev.target.closest("#globalUnifiedNavV41 [data-page],#globalUnifiedNavV41 [data-config-direct]") : null;
+    var navPage = nav ? (nav.getAttribute("data-page") || (nav.getAttribute("data-config-direct") === "1" ? "configStep1" : "")) : "";
     if(nav && isBlocked()){
       ev.preventDefault();
       ev.stopPropagation();
@@ -27189,16 +27245,16 @@ body.show-profile-v92 #inventoryView{
       alert("该账号尚未获得商家授权，请联系管理员开通权限");
       if(typeof window.showAppPage === "function") window.showAppPage("profileV92");
     }
-    if(nav && !canOpenPage(nav.getAttribute("data-page") || "", nav.textContent || "")){
+    if(nav && !canOpenPage(navPage, nav.textContent || "")){
       ev.preventDefault();
       ev.stopPropagation();
       if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
-      alert("当前账号没有该模块权限");
-      if(typeof window.showAppPage === "function") window.showAppPage("profileV92");
+      alert(NO_PERMISSION_TEXT);
     }
   }, true);
 
   function boot(){
+    installNavPermissionGuard();
     var savedAccount = read(ACCOUNT_KEY, null);
     if(!savedAccount){
       setAccount(defaultAdmin());
@@ -27214,6 +27270,7 @@ body.show-profile-v92 #inventoryView{
     renderAccount();
     renderEmployees();
     applyNavPermissions();
+    installNavPermissionGuard();
     injectOrderFilter();
   }
   window.renderEmployeesV94 = renderEmployees;
@@ -28928,6 +28985,8 @@ body.show-profile-v92 #inventoryView{
     order.employee_name = order.employee_name || order.employeeName || order.cashierName || account.employee_name || account.name || (m.role === "owner" ? "主账号" : "员工");
     order.employeeName = order.employeeName || order.employee_name;
     order.employeeRole = order.employeeRole || (account.role === "owner" ? "管理员" : (account.role || "管理员"));
+    order.employee_phone = order.employee_phone || account.phone || "";
+    order.employeePhone = order.employeePhone || account.phone || "";
     order.deviceId = order.deviceId || m.deviceId;
     order.createdAt = order.createdAt || order.time || now();
     order.cloudUpdatedAt = order.cloudUpdatedAt || "";
