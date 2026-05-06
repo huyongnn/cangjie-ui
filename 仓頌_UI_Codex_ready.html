@@ -26098,6 +26098,33 @@ body.account-blocked-v93 #profileCenterRootV92{
   border-radius:16px;
   overflow:auto;
 }
+.employee-cloud-v95-actions{
+  margin-top:14px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.employee-cloud-v95-actions button{
+  min-height:38px;
+  border:0;
+  border-radius:10px;
+  background:#1f2023;
+  color:#fff;
+  padding:0 12px;
+  font-size:13px;
+  font-weight:950;
+  cursor:pointer;
+}
+.employee-cloud-v95-actions button.secondary{
+  background:#e5e8e0;
+  color:#263028;
+}
+.employee-cloud-v95-status{
+  color:#687268;
+  font-size:12px;
+  font-weight:900;
+}
 .employee-v93-table{
   width:100%;
   min-width:760px;
@@ -26931,7 +26958,7 @@ body.show-profile-v92 #inventoryView{
       + '<div class="profile-v92-field"><label>状态</label><select id="employeeStatusV94"><option value="启用">启用</option><option value="禁用">禁用</option></select></div>'
       + permissionChecksHtml(allPermissions())
       + '<button id="addEmployeeBtnV94" class="profile-v92-btn secondary" type="button">新增员工</button>'
-      + '</div><div class="employee-v93-table-wrap" id="employeeTableWrapV94"><table class="employee-v93-table"><thead><tr><th>员工ID</th><th>员工姓名</th><th>手机号</th><th>角色</th><th>状态</th><th>权限</th><th>已开单数量</th><th>已收金额</th><th>操作</th></tr></thead><tbody id="employeeListV94"></tbody></table></div>';
+      + '</div><div class="employee-cloud-v95-actions" id="employeeCloudActionsV95"><button id="pushEmployeesCloudV95" type="button" onclick="pushEmployeesToCloud()">上传员工权限</button><button id="readCloudEmployeesV95" class="secondary" type="button" onclick="readCloudEmployees()">读取云端员工</button><button id="mergeCloudEmployeesV95" class="secondary" type="button" onclick="mergeCloudEmployeesToLocal()">合并云端员工</button><span id="employeeCloudStatus" class="employee-cloud-v95-status">未同步员工权限</span></div><div class="employee-v93-table-wrap" id="employeeTableWrapV94"><table class="employee-v93-table"><thead><tr><th>员工ID</th><th>员工姓名</th><th>手机号</th><th>角色</th><th>状态</th><th>权限</th><th>已开单数量</th><th>已收金额</th><th>操作</th></tr></thead><tbody id="employeeListV94"></tbody></table></div>';
     grid.appendChild(card);
   }
   function renderEmployees(){
@@ -26940,8 +26967,10 @@ body.show-profile-v92 #inventoryView{
     if(warning) warning.innerHTML = isBlocked() ? '<div class="employee-v93-auth-warning">该账号尚未获得商家授权，请联系管理员开通权限。</div>' : "";
     var form = document.getElementById("employeeFormV94");
     var wrap = document.getElementById("employeeTableWrapV94");
+    var cloudActions = document.getElementById("employeeCloudActionsV95");
     if(form) form.style.display = isAdmin() ? "grid" : "none";
     if(wrap) wrap.style.display = isAdmin() ? "block" : "none";
+    if(cloudActions) cloudActions.style.display = isAdmin() ? "flex" : "none";
     var tbody = document.getElementById("employeeListV94");
     if(!tbody) return;
     var rows = employees();
@@ -27187,6 +27216,9 @@ body.show-profile-v92 #inventoryView{
     applyNavPermissions();
     injectOrderFilter();
   }
+  window.renderEmployeesV94 = renderEmployees;
+  window.getEmployeesV94 = employees;
+  window.saveEmployeesV94 = saveEmployees;
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
   setTimeout(boot, 300);
@@ -27763,6 +27795,191 @@ body.show-profile-v92 #inventoryView{
     return (client && typeof client.schema === "function")
       ? client.schema("public").from("inventory")
       : client.from("inventory");
+  }
+  function publicEmployeesTable(client){
+    return (client && typeof client.schema === "function")
+      ? client.schema("public").from("employees")
+      : client.from("employees");
+  }
+  function setEmployeeCloudStatus(text){
+    var el = document.getElementById("employeeCloudStatus");
+    if(el) el.textContent = text || "未同步员工权限";
+  }
+  function normalizeEmployeeCloudPermissions(perms){
+    if(Array.isArray(perms)) return perms;
+    if(typeof perms === "string"){
+      try{
+        var parsed = JSON.parse(perms);
+        return Array.isArray(parsed) ? parsed : [];
+      }catch(err){
+        return perms ? perms.split(/[、,，]/).map(function(item){ return item.trim(); }).filter(Boolean) : [];
+      }
+    }
+    return [];
+  }
+  function localEmployeesForCloud(){
+    var rows = readJson("cangjieEmployeesV94", readJson("cangjieEmployeesV93", []));
+    return Array.isArray(rows) ? rows : [];
+  }
+  function employeeCloudKey(row){
+    row = row || {};
+    return {
+      id:String(row.employee_id || row.employeeId || row.id || "").trim(),
+      phone:String(row.phone || "").trim()
+    };
+  }
+  function employeeRowsForCloud(){
+    var m = meta();
+    var at = now();
+    return localEmployeesForCloud().map(function(row){
+      var key = employeeCloudKey(row);
+      return {
+        merchant_id:m.merchantId || "mch_08230i",
+        employee_id:key.id || ("emp_" + Date.now()),
+        employee_name:row.employee_name || row.employeeName || row.name || "",
+        phone:key.phone,
+        role:row.role || "收银员",
+        status:row.status === "停用" ? "禁用" : (row.status || "启用"),
+        permissions_json:normalizeEmployeeCloudPermissions(row.permissions || row.permissions_json),
+        device_id:m.deviceId || "dev_local_seed",
+        local_updated_at:row.local_updated_at || row.updatedAt || at,
+        cloud_updated_at:at
+      };
+    }).filter(function(row){
+      return row.employee_id || row.phone || row.employee_name;
+    });
+  }
+  function cloudEmployeeToLocal(row){
+    row = row || {};
+    var employeeId = row.employee_id || row.employeeId || row.id || ("emp_cloud_" + Date.now());
+    var employeeName = row.employee_name || row.employeeName || row.name || "";
+    return {
+      id:employeeId,
+      employee_id:employeeId,
+      employee_name:employeeName,
+      name:employeeName,
+      phone:row.phone || "",
+      wechat:row.wechat || "",
+      role:row.role || "收银员",
+      status:row.status === "停用" ? "禁用" : (row.status || "启用"),
+      permissions:normalizeEmployeeCloudPermissions(row.permissions_json || row.permissions),
+      cloudEmployeeRowId:row.id || "",
+      cloudDeviceId:row.device_id || "",
+      cloudUpdatedAt:row.cloud_updated_at || ""
+    };
+  }
+  function backupBeforeEmployeesMerge(){
+    var key = "backup_before_employees_merge_" + Date.now();
+    var backup = {key:key, createdAt:now(), localStorage:{}};
+    for(var i=0;i<localStorage.length;i++){
+      var name = localStorage.key(i);
+      backup.localStorage[name] = localStorage.getItem(name);
+    }
+    localStorage.setItem(key, JSON.stringify(backup));
+    localStorage.setItem("cangjie_last_employees_merge_backup_key", key);
+    return key;
+  }
+  async function pushEmployeesToCloud(){
+    var client = initSupabaseClient();
+    if(!client){
+      var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
+      setEmployeeCloudStatus("员工上传失败：" + initError);
+      return {data:null, error:initError};
+    }
+    var rows = employeeRowsForCloud();
+    if(!rows.length){
+      setEmployeeCloudStatus("暂无本地员工可上传");
+      return {data:[], error:null};
+    }
+    setEmployeeCloudStatus("员工权限上传中...");
+    try{
+      var result = await publicEmployeesTable(client).insert(rows).select();
+      console.log("员工权限上传结果:", result.data, result.error);
+      if(result.error){
+        var message = result.error.message || String(result.error);
+        setEmployeeCloudStatus("员工上传失败：" + message);
+      }else{
+        var saved = result.data || [];
+        setEmployeeCloudStatus("员工上传成功：" + (saved.length || rows.length) + " 条");
+      }
+      return {data:result.data, error:result.error};
+    }catch(err){
+      var errText = err && err.message ? err.message : String(err);
+      setEmployeeCloudStatus("员工上传失败：" + errText);
+      console.error("员工权限上传异常:", err);
+      return {data:null, error:err};
+    }
+  }
+  async function readCloudEmployees(){
+    var client = initSupabaseClient();
+    if(!client){
+      var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
+      setEmployeeCloudStatus("云端员工读取失败：" + initError);
+      return {data:null, error:initError};
+    }
+    setEmployeeCloudStatus("读取云端员工中...");
+    try{
+      var merchantId = meta().merchantId || "mch_08230i";
+      var result = await publicEmployeesTable(client)
+        .select("*")
+        .eq("merchant_id", merchantId)
+        .order("cloud_updated_at", {ascending:false});
+      console.log("云端员工读取结果:", result.data, result.error);
+      if(result.error){
+        var message = result.error.message || String(result.error);
+        setEmployeeCloudStatus("云端员工读取失败：" + message);
+      }else{
+        var rows = result.data || [];
+        window.CANGJIE_LAST_CLOUD_EMPLOYEES = rows;
+        setEmployeeCloudStatus("读取成功：" + rows.length + " 条云端员工");
+      }
+      return {data:result.data, error:result.error};
+    }catch(err){
+      var errText = err && err.message ? err.message : String(err);
+      setEmployeeCloudStatus("云端员工读取失败：" + errText);
+      console.error("云端员工读取异常:", err);
+      return {data:null, error:err};
+    }
+  }
+  async function mergeCloudEmployeesToLocal(){
+    setEmployeeCloudStatus("准备合并云端员工...");
+    var readResult = await readCloudEmployees();
+    if(readResult.error){
+      var readMessage = readResult.error && readResult.error.message ? readResult.error.message : String(readResult.error);
+      setEmployeeCloudStatus("云端员工读取失败：" + readMessage);
+      return {merged:0, skipped:0, cloudTotal:0, backupKey:"", error:readResult.error};
+    }
+    var cloudRows = readResult.data || [];
+    var backupKey = backupBeforeEmployeesMerge();
+    var localRows = localEmployeesForCloud();
+    var existingIds = {};
+    var existingPhones = {};
+    localRows.forEach(function(row){
+      var key = employeeCloudKey(row);
+      if(key.id) existingIds[key.id] = true;
+      if(key.phone) existingPhones[key.phone] = true;
+    });
+    var merged = 0;
+    var skipped = 0;
+    cloudRows.forEach(function(row){
+      var key = employeeCloudKey(row);
+      if((key.id && existingIds[key.id]) || (key.phone && existingPhones[key.phone])){
+        skipped++;
+        return;
+      }
+      var local = cloudEmployeeToLocal(row);
+      localRows.push(local);
+      if(local.employee_id) existingIds[local.employee_id] = true;
+      if(local.phone) existingPhones[local.phone] = true;
+      merged++;
+    });
+    localStorage.setItem("cangjieEmployeesV94", JSON.stringify(localRows));
+    localStorage.setItem("cangjieEmployeesV93", JSON.stringify(localRows));
+    try{ if(typeof window.renderEmployeesV94 === "function") window.renderEmployeesV94(); }catch(err){}
+    var statusText = "云端员工：" + cloudRows.length + " 条｜新增本地：" + merged + " 条｜跳过重复：" + skipped + " 条";
+    setEmployeeCloudStatus(statusText);
+    console.log("云端员工合并结果:", {cloudTotal:cloudRows.length, merged:merged, skipped:skipped, backupKey:backupKey});
+    return {merged:merged, skipped:skipped, cloudTotal:cloudRows.length, backupKey:backupKey, error:null};
   }
   function setCloudInventoryStatus(text){
     var value = text || "未同步云端库存";
@@ -28809,6 +29026,9 @@ body.show-profile-v92 #inventoryView{
   window.pushLatestOrderToCloud = pushLatestOrderToCloud;
   window.readCloudOrders = readCloudOrders;
   window.mergeCloudOrdersToLocal = mergeCloudOrdersToLocal;
+  window.pushEmployeesToCloud = pushEmployeesToCloud;
+  window.readCloudEmployees = readCloudEmployees;
+  window.mergeCloudEmployeesToLocal = mergeCloudEmployeesToLocal;
   window.pushInventorySnapshotToCloud = pushInventorySnapshotToCloud;
   window.readCloudInventory = readCloudInventory;
   window.mergeCloudInventoryToLocal = mergeCloudInventoryToLocal;
