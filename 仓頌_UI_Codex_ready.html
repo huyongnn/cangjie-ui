@@ -31259,6 +31259,314 @@ body.show-profile-v92 #inventoryView{
 })();
 </script>
 
+<style>
+/* ===== iPad 横屏商用布局优化：仅覆盖 1024~1366 宽度，不改业务逻辑 ===== */
+@media (min-width:1024px) and (max-width:1366px) and (orientation:landscape){
+  #globalUnifiedNavV41{
+    width:62px!important;
+    gap:8px!important;
+    padding:10px 5px!important;
+  }
+  #globalUnifiedNavV41 .v41-logo{
+    width:44px!important;
+    height:40px!important;
+    margin:0 0 6px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    font-size:15px!important;
+  }
+  #globalUnifiedNavV41 .v41-nav-btn{
+    width:50px!important;
+    min-height:50px!important;
+    height:50px!important;
+    border-radius:13px!important;
+    padding:4px 2px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:2px!important;
+    font-size:12px!important;
+    line-height:1.05!important;
+  }
+  #globalUnifiedNavV41 .v41-nav-btn::before{
+    content:"";
+    width:16px;
+    height:16px;
+    border-radius:6px;
+    display:block;
+    background:rgba(216,226,232,.22);
+    box-shadow:inset 0 0 0 1px rgba(216,226,232,.28);
+  }
+  #globalUnifiedNavV41 .v41-nav-btn[data-page="cashier"]::before{content:"收";font-size:11px;font-weight:950;line-height:16px;text-align:center;background:rgba(47,142,64,.25)}
+  #globalUnifiedNavV41 .v41-nav-btn[data-page="stock"]::before{content:"批";font-size:11px;font-weight:950;line-height:16px;text-align:center;background:rgba(29,89,216,.22)}
+  #globalUnifiedNavV41 .v41-nav-btn[data-page="orders"]::before{content:"单";font-size:11px;font-weight:950;line-height:16px;text-align:center;background:rgba(216,107,31,.22)}
+  #globalUnifiedNavV41 .v41-nav-btn[data-page="profileV92"]::before{content:"人";font-size:11px;font-weight:950;line-height:16px;text-align:center;background:rgba(148,163,184,.22)}
+
+  #inboundRoot,
+  #cashierRoot,
+  #stockRoot,
+  #ordersRoot{
+    margin-left:62px!important;
+    width:calc(100vw - 62px)!important;
+    max-width:calc(100vw - 62px)!important;
+  }
+
+  #cashierRoot .cashier-layout{
+    grid-template-columns:136px minmax(430px,1fr) 352px!important;
+  }
+  #cashierRoot .cashier-batches{
+    padding:10px 8px!important;
+  }
+  #cashierRoot .cashier-batch-title{
+    height:44px!important;
+    margin-bottom:8px!important;
+    font-size:14px!important;
+  }
+  #cashierRoot .cashier-batch-card{
+    padding:10px!important;
+    margin-bottom:8px!important;
+    border-radius:12px!important;
+  }
+  #cashierRoot .cashier-batch-card b{
+    font-size:15px!important;
+  }
+  #cashierRoot .cashier-top{
+    min-height:70px!important;
+    padding:10px 12px!important;
+    gap:10px!important;
+  }
+  #cashierRoot .cashier-top h1{
+    font-size:21px!important;
+  }
+  #cashierRoot .cashier-top-tools{
+    gap:8px!important;
+  }
+  #cashierRoot .cashier-top-tools input,
+  #cashierRoot .cashier-top-tools select{
+    height:42px!important;
+    border-radius:10px!important;
+    font-size:14px!important;
+  }
+  #cashierRoot .cashier-top-tools input{
+    width:170px!important;
+  }
+  #cashierRoot .cashier-product-area{
+    grid-template-columns:minmax(0,1fr) 48px!important;
+  }
+  #cashierRoot .cashier-products{
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important;
+    gap:9px!important;
+    padding:10px!important;
+  }
+  #cashierRoot .cashier-product-card{
+    min-height:118px!important;
+    padding:11px!important;
+    border-radius:13px!important;
+  }
+  #cashierRoot .cashier-product-name{
+    font-size:17px!important;
+    margin-bottom:5px!important;
+  }
+  #cashierRoot .cashier-catbar{
+    padding:8px 4px!important;
+  }
+  #cashierRoot .cashier-cat{
+    width:38px!important;
+    height:46px!important;
+    border-radius:10px!important;
+  }
+  #cashierRoot .cashier-right{
+    min-width:0!important;
+  }
+  #cashierRoot .order-head{
+    padding:10px!important;
+  }
+  #cashierRoot .order-customer-row{
+    grid-template-columns:minmax(0,1fr) auto!important;
+  }
+  #cashierRoot .order-customer-row button:last-child{
+    display:none!important;
+  }
+  #cashierRoot .order-customer-row select,
+  #cashierRoot .order-customer-row button,
+  #cashierRoot .pay-box select,
+  #cashierRoot .pay-box input{
+    height:42px!important;
+    font-size:15px!important;
+  }
+  #cashierRoot .order-table-head,
+  #cashierRoot .order-item{
+    grid-template-columns:minmax(0,1.15fr) 62px 68px 60px 38px!important;
+  }
+  #cashierRoot .order-item input{
+    height:36px!important;
+    font-size:13px!important;
+  }
+  #cashierRoot .order-actions{
+    gap:10px!important;
+  }
+  #cashierRoot .codebill-btn,
+  #cashierRoot .checkout-btn{
+    height:56px!important;
+    border-radius:14px!important;
+    font-size:17px!important;
+  }
+
+  #inboundRoot .app,
+  body.batch-create-mode #inboundRoot .app{
+    grid-template-columns:148px minmax(220px,300px) 46px minmax(0,1fr)!important;
+    grid-template-areas:"left middle cat right"!important;
+  }
+  #inboundRoot .left-panel{
+    padding:10px 8px!important;
+  }
+  #inboundRoot .middle-panel{
+    padding:12px!important;
+  }
+  #inboundRoot .batch-card{
+    padding:12px 10px!important;
+    margin-top:9px!important;
+    border-radius:13px!important;
+  }
+  #inboundRoot .batch-card .owner{
+    font-size:17px!important;
+  }
+  #inboundRoot .batch-card .no{
+    font-size:14px!important;
+  }
+  #inboundRoot .goods-grid{
+    grid-template-columns:repeat(auto-fill,minmax(124px,1fr))!important;
+    gap:9px!important;
+  }
+  #inboundRoot .goods-card{
+    min-height:96px!important;
+    padding:12px 10px!important;
+  }
+  #inboundRoot .goods-card .name{
+    font-size:16px!important;
+    margin-bottom:10px!important;
+  }
+  #inboundRoot .topbar{
+    min-height:74px!important;
+    padding:10px 14px!important;
+  }
+  #inboundRoot .batch-info h1{
+    font-size:23px!important;
+  }
+  #inboundRoot .tools{
+    gap:8px!important;
+  }
+  #inboundRoot .tools .tool-search{
+    width:180px!important;
+    height:42px!important;
+  }
+  #inboundRoot .btn,
+  #inboundRoot .confirm-btn{
+    height:42px!important;
+    padding:0 12px!important;
+  }
+
+  #stockRoot .stock-layout{
+    grid-template-columns:238px minmax(0,1fr)!important;
+  }
+  #stockRoot .stock-batch-head{
+    padding:12px!important;
+  }
+  #stockRoot .stock-batch-head h1{
+    font-size:21px!important;
+  }
+  #stockRoot .stock-batch-list{
+    padding:9px!important;
+  }
+  #stockRoot .stock-batch-card{
+    padding:10px!important;
+    margin-bottom:8px!important;
+    border-radius:12px!important;
+  }
+  #stockRoot .stock-batch-card b{
+    font-size:16px!important;
+    margin-bottom:4px!important;
+  }
+  #stockRoot .stock-topbar{
+    min-height:72px!important;
+    padding:11px 14px!important;
+    gap:10px!important;
+  }
+  #stockRoot .stock-topbar h2{
+    font-size:22px!important;
+  }
+  #stockRoot .stock-actions input{
+    width:180px!important;
+    height:40px!important;
+  }
+  #stockRoot .stock-actions button{
+    height:40px!important;
+    padding:0 12px!important;
+  }
+  #stockRoot .stock-summary{
+    grid-template-columns:repeat(auto-fit,minmax(136px,1fr))!important;
+    gap:8px!important;
+    padding:10px 14px!important;
+  }
+  #stockRoot .stock-summary-card{
+    padding:10px!important;
+    border-radius:12px!important;
+  }
+  #stockRoot .stock-summary-card b{
+    font-size:18px!important;
+  }
+  #stockRoot .stock-table-wrap,
+  #inventoryView .inventory-table-wrap,
+  #inboundRoot .table-wrap,
+  #ordersRoot .orders-detail-body{
+    overflow:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  #stockRoot .stock-table,
+  #inventoryView .inventory-table,
+  #inboundRoot table,
+  #ordersRoot table,
+  #ordersRoot .orders-table{
+    min-width:980px!important;
+    table-layout:auto!important;
+  }
+  #stockRoot .stock-table th,
+  #stockRoot .stock-table td,
+  #inventoryView .inventory-table th,
+  #inventoryView .inventory-table td,
+  #inboundRoot table th,
+  #inboundRoot table td,
+  #ordersRoot table th,
+  #ordersRoot table td{
+    white-space:nowrap!important;
+  }
+  #stockRoot .stock-goods-name,
+  #inventoryView .inventory-name,
+  #inboundRoot .prod b{
+    white-space:normal!important;
+    min-width:120px!important;
+  }
+
+  #ordersRoot .orders-layout{
+    grid-template-columns:280px minmax(0,1fr)!important;
+  }
+  #ordersRoot .orders-list-head,
+  #ordersRoot .orders-detail-head{
+    padding:12px 14px!important;
+  }
+  #ordersRoot .orders-list-head h1,
+  #ordersRoot .orders-detail-head h2{
+    font-size:22px!important;
+  }
+  #ordersRoot .orders-list-panel,
+  #ordersRoot .orders-detail{
+    min-width:0!important;
+  }
+}
+</style>
+
 <script>
 /* ===== 客户测试版入口页：本地模拟登录，不连接数据库 ===== */
 (function(){
