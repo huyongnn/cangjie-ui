@@ -4672,9 +4672,6 @@ body.batch-create-mode #inboundRoot .app{
           <button class="stock-btn-gray" onclick="showAppPage('inbound')">返回批次</button>
         <button class="v53-edit-batch-btn" onclick="goBackToBatchEditFromOverview()">修改批次</button>
           <button class="stock-btn-green" onclick="renderStockModule()">刷新批次</button>
-          <button id="pushInventorySnapshotV1" class="stock-btn-green" type="button" onclick="pushInventorySnapshotToCloud()">上传库存到云端</button>
-          <button id="readCloudInventoryV1" class="stock-btn-gray" type="button" onclick="readCloudInventory()">读取云端库存</button>
-          <span id="cloudInventoryStatusV1" class="cloud-inventory-v1-status">未同步云端库存</span>
         </div>
       </header>
 
@@ -4705,9 +4702,6 @@ body.batch-create-mode #inboundRoot .app{
     <section class="orders-list-panel">
       <div class="orders-list-head">
         <h1>订单中心</h1>
-        <button id="readCloudOrdersBtnV1" class="cloud-orders-v1-btn" type="button" onclick="readCloudOrders()">读取云端订单</button>
-        <button id="mergeCloudOrdersBtnV1" class="cloud-orders-v1-btn" type="button" onclick="mergeCloudOrdersToLocal()">合并云端订单到本地</button>
-        <div id="cloudOrdersStatusV1" class="cloud-orders-v1-status">未读取云端订单</div>
         <input id="ordersSearch" placeholder="搜索客户、单号、货品..." oninput="renderOrdersCenter()">
         <select id="ordersStatusFilter" onchange="renderOrdersCenter()">
           <option value="">全部订单</option>
@@ -13121,7 +13115,7 @@ function goBackToBatchEditFromOverview(){
     document.head.appendChild(style);
     var root = document.createElement("div");
     root.id = "inventoryStep1Root";
-    root.innerHTML = '<div class="inventory-step1-layout"><aside class="inventory-step1-tree"><h1>库存</h1><div id="inventoryStep1Tree"></div></aside><main class="inventory-step1-main"><header class="inventory-step1-top"><div><h2 id="inventoryStep1Title">全部批次</h2><p id="inventoryStep1Sub"></p></div><div class="inventory-step1-actions"><input id="inventoryStep1Search" placeholder="搜索货主 / 批次 / 商品..." oninput="renderInventoryStep1()"><button class="inventory-step1-gray" onclick="showAppPage(\'stock\')">查看批次</button><button class="inventory-step1-greenbtn" onclick="renderInventoryStep1()">刷新库存</button><button id="pushInventorySnapshotStep1V1" class="inventory-step1-greenbtn" type="button" onclick="pushInventorySnapshotToCloud()">上传库存</button><button id="readCloudInventoryStep1V1" class="inventory-step1-gray" type="button" onclick="readCloudInventory()">读取云库存</button><button id="mergeCloudInventoryStep1V1" class="inventory-step1-gray" type="button" onclick="mergeCloudInventoryToLocal()">合并云库存到本地</button><span id="inventoryCloudStatus" class="inventory-cloud-status">未同步云端库存</span></div></header><section class="inventory-step1-summary" id="inventoryStep1Summary"></section><section class="inventory-step1-section"><h3>库存明细</h3><div id="inventoryStep1Table"></div></section><section class="inventory-step1-section"><h3>销售流水</h3><div id="inventoryStep1Ledger"></div></section></main></div>';
+    root.innerHTML = '<div class="inventory-step1-layout"><aside class="inventory-step1-tree"><h1>库存</h1><div id="inventoryStep1Tree"></div></aside><main class="inventory-step1-main"><header class="inventory-step1-top"><div><h2 id="inventoryStep1Title">全部批次</h2><p id="inventoryStep1Sub"></p></div><div class="inventory-step1-actions"><input id="inventoryStep1Search" placeholder="搜索货主 / 批次 / 商品..." oninput="renderInventoryStep1()"><button class="inventory-step1-gray" onclick="showAppPage(\'stock\')">查看批次</button><button class="inventory-step1-greenbtn" onclick="renderInventoryStep1()">刷新库存</button></div></header><section class="inventory-step1-summary" id="inventoryStep1Summary"></section><section class="inventory-step1-section"><h3>库存明细</h3><div id="inventoryStep1Table"></div></section><section class="inventory-step1-section"><h3>销售流水</h3><div id="inventoryStep1Ledger"></div></section></main></div>';
     document.body.appendChild(root);
   }
   window.renderInventoryStep1 = renderInventoryStep1;
@@ -27303,7 +27297,7 @@ body.show-profile-v92 #inventoryView{
     var canManage = canManageEmployees();
     if(form) form.style.display = canManage ? "grid" : "none";
     if(wrap) wrap.style.display = canManage ? "block" : "none";
-    if(cloudActions) cloudActions.style.display = canManage ? "flex" : "none";
+    if(cloudActions) cloudActions.style.display = "none";
     if(warning && !isBlocked() && !canManage){
       warning.innerHTML = '<div class="employee-v93-auth-warning">'+NO_PERMISSION_TEXT+'</div>';
     }
@@ -27705,6 +27699,56 @@ body.show-profile-v92 #inventoryView{
   font-size:12px;
   font-weight:900;
 }
+.admin-sync-tools-v1{
+  margin-top:12px;
+  border:1px solid #e5e8df;
+  border-radius:14px;
+  background:#fff;
+  overflow:hidden;
+}
+.admin-sync-tools-v1 summary{
+  list-style:none;
+  cursor:pointer;
+  padding:13px 14px;
+  color:#1f2a22;
+  font-size:15px;
+  font-weight:950;
+}
+.admin-sync-tools-v1 summary::-webkit-details-marker{
+  display:none;
+}
+.admin-sync-tools-v1 summary:after{
+  content:"展开";
+  float:right;
+  color:#667068;
+  font-size:12px;
+  font-weight:900;
+}
+.admin-sync-tools-v1[open] summary{
+  border-bottom:1px solid #edf0e7;
+}
+.admin-sync-tools-v1[open] summary:after{
+  content:"收起";
+}
+.admin-sync-tools-v1-body{
+  padding:12px 14px 14px;
+}
+.admin-sync-tools-v1-group{
+  border:1px solid #edf0e7;
+  border-radius:12px;
+  background:#fbfcf8;
+  padding:12px;
+  margin-top:10px;
+}
+.admin-sync-tools-v1-group:first-child{
+  margin-top:0;
+}
+.admin-sync-tools-v1-group h3{
+  margin:0 0 10px;
+  color:#263028;
+  font-size:14px;
+  font-weight:950;
+}
 .sync-console-v1-head{
   display:flex;
   justify-content:space-between;
@@ -27865,6 +27909,11 @@ body.show-profile-v92 #inventoryView{
     return readJson("cangjieCurrentAccountV94", null)
       || readJson("cangjieCurrentAccountV93", null)
       || {id:"owner", employee_id:"owner", employee_name:"主账号", role:"owner", name:"主账号", phone:"", authorized:true};
+  }
+  function canShowAdminSyncTools(){
+    var account = currentAccount() || {};
+    var role = String(account.role || "").trim();
+    return !account.blocked && (role === "owner" || role === "管理员" || role === "admin");
   }
   function ensureDeviceId(){
     var id = "";
@@ -28468,8 +28517,11 @@ body.show-profile-v92 #inventoryView{
     return state;
   }
   function setSyncConsoleGlobalStatus(text){
+    var value = text || "未检查";
     var el = document.getElementById("syncConsoleStatusV1");
-    if(el) el.textContent = text || "未检查";
+    if(el) el.textContent = value;
+    var adminEl = document.getElementById("syncConsoleStatusAdminV1");
+    if(adminEl) adminEl.textContent = value;
   }
   function ensureSyncConsolePanel(){
     var root = document.getElementById("profileCenterRootV92");
@@ -28480,15 +28532,17 @@ body.show-profile-v92 #inventoryView{
     card.className = "profile-v92-card commercial-sync-v1-card";
     card.innerHTML = '<div class="sync-console-v1-head"><div><h2>同步总控制台</h2><p>集中检查订单、库存、员工和云端快照状态；所有检查只读，不会覆盖本地数据。</p></div><span id="syncConsoleStatusV1" class="commercial-sync-v1-status">未检查</span></div>'
       + '<div id="syncConsoleIdentityV1" class="commercial-sync-v1-grid" style="margin-top:12px"></div>'
-      + '<div class="commercial-sync-v1-actions"><button class="commercial-sync-v1-btn" type="button" onclick="checkOrderSyncConsole()">检查订单同步</button><button class="commercial-sync-v1-btn" type="button" onclick="checkInventorySyncConsole()">检查库存同步</button><button class="commercial-sync-v1-btn" type="button" onclick="checkEmployeeSyncConsole()">检查员工同步</button><button class="commercial-sync-v1-btn" type="button" onclick="checkSnapshotSyncConsole()">检查云快照</button><button class="commercial-sync-v1-btn" type="button" onclick="checkAllSyncConsole()">一键检查全部</button><button class="commercial-sync-v1-btn" type="button" onclick="runSyncHealthCheck()">同步健康检查</button><button class="commercial-sync-v1-btn" type="button" onclick="clearSyncConsoleErrors()">清除错误提示</button></div>'
       + '<div class="sync-console-v1-table-wrap" style="margin-top:12px"><table class="sync-console-v1-table"><thead><tr><th>模块</th><th>健康状态</th><th>最近上传时间</th><th>最近读取时间</th><th>最近一次检查时间</th><th>最近同步结果</th><th>云端记录数量</th><th>错误详情</th></tr></thead><tbody id="syncConsoleBodyV1"></tbody></table></div>'
-      + '<div class="commercial-sync-v1-note">只读检查：不会调用合并、恢复、清空、覆盖或自动同步流程。</div>';
+      + '<div class="commercial-sync-v1-note">只读检查入口已收纳到“管理员同步工具”；不会调用合并、恢复、清空、覆盖或自动同步流程。</div>';
     var after = document.getElementById("commercialSyncPanelV1");
     if(after && after.parentNode === grid) grid.insertBefore(card, after.nextSibling);
     else grid.appendChild(card);
   }
   function renderSyncConsolePanel(){
     ensureSyncConsolePanel();
+    var panel = document.getElementById("syncConsolePanelV1");
+    if(panel) panel.style.display = canShowAdminSyncTools() ? "" : "none";
+    if(!canShowAdminSyncTools()) return;
     var idBox = document.getElementById("syncConsoleIdentityV1");
     var body = document.getElementById("syncConsoleBodyV1");
     if(!idBox || !body) return;
@@ -28521,8 +28575,11 @@ body.show-profile-v92 #inventoryView{
     }).join("");
   }
   function setEmployeeCloudStatus(text){
+    var value = text || "未同步员工权限";
     var el = document.getElementById("employeeCloudStatus");
-    if(el) el.textContent = text || "未同步员工权限";
+    if(el) el.textContent = value;
+    var adminEl = document.getElementById("employeeCloudStatusAdminV1");
+    if(adminEl) adminEl.textContent = value;
   }
   function normalizeEmployeeCloudPermissions(perms){
     if(Array.isArray(perms)) return perms;
@@ -28706,6 +28763,8 @@ body.show-profile-v92 #inventoryView{
     if(el) el.textContent = value;
     var inventoryEl = document.getElementById("inventoryCloudStatus");
     if(inventoryEl) inventoryEl.textContent = value;
+    var adminEl = document.getElementById("inventoryCloudStatusAdminV1");
+    if(adminEl) adminEl.textContent = value;
   }
   function localBatchesForInventoryCloud(){
     try{
@@ -28963,8 +29022,11 @@ body.show-profile-v92 #inventoryView{
     return {merged:merged, skipped:skipped, cloudTotal:cloudRows.length, backupKey:backupKey, error:null};
   }
   function setCloudOrdersReadStatus(text){
+    var value = text || "未读取云端订单";
     var el = document.getElementById("cloudOrdersStatusV1");
-    if(el) el.textContent = text || "未读取云端订单";
+    if(el) el.textContent = value;
+    var adminEl = document.getElementById("cloudOrdersStatusAdminV1");
+    if(adminEl) adminEl.textContent = value;
   }
   function renderCloudOrdersList(rows){
     var title = document.getElementById("ordersDetailTitle");
@@ -29690,15 +29752,31 @@ body.show-profile-v92 #inventoryView{
     card.className = "profile-v92-card commercial-sync-v1-card";
     card.innerHTML = '<h2>数据同步</h2><p>商用多设备同步架构预留。当前不连接真实云端，系统继续使用 storage.js 作为本地离线缓存。</p>'
       + '<div id="commercialSyncGridV1" class="commercial-sync-v1-grid"></div>'
-      + '<div class="commercial-sync-v1-actions"><button id="testCloudConnectionV1" class="commercial-sync-v1-btn" type="button">测试云连接</button><span id="commercialSyncConnectionStatusV1" class="commercial-sync-v1-status">未测试</span></div>'
-      + '<div class="commercial-sync-v1-actions"><button id="testCloudInsertV1" class="commercial-sync-v1-btn" type="button" onclick="testInsert()">测试写入云端</button><span id="commercialSyncInsertStatusV1" class="commercial-sync-v1-status">未写入</span></div>'
-      + '<div class="commercial-sync-v1-actions"><button id="testCloudReadV1" class="commercial-sync-v1-btn" type="button" onclick="testReadCloud()">测试读取云端</button><span id="commercialSyncReadStatusV1" class="commercial-sync-v1-status">未读取</span></div>'
-      + '<div class="commercial-sync-v1-actions"><button id="pushBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="pushBusinessSnapshot()">上传业务快照</button><button id="readBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="readBusinessSnapshot()">读取业务快照</button><span id="commercialSyncSnapshotStatusV1" class="commercial-sync-v1-status">未同步快照</span></div>'
-      + '<div class="commercial-sync-v1-actions"><button id="readLatestBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="readLatestBusinessSnapshot()">读取云端快照</button></div><div id="commercialSyncSnapshotPreviewV1"></div>'
-      + '<div class="commercial-sync-v1-actions"><button id="restoreBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="restoreLatestBusinessSnapshotSafely()">从云端恢复到本地</button><span id="commercialSyncRestoreStatusV1" class="commercial-sync-v1-status">未恢复</span></div>'
       + '<div class="commercial-sync-v1-actions"><label class="commercial-sync-v1-toggle"><input id="autoSyncEnabledV1" type="checkbox"> 自动同步</label><span id="commercialSyncAutoStatusV1" class="commercial-sync-v1-status">自动同步：关闭</span></div>'
+      + '<div id="adminSyncToolsSlotV1"></div>'
       + '<div class="commercial-sync-v1-note">未来云端集合：merchants / users / permissions / products / owners / customers / batches / inventory / orders / debts / printSettings / syncLogs。正式快照表预留为 cloud_snapshots；读取快照只显示结果，不会自动覆盖本地数据。</div>';
     grid.appendChild(card);
+  }
+  function renderAdminSyncTools(){
+    ensureCommercialSyncPanel();
+    var slot = document.getElementById("adminSyncToolsSlotV1");
+    if(!slot) return;
+    if(!canShowAdminSyncTools()){
+      slot.innerHTML = "";
+      return;
+    }
+    if(!document.getElementById("adminSyncToolsV1")){
+      slot.innerHTML = '<details id="adminSyncToolsV1" class="admin-sync-tools-v1"><summary>管理员同步工具</summary><div class="admin-sync-tools-v1-body">'
+        + '<div class="admin-sync-tools-v1-group"><h3>连接测试</h3><div class="commercial-sync-v1-actions"><button id="testCloudConnectionV1" class="commercial-sync-v1-btn" type="button">测试云连接</button><span id="commercialSyncConnectionStatusV1" class="commercial-sync-v1-status">未测试</span></div><div class="commercial-sync-v1-actions"><button id="testCloudInsertV1" class="commercial-sync-v1-btn" type="button" onclick="testInsert()">测试写入云端</button><span id="commercialSyncInsertStatusV1" class="commercial-sync-v1-status">未写入</span></div><div class="commercial-sync-v1-actions"><button id="testCloudReadV1" class="commercial-sync-v1-btn" type="button" onclick="testReadCloud()">测试读取云端</button><span id="commercialSyncReadStatusV1" class="commercial-sync-v1-status">未读取</span></div></div>'
+        + '<div class="admin-sync-tools-v1-group"><h3>业务快照</h3><div class="commercial-sync-v1-actions"><button id="pushBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="pushBusinessSnapshot()">上传业务快照</button><button id="readBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="readBusinessSnapshot()">读取业务快照</button><button id="readLatestBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="readLatestBusinessSnapshot()">读取云端快照</button><button id="restoreBusinessSnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="restoreLatestBusinessSnapshotSafely()">从云端恢复到本地</button><span id="commercialSyncSnapshotStatusV1" class="commercial-sync-v1-status">未同步快照</span><span id="commercialSyncRestoreStatusV1" class="commercial-sync-v1-status">未恢复</span></div><div id="commercialSyncSnapshotPreviewV1"></div></div>'
+        + '<div class="admin-sync-tools-v1-group"><h3>订单同步</h3><div class="commercial-sync-v1-actions"><button id="readCloudOrdersBtnV1" class="commercial-sync-v1-btn" type="button" onclick="readCloudOrders()">读取云端订单</button><button id="mergeCloudOrdersBtnV1" class="commercial-sync-v1-btn" type="button" onclick="mergeCloudOrdersToLocal()">合并云端订单到本地</button><button class="commercial-sync-v1-btn" type="button" onclick="checkOrderSyncConsole()">检查订单同步</button><span id="cloudOrdersStatusV1" class="commercial-sync-v1-status">未读取云端订单</span></div></div>'
+        + '<div class="admin-sync-tools-v1-group"><h3>库存同步</h3><div class="commercial-sync-v1-actions"><button id="pushInventorySnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="pushInventorySnapshotToCloud()">上传库存到云端</button><button id="readCloudInventoryV1" class="commercial-sync-v1-btn" type="button" onclick="readCloudInventory()">读取云端库存</button><button class="commercial-sync-v1-btn" type="button" onclick="mergeCloudInventoryToLocal()">合并云库存到本地</button><button class="commercial-sync-v1-btn" type="button" onclick="checkInventorySyncConsole()">检查库存同步</button><span id="cloudInventoryStatusV1" class="commercial-sync-v1-status">未同步云端库存</span></div></div>'
+        + '<div class="admin-sync-tools-v1-group"><h3>员工同步</h3><div class="commercial-sync-v1-actions"><button class="commercial-sync-v1-btn" type="button" onclick="pushEmployeesToCloud()">上传员工权限</button><button class="commercial-sync-v1-btn" type="button" onclick="readCloudEmployees()">读取云端员工</button><button class="commercial-sync-v1-btn" type="button" onclick="mergeCloudEmployeesToLocal()">合并云端员工</button><button class="commercial-sync-v1-btn" type="button" onclick="checkEmployeeSyncConsole()">检查员工同步</button><span id="employeeCloudStatusAdminV1" class="commercial-sync-v1-status">未同步员工权限</span></div></div>'
+        + '<div class="admin-sync-tools-v1-group"><h3>同步检查</h3><div class="commercial-sync-v1-actions"><button class="commercial-sync-v1-btn" type="button" onclick="checkSnapshotSyncConsole()">检查云快照</button><button class="commercial-sync-v1-btn" type="button" onclick="checkAllSyncConsole()">一键检查全部</button><button class="commercial-sync-v1-btn" type="button" onclick="runSyncHealthCheck()">同步健康检查</button><button class="commercial-sync-v1-btn" type="button" onclick="clearSyncConsoleErrors()">清除错误提示</button><span id="syncConsoleStatusAdminV1" class="commercial-sync-v1-status">未检查</span></div></div>'
+        + '</div></details>';
+    }
+    var details = document.getElementById("adminSyncToolsV1");
+    if(details) details.style.display = "";
   }
   function renderCommercialSyncPanel(){
     ensureCommercialSyncPanel();
@@ -29729,6 +29807,7 @@ body.show-profile-v92 #inventoryView{
     var autoInput = document.getElementById("autoSyncEnabledV1");
     if(autoInput) autoInput.checked = m.autoSyncEnabled === true;
     setAutoSyncText(m.autoSyncEnabled ? "自动同步：开启（仅上传快照）" : "自动同步：关闭");
+    renderAdminSyncTools();
   }
   function initCommercialSync(){
     var firstBoot = !window.__commercialSyncV1Booted;
