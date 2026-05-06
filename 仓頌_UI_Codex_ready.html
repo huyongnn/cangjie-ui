@@ -26835,6 +26835,17 @@ body.show-profile-v92 #inventoryView{
     list = list.filter(function(item){ return PERMISSIONS.indexOf(item) >= 0 || SPECIAL_PERMISSIONS.indexOf(item) >= 0; });
     return list.length ? Array.from(new Set(list)) : defaultPermissions(role);
   }
+  function normalizeCloudPermissions(perms, role){
+    if(Array.isArray(perms)) return normalizePermissions(perms, role);
+    if(typeof perms === "string"){
+      try{
+        return normalizePermissions(JSON.parse(perms), role);
+      }catch(err){
+        return normalizePermissions(perms.split(/[、,，]/).map(function(item){ return item.trim(); }).filter(Boolean), role);
+      }
+    }
+    return normalizePermissions([], role);
+  }
   function normalizeEmployee(row){
     row = row || {};
     var role = row.role && row.role !== "员工" ? row.role : "收银员";
@@ -26851,6 +26862,26 @@ body.show-profile-v92 #inventoryView{
       status:normalizeStatus(row.status),
       permissions:normalizePermissions(row.permissions, role)
     };
+  }
+  function cloudEmployeeToLocal(row){
+    row = row || {};
+    var role = row.role || "收银员";
+    var employeeId = row.employee_id || row.employeeId || row.id || ("emp_cloud_" + Date.now());
+    var employeeName = row.employee_name || row.employeeName || row.name || "";
+    return normalizeEmployee({
+      id:employeeId,
+      employee_id:employeeId,
+      employee_name:employeeName,
+      name:employeeName,
+      phone:row.phone || "",
+      wechat:row.wechat || "",
+      role:role,
+      status:row.status || "启用",
+      permissions:normalizeCloudPermissions(row.permissions_json || row.permissions, role),
+      cloudEmployeeRowId:row.id || "",
+      cloudDeviceId:row.device_id || "",
+      cloudUpdatedAt:row.cloud_updated_at || ""
+    });
   }
   function permissionChecksHtml(selected){
     selected = Array.isArray(selected) ? selected : allPermissions();
@@ -26889,6 +26920,18 @@ body.show-profile-v92 #inventoryView{
   }
   function saveEmployees(rows){
     write(EMP_KEY, (rows || []).map(normalizeEmployee));
+  }
+  function appendEmployeeIfMissing(row){
+    row = normalizeEmployee(row);
+    var rows = employees();
+    var hit = rows.find(function(item){
+      return (row.phone && item.phone === row.phone) || (row.employee_id && item.employee_id === row.employee_id);
+    });
+    if(hit) return normalizeEmployee(hit);
+    rows.push(row);
+    saveEmployees(rows);
+    try{ localStorage.setItem("cangjieEmployeesV93", JSON.stringify(rows)); }catch(err){}
+    return row;
   }
   function defaultAdmin(){
     return ownerSeed();
@@ -27028,6 +27071,32 @@ body.show-profile-v92 #inventoryView{
       return (phone && row.phone === phone) || (wechat && row.wechat === wechat);
     }) || null;
   }
+  function employeeLoginTable(client){
+    return (client && typeof client.schema === "function") ? client.schema("public").from("employees") : (client ? client.from("employees") : null);
+  }
+  function supabaseForEmployeeLogin(){
+    return window.CANGJIE_SUPABASE_CLIENT || window.cangjieSupabase || null;
+  }
+  async function findCloudEmployeeByPhone(phone){
+    var client = supabaseForEmployeeLogin();
+    if(!client || !phone) return null;
+    try{
+      var query = employeeLoginTable(client)
+        .select("*")
+        .eq("merchant_id", "mch_08230i")
+        .eq("phone", phone)
+        .eq("status", "启用")
+        .order("cloud_updated_at", {ascending:false})
+        .limit(1);
+      var result = await query;
+      console.log("手机号登录云端员工查询:", result.data, result.error);
+      if(result.error) return null;
+      return (result.data || [])[0] || null;
+    }catch(err){
+      console.error("手机号登录云端员工查询异常:", err);
+      return null;
+    }
+  }
   function orderRows(){
     try{ return Array.isArray(finalOrders) ? finalOrders : []; }catch(err){ return []; }
   }
@@ -27142,17 +27211,19 @@ body.show-profile-v92 #inventoryView{
       if(a.blocked){
         card.innerHTML = '<div class="profile-v92-info-row"><span>当前登录身份</span><b>未授权手机号</b></div>'
           + '<div class="profile-v92-info-row"><span>手机号</span><b>'+e(user.phone || a.phone || "-")+'</b></div>'
+          + '<div class="profile-v92-info-row"><span>角色</span><b>未授权</b></div>'
           + '<div class="profile-v92-info-row"><span>状态</span><b>该手机号尚未被主账号授权</b></div>';
       }else{
         card.innerHTML = '<div class="profile-v92-info-row"><span>当前登录身份</span><b>'+e(isAdminAccount(a) ? "主账号" : (user.role || "员工"))+'</b></div>'
           + '<div class="profile-v92-info-row"><span>姓名</span><b>'+e(user.employee_name || "-")+'</b></div>'
           + '<div class="profile-v92-info-row"><span>手机号</span><b>'+e(user.phone || "-")+'</b></div>'
+          + '<div class="profile-v92-info-row"><span>角色</span><b>'+e(isAdminAccount(a) ? "owner" : (user.role || "-"))+'</b></div>'
           + '<div class="profile-v92-info-row"><span>员工ID</span><b>'+e(user.employee_id || "-")+'</b></div>'
           + '<div class="profile-v92-info-row"><span>权限</span><b>'+e((user.permissions || []).join("、") || "-")+'</b></div>';
       }
     }
   }
-  function loginByPhone(phone){
+  async function loginByPhone(phone){
     phone = String(phone || "").trim();
     if(!phone){
       alert("请先填写手机号。");
@@ -27171,6 +27242,12 @@ body.show-profile-v92 #inventoryView{
       return true;
     }
     var emp = findEmployee(phone, "");
+    if(!emp){
+      var cloudRow = await findCloudEmployeeByPhone(phone);
+      if(cloudRow){
+        emp = appendEmployeeIfMissing(cloudEmployeeToLocal(cloudRow));
+      }
+    }
     if(emp && emp.status === "启用"){
       setAccount({id:emp.employee_id, employee_id:emp.employee_id, employee_name:emp.employee_name, role:emp.role, name:emp.employee_name, phone:emp.phone, wechat:emp.wechat || "", status:emp.status, permissions:emp.permissions, authorized:true});
       localStorage.setItem("cangjieMerchantLoginV92", JSON.stringify({loggedIn:true, mode:"phone", phone:emp.phone, wechat:emp.wechat || "", time:new Date().toLocaleString("zh-CN",{hour12:false})}));
