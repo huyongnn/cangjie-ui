@@ -27820,9 +27820,89 @@ body.show-profile-v92 #inventoryView{
 .sync-console-v1-health.pending{
   color:#657068;
 }
+.deployment-config-v1 .deployment-v1-options{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:12px 0;
+}
+.deployment-config-v1 .deployment-v1-option{
+  min-height:42px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  border:1px solid #d9ddd3;
+  border-radius:12px;
+  background:#fff;
+  color:#1f2a22;
+  padding:0 14px;
+  font-size:14px;
+  font-weight:950;
+  cursor:pointer;
+}
+.deployment-config-v1 .deployment-v1-option input{
+  width:16px;
+  height:16px;
+  accent-color:#1f2023;
+}
+.deployment-v1-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin:12px 0;
+}
+.deployment-v1-item{
+  border:1px solid #e5e8df;
+  border-radius:12px;
+  background:#fbfcf8;
+  padding:12px;
+  min-width:0;
+}
+.deployment-v1-item span{
+  display:block;
+  color:#667068;
+  font-size:12px;
+  font-weight:900;
+}
+.deployment-v1-item b{
+  display:block;
+  margin-top:4px;
+  color:#1f2a22;
+  font-size:15px;
+  font-weight:950;
+  line-height:1.35;
+  overflow-wrap:anywhere;
+}
+.deployment-v1-private{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  margin:12px 0;
+}
+.deployment-v1-private label{
+  display:block;
+  color:#263028;
+  font-size:13px;
+  font-weight:950;
+}
+.deployment-v1-private input{
+  width:100%;
+  height:42px;
+  margin-top:6px;
+  border:1px solid #d2d8cf;
+  border-radius:10px;
+  background:#fff;
+  padding:0 12px;
+  color:#1f2a22;
+  font-size:14px;
+  font-weight:850;
+}
 @media(max-width:980px){
   .commercial-sync-v1-grid{
     grid-template-columns:1fr 1fr;
+  }
+  .deployment-v1-grid{
+    grid-template-columns:1fr;
   }
 }
 @media(max-width:640px){
@@ -27839,33 +27919,17 @@ body.show-profile-v92 #inventoryView{
   var SCHEMA_KEY = "cangjieCloudSchemaV1";
   var PERSIST_KEY = "tudou2_v57_persistent_data";
   var SYNC_CONSOLE_KEY = "cangjieSyncConsoleV1";
+  var DEPLOYMENT_CONFIG_KEY = "cangjieDeploymentConfigV1";
   const SUPABASE_URL = "https://dsutthgfzyopkzpwawkb.supabase.co";
   const SUPABASE_KEY = "sb_publishable_JKxs11pjPZ2DbQVEi_1A1A_GPaWnn7r";
   let supabaseInitError = "";
-  const supabase = (function(){
-    try{
-      if(!window.supabase || typeof window.supabase.createClient !== "function"){
-        supabaseInitError = "Supabase SDK 未加载";
-        return null;
-      }
-      if(!SUPABASE_KEY || SUPABASE_KEY.indexOf("sb_publishable_") !== 0){
-        supabaseInitError = "Supabase publishable key 无效";
-        return null;
-      }
-      var client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      window.CANGJIE_SUPABASE_CLIENT = client;
-      window.cangjieSupabase = client;
-      console.log("当前 Supabase URL:", SUPABASE_URL);
-      console.log("Supabase初始化成功", client);
-      return client;
-    }catch(err){
-      supabaseInitError = err && err.message ? err.message : String(err);
-      return null;
-    }
-  })();
+  let supabaseClient = null;
+  let supabaseClientSignature = "";
   window.CANGJIE_SUPABASE_CONFIG = {
     projectUrl:SUPABASE_URL,
     anonKey:SUPABASE_KEY,
+    deploymentMode:"cangjie_cloud",
+    databaseSource:"仓颉云 Supabase",
     connected:false,
     lastTestAt:"",
     lastError:""
@@ -27889,6 +27953,91 @@ body.show-profile-v92 #inventoryView{
   }
   function writeJson(key, value){
     localStorage.setItem(key, JSON.stringify(value));
+  }
+  function defaultDeploymentConfig(){
+    return {
+      deploymentMode:"cangjie_cloud",
+      privateSupabaseUrl:"",
+      privateSupabaseKey:"",
+      updatedAt:""
+    };
+  }
+  function deploymentModeLabel(mode){
+    if(mode === "local_only") return "本地模式";
+    if(mode === "private_cloud") return "私有云";
+    return "仓颉云";
+  }
+  function deploymentDatabaseSource(config){
+    config = config || deploymentConfig();
+    if(config.deploymentMode === "local_only") return "本地 storage.js / localStorage";
+    if(config.deploymentMode === "private_cloud") return "客户私有 Supabase";
+    return "仓颉云 Supabase";
+  }
+  function deploymentConfig(){
+    var saved = readJson(DEPLOYMENT_CONFIG_KEY, null);
+    var next = Object.assign(defaultDeploymentConfig(), saved || {});
+    if(["local_only","cangjie_cloud","private_cloud"].indexOf(next.deploymentMode) < 0){
+      next.deploymentMode = "cangjie_cloud";
+    }
+    return next;
+  }
+  function activeSupabaseSettings(config){
+    config = config || deploymentConfig();
+    if(config.deploymentMode === "local_only"){
+      return {mode:config.deploymentMode, url:"", key:"", source:deploymentDatabaseSource(config)};
+    }
+    if(config.deploymentMode === "private_cloud"){
+      return {
+        mode:config.deploymentMode,
+        url:String(config.privateSupabaseUrl || "").trim(),
+        key:String(config.privateSupabaseKey || "").trim(),
+        source:deploymentDatabaseSource(config)
+      };
+    }
+    return {mode:"cangjie_cloud", url:SUPABASE_URL, key:SUPABASE_KEY, source:deploymentDatabaseSource(config)};
+  }
+  function isLocalOnlyDeployment(){
+    return deploymentConfig().deploymentMode === "local_only";
+  }
+  function updateSupabaseConfigFromDeployment(){
+    var config = deploymentConfig();
+    var settings = activeSupabaseSettings(config);
+    window.CANGJIE_SUPABASE_CONFIG.projectUrl = settings.url || "";
+    window.CANGJIE_SUPABASE_CONFIG.anonKey = settings.key || "";
+    window.CANGJIE_SUPABASE_CONFIG.deploymentMode = config.deploymentMode;
+    window.CANGJIE_SUPABASE_CONFIG.databaseSource = settings.source;
+    return settings;
+  }
+  function resetSupabaseClient(){
+    supabaseClient = null;
+    supabaseClientSignature = "";
+    window.CANGJIE_SUPABASE_CLIENT = null;
+    window.cangjieSupabase = null;
+  }
+  function saveDeploymentConfig(config){
+    var next = Object.assign(defaultDeploymentConfig(), config || {});
+    if(["local_only","cangjie_cloud","private_cloud"].indexOf(next.deploymentMode) < 0){
+      next.deploymentMode = "cangjie_cloud";
+    }
+    next.privateSupabaseUrl = String(next.privateSupabaseUrl || "").trim();
+    next.privateSupabaseKey = String(next.privateSupabaseKey || "").trim();
+    next.updatedAt = now();
+    writeJson(DEPLOYMENT_CONFIG_KEY, next);
+    resetSupabaseClient();
+    updateSupabaseConfigFromDeployment();
+    var m = meta();
+    m.deploymentMode = next.deploymentMode;
+    m.databaseSource = deploymentDatabaseSource(next);
+    m.syncEnabled = next.deploymentMode !== "local_only";
+    if(next.deploymentMode === "local_only"){
+      m.autoSyncEnabled = false;
+      m.autoSyncMode = "manual";
+      m.cloudStatus = "未连接";
+    }
+    saveMeta(m);
+    renderDeploymentConfigV1();
+    renderCommercialSyncPanel();
+    return next;
   }
   function hashText(text){
     var h = 0;
@@ -27927,15 +28076,18 @@ body.show-profile-v92 #inventoryView{
   function defaultMeta(){
     var merchant = merchantProfile();
     var account = currentAccount();
+    var deployment = deploymentConfig();
     var merchantId = "mch_" + hashText([merchant.name, merchant.phone, merchant.address].join("|"));
     return {
       merchantId:merchantId,
       userId:account.employee_id || account.employeeId || account.id || (account.role === "owner" ? "owner" : account.phone),
       deviceId:ensureDeviceId(),
       role:account.role || "管理员",
+      deploymentMode:deployment.deploymentMode,
+      databaseSource:deploymentDatabaseSource(deployment),
       syncVersion:1,
       lastSyncAt:"",
-      syncEnabled:false,
+      syncEnabled:deployment.deploymentMode !== "local_only",
       autoSyncEnabled:false,
       autoSyncMode:"manual",
       lastAutoSyncAt:null,
@@ -27971,11 +28123,19 @@ body.show-profile-v92 #inventoryView{
     var base = defaultMeta();
     var merged = Object.assign({}, base, saved || {});
     var account = currentAccount();
+    var deployment = deploymentConfig();
     merged.userId = account.id || merged.userId || "admin";
     merged.role = account.role || merged.role || "管理员";
     merged.deviceId = merged.deviceId || ensureDeviceId();
+    merged.deploymentMode = deployment.deploymentMode;
+    merged.databaseSource = deploymentDatabaseSource(deployment);
+    merged.syncEnabled = deployment.deploymentMode !== "local_only";
     merged.autoSyncEnabled = merged.autoSyncEnabled === true;
     merged.autoSyncMode = merged.autoSyncMode || "manual";
+    if(deployment.deploymentMode === "local_only"){
+      merged.autoSyncEnabled = false;
+      merged.autoSyncMode = "manual";
+    }
     if(typeof merged.lastAutoSyncAt === "undefined") merged.lastAutoSyncAt = null;
     merged.lastAutoSyncResult = merged.lastAutoSyncResult || "尚未自动上传";
     if(typeof merged.lastCloudOrderSyncAt === "undefined") merged.lastCloudOrderSyncAt = null;
@@ -28040,6 +28200,7 @@ body.show-profile-v92 #inventoryView{
   }
   function toggleAutoSyncEnabled(checked){
     var m = meta();
+    if(isLocalOnlyDeployment()) checked = false;
     m.autoSyncEnabled = checked === true;
     m.autoSyncMode = m.autoSyncEnabled ? "snapshot_upload_only" : "manual";
     if(typeof m.lastAutoSyncAt === "undefined") m.lastAutoSyncAt = null;
@@ -28054,11 +28215,167 @@ body.show-profile-v92 #inventoryView{
     );
     return m;
   }
+  function ensureDeploymentConfig(){
+    if(!readJson(DEPLOYMENT_CONFIG_KEY, null)) writeJson(DEPLOYMENT_CONFIG_KEY, defaultDeploymentConfig());
+    updateSupabaseConfigFromDeployment();
+    return deploymentConfig();
+  }
+  function deploymentCloudStatusText(){
+    var config = deploymentConfig();
+    var settings = activeSupabaseSettings(config);
+    if(config.deploymentMode === "local_only") return "本地模式：云同步关闭";
+    if(config.deploymentMode === "private_cloud" && (!settings.url || !settings.key)) return "私有云待配置";
+    if(window.CANGJIE_SUPABASE_CONFIG.connected) return "已连接";
+    if(window.CANGJIE_SUPABASE_CONFIG.lastError) return "未连接：" + window.CANGJIE_SUPABASE_CONFIG.lastError;
+    return "未连接";
+  }
+  function ensureDeploymentConfigPanelV1(){
+    var root = document.getElementById("configStep1Root");
+    if(!root) return;
+    var menu = root.querySelector(".config-step1-menu");
+    if(menu && !document.getElementById("deploymentConfigMenuV1")){
+      var menuBtn = document.createElement("button");
+      menuBtn.id = "deploymentConfigMenuV1";
+      menuBtn.type = "button";
+      menuBtn.textContent = "系统部署";
+      menuBtn.onclick = function(){ focusDeploymentConfigV1(); };
+      menu.appendChild(menuBtn);
+    }
+    var main = root.querySelector(".config-step1-main") || root.querySelector(".config-fallback-body");
+    if(!main || document.getElementById("deploymentConfigPanelV1")) return;
+    var title = document.createElement("h2");
+    title.id = "deploymentConfigTitleV1";
+    title.textContent = "系统部署";
+    var section = document.createElement("section");
+    section.id = "deploymentConfigPanelV1";
+    section.className = "config-step1-card deployment-config-v1";
+    section.innerHTML = '<div class="config-step1-row"><div><b>部署模式配置</b><br><span>为 SaaS、私有化和纯本地版本预留。切换模式不会清空数据，也不会覆盖本地订单、库存和员工资料。</span></div><span id="deploymentConfigSaveStatusV1" class="config-step1-status">未修改</span></div>'
+      + '<div class="deployment-v1-grid" id="deploymentSummaryV1"></div>'
+      + '<div class="deployment-v1-options">'
+      + '<label class="deployment-v1-option"><input type="radio" name="deploymentModeV1" value="local_only" onchange="togglePrivateDeploymentFieldsV1()"> 本地模式</label>'
+      + '<label class="deployment-v1-option"><input type="radio" name="deploymentModeV1" value="cangjie_cloud" onchange="togglePrivateDeploymentFieldsV1()"> 仓颉云</label>'
+      + '<label class="deployment-v1-option"><input type="radio" name="deploymentModeV1" value="private_cloud" onchange="togglePrivateDeploymentFieldsV1()"> 私有云</label>'
+      + '</div>'
+      + '<div id="privateCloudFieldsV1" class="deployment-v1-private">'
+      + '<label>Supabase URL<input id="privateSupabaseUrlV1" placeholder="https://xxxx.supabase.co"></label>'
+      + '<label>Supabase Key<input id="privateSupabaseKeyV1" placeholder="sb_publishable_..."></label>'
+      + '</div>'
+      + '<div class="config-step1-actions"><button class="config-step1-green" type="button" onclick="saveDeploymentConfigV1()">保存部署模式</button><button class="config-step1-gray" type="button" onclick="renderDeploymentConfigV1()">刷新状态</button></div>'
+      + '<p class="config-step1-note">本地模式会在框架层禁止 Supabase 上传；仓颉云使用当前项目 Supabase；私有云仅保存客户自己的 URL 和 publishable key，后续同步函数会从这里读取。</p>';
+    main.appendChild(title);
+    main.appendChild(section);
+  }
+  function renderDeploymentConfigV1(){
+    ensureDeploymentConfig();
+    if(!document.getElementById("configStep1Root") && typeof window.ensureConfigStep1Dom === "function"){
+      try{ window.ensureConfigStep1Dom(); }catch(err){}
+    }
+    ensureDeploymentConfigPanelV1();
+    var config = deploymentConfig();
+    Array.from(document.querySelectorAll('input[name="deploymentModeV1"]')).forEach(function(input){
+      input.checked = input.value === config.deploymentMode;
+    });
+    var url = document.getElementById("privateSupabaseUrlV1");
+    var key = document.getElementById("privateSupabaseKeyV1");
+    if(url && document.activeElement !== url) url.value = config.privateSupabaseUrl || "";
+    if(key && document.activeElement !== key) key.value = config.privateSupabaseKey || "";
+    togglePrivateDeploymentFieldsV1();
+    var summary = document.getElementById("deploymentSummaryV1");
+    if(summary){
+      summary.innerHTML = [
+        ["当前部署模式", deploymentModeLabel(config.deploymentMode)],
+        ["当前云状态", deploymentCloudStatusText()],
+        ["当前数据库来源", deploymentDatabaseSource(config)]
+      ].map(function(row){
+        return '<div class="deployment-v1-item"><span>'+e(row[0])+'</span><b>'+e(row[1])+'</b></div>';
+      }).join("");
+    }
+  }
+  function togglePrivateDeploymentFieldsV1(){
+    var checked = document.querySelector('input[name="deploymentModeV1"]:checked');
+    var mode = checked ? checked.value : deploymentConfig().deploymentMode;
+    var box = document.getElementById("privateCloudFieldsV1");
+    if(box) box.style.display = mode === "private_cloud" ? "grid" : "none";
+  }
+  function saveDeploymentConfigV1(){
+    var checked = document.querySelector('input[name="deploymentModeV1"]:checked');
+    var mode = checked ? checked.value : "cangjie_cloud";
+    var config = saveDeploymentConfig({
+      deploymentMode:mode,
+      privateSupabaseUrl:document.getElementById("privateSupabaseUrlV1")?.value || "",
+      privateSupabaseKey:document.getElementById("privateSupabaseKeyV1")?.value || ""
+    });
+    var status = document.getElementById("deploymentConfigSaveStatusV1");
+    if(status){
+      status.textContent = "已保存：" + deploymentModeLabel(config.deploymentMode);
+      status.className = "config-step1-status ok";
+    }
+    if(typeof toast === "function") toast("部署模式已保存");
+    return config;
+  }
+  function focusDeploymentConfigV1(){
+    if(typeof window.renderConfigStep1 === "function") window.renderConfigStep1();
+    setTimeout(function(){
+      renderDeploymentConfigV1();
+      var panel = document.getElementById("deploymentConfigPanelV1");
+      if(panel && panel.scrollIntoView) panel.scrollIntoView({block:"start", behavior:"smooth"});
+    }, 0);
+  }
+  function installDeploymentConfigRenderHook(){
+    if(typeof window.renderConfigStep1 !== "function" || window.renderConfigStep1.__deploymentConfigV1) return;
+    var old = window.renderConfigStep1;
+    window.renderConfigStep1 = function(){
+      var result = old.apply(this, arguments);
+      setTimeout(renderDeploymentConfigV1, 0);
+      return result;
+    };
+    window.renderConfigStep1.__deploymentConfigV1 = true;
+  }
   function initSupabaseClient(){
-    if(supabase) return supabase;
-    window.CANGJIE_SUPABASE_CONFIG.lastError = supabaseInitError || "Supabase 未初始化";
-    setConnectionText(supabaseInitError === "Supabase SDK 未加载" ? "SDK 未加载" : "初始化失败");
-    return null;
+    var settings = updateSupabaseConfigFromDeployment();
+    if(settings.mode === "local_only"){
+      supabaseInitError = "当前为本地模式，云同步已关闭";
+      window.CANGJIE_SUPABASE_CONFIG.connected = false;
+      window.CANGJIE_SUPABASE_CONFIG.lastError = supabaseInitError;
+      setConnectionText("本地模式：云同步关闭");
+      return null;
+    }
+    if(!window.supabase || typeof window.supabase.createClient !== "function"){
+      supabaseInitError = "Supabase SDK 未加载";
+      window.CANGJIE_SUPABASE_CONFIG.lastError = supabaseInitError;
+      setConnectionText("SDK 未加载");
+      return null;
+    }
+    if(!settings.url || !settings.key){
+      supabaseInitError = settings.mode === "private_cloud" ? "私有云 Supabase URL/Key 未填写" : "Supabase URL/Key 未配置";
+      window.CANGJIE_SUPABASE_CONFIG.lastError = supabaseInitError;
+      setConnectionText("初始化失败");
+      return null;
+    }
+    if(settings.key.indexOf("sb_publishable_") !== 0){
+      supabaseInitError = "Supabase publishable key 无效";
+      window.CANGJIE_SUPABASE_CONFIG.lastError = supabaseInitError;
+      setConnectionText("初始化失败");
+      return null;
+    }
+    var signature = settings.mode + "|" + settings.url + "|" + settings.key;
+    if(supabaseClient && supabaseClientSignature === signature) return supabaseClient;
+    try{
+      supabaseClient = window.supabase.createClient(settings.url, settings.key);
+      supabaseClientSignature = signature;
+      supabaseInitError = "";
+      window.CANGJIE_SUPABASE_CLIENT = supabaseClient;
+      window.cangjieSupabase = supabaseClient;
+      window.CANGJIE_SUPABASE_CONFIG.lastError = "";
+      console.log("当前 Supabase URL:", settings.url);
+      console.log("Supabase初始化成功", supabaseClient);
+      return supabaseClient;
+    }catch(err){
+      supabaseInitError = err && err.message ? err.message : String(err);
+      window.CANGJIE_SUPABASE_CONFIG.lastError = supabaseInitError;
+      setConnectionText("初始化失败");
+      return null;
+    }
   }
   async function testConnection(){
     var client = initSupabaseClient();
@@ -28221,6 +28538,10 @@ body.show-profile-v92 #inventoryView{
   }
   function autoUploadBusinessSnapshotAfterOrder(reason){
     var m = meta();
+    if(isLocalOnlyDeployment()){
+      setAutoUploadResult("本地模式：未自动上传云端", now());
+      return Promise.resolve({skipped:true, reason:"local_only"});
+    }
     if(m.autoSyncEnabled !== true) return Promise.resolve({skipped:true, reason:"auto_sync_off"});
     m.autoSyncMode = "snapshot_upload_only";
     saveMeta(m);
@@ -29251,6 +29572,11 @@ body.show-profile-v92 #inventoryView{
     if(!lastOrder) return {data:null, error:"没有订单"};
     console.log("准备上传订单:", lastOrder);
     var key = cloudOrderKey(lastOrder) || String(Date.now());
+    if(isLocalOnlyDeployment()){
+      setCloudOrderSyncResult("本地模式：订单只保存在本地", now());
+      writeSyncLog("cloud_order_push", "未连接", "当前为本地模式，订单未上传 Supabase。", {orderNo:key});
+      return {data:null, error:null, skipped:true, reason:"local_only"};
+    }
     var ledger = cloudOrderSyncLedger();
     if(ledger[key] && ledger[key].status === "success"){
       return {data:null, error:null, skipped:true, reason:"already_synced"};
@@ -29340,6 +29666,8 @@ body.show-profile-v92 #inventoryView{
       deviceId:m.deviceId,
       userId:m.userId,
       role:m.role,
+      deploymentMode:m.deploymentMode,
+      databaseSource:m.databaseSource,
       syncVersion:m.syncVersion,
       localUpdatedAt:m.dataUpdatedAt,
       cloudUpdatedAt:m.cloudUpdatedAt || "",
@@ -29364,6 +29692,8 @@ body.show-profile-v92 #inventoryView{
         deviceId:payload.deviceId,
         userId:payload.userId,
         role:payload.role,
+        deploymentMode:payload.deploymentMode,
+        databaseSource:payload.databaseSource,
         syncVersion:ts,
         localUpdatedAt:payload.localUpdatedAt,
         cloudUpdatedAt:builtAt,
@@ -29786,6 +30116,8 @@ body.show-profile-v92 #inventoryView{
     var m = meta();
     var account = currentAccount();
     var fields = [
+      ["当前部署模式", deploymentModeLabel(m.deploymentMode)],
+      ["当前数据库来源", m.databaseSource || deploymentDatabaseSource()],
       ["当前商户ID", m.merchantId],
       ["当前设备ID", m.deviceId],
       ["当前登录员工", (account.name || m.role || "管理员") + (account.phone ? " " + account.phone : "")],
@@ -29805,18 +30137,25 @@ body.show-profile-v92 #inventoryView{
       return '<div class="commercial-sync-v1-item"><span>'+e(row[0])+'</span><b>'+row[1]+'</b></div>';
     }).join("");
     var autoInput = document.getElementById("autoSyncEnabledV1");
-    if(autoInput) autoInput.checked = m.autoSyncEnabled === true;
-    setAutoSyncText(m.autoSyncEnabled ? "自动同步：开启（仅上传快照）" : "自动同步：关闭");
+    if(autoInput){
+      autoInput.checked = m.autoSyncEnabled === true;
+      autoInput.disabled = isLocalOnlyDeployment();
+    }
+    setAutoSyncText(isLocalOnlyDeployment() ? "自动同步：关闭（本地模式）" : (m.autoSyncEnabled ? "自动同步：开启（仅上传快照）" : "自动同步：关闭"));
     renderAdminSyncTools();
   }
   function initCommercialSync(){
     var firstBoot = !window.__commercialSyncV1Booted;
     window.__commercialSyncV1Booted = true;
+    ensureDeploymentConfig();
+    installDeploymentConfigRenderHook();
     ensureMeta();
+    if(!isLocalOnlyDeployment()) initSupabaseClient();
     ["pushCompletedOrder","confirmOrderFromCodeBill","completeSettleOrder","checkoutCurrentOrder","finishOrder","submitOrder"].forEach(wrapOrderFunction);
     stampExistingOrders();
     renderCommercialSyncPanel();
-    if(firstBoot) writeSyncLog("init", "未连接", "商用同步底座已初始化，当前保持本地离线运行。");
+    renderDeploymentConfigV1();
+    if(firstBoot) writeSyncLog("init", "未连接", "商用同步底座已初始化，当前部署模式：" + deploymentModeLabel(meta().deploymentMode) + "。");
   }
 
   window.initCommercialSync = initCommercialSync;
@@ -29843,6 +30182,11 @@ body.show-profile-v92 #inventoryView{
   window.checkAllSyncConsole = checkAllSyncConsole;
   window.runSyncHealthCheck = runSyncHealthCheck;
   window.clearSyncConsoleErrors = clearSyncConsoleErrors;
+  window.renderDeploymentConfigV1 = renderDeploymentConfigV1;
+  window.saveDeploymentConfigV1 = saveDeploymentConfigV1;
+  window.togglePrivateDeploymentFieldsV1 = togglePrivateDeploymentFieldsV1;
+  window.focusDeploymentConfigV1 = focusDeploymentConfigV1;
+  window.getDeploymentConfigV1 = deploymentConfig;
   window.toggleAutoSyncEnabled = toggleAutoSyncEnabled;
   window.pullCloudSnapshot = pullCloudSnapshot;
   window.pushLocalChanges = pushLocalChanges;
