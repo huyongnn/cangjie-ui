@@ -4661,6 +4661,7 @@ body.batch-create-mode #inboundRoot .app{
       <div class="orders-list-head">
         <h1>订单中心</h1>
         <button id="readCloudOrdersBtnV1" class="cloud-orders-v1-btn" type="button" onclick="readCloudOrders()">读取云端订单</button>
+        <button id="mergeCloudOrdersBtnV1" class="cloud-orders-v1-btn" type="button" onclick="mergeCloudOrdersToLocal()">合并云端订单到本地</button>
         <div id="cloudOrdersStatusV1" class="cloud-orders-v1-status">未读取云端订单</div>
         <input id="ordersSearch" placeholder="搜索客户、单号、货品..." oninput="renderOrdersCenter()">
         <select id="ordersStatusFilter" onchange="renderOrdersCenter()">
@@ -27590,6 +27591,102 @@ body.show-profile-v92 #inventoryView{
       return {data:null, error:err};
     }
   }
+  function cloudOrderNoV1(row){
+    return String((row && (row.order_no || row.orderNo || row.billNo || row.id)) || "").trim();
+  }
+  function localOrderNoV1(row){
+    return String((row && (row.orderNo || row.billNo || row.id || row.order_no)) || "").trim();
+  }
+  function cloudRowToLocalOrder(row){
+    var orderNo = cloudOrderNoV1(row) || String(Date.now());
+    return {
+      id:row.id || ("cloud_" + orderNo),
+      orderNo:orderNo,
+      billNo:orderNo,
+      customerName:row.customer_name || "未知客户",
+      totalAmount:Number(row.total_amount || 0),
+      paid:Number(row.paid_amount || 0),
+      debt:Number(row.debt_amount || 0),
+      status:row.status || "已收银",
+      displayStatus:row.status || "已收银",
+      employeeName:row.employee_name || "",
+      employeeId:row.employee_id || "",
+      deviceId:row.device_id || "",
+      lines:Array.isArray(row.items_json) ? row.items_json : [],
+      time:row.local_created_at || row.cloud_created_at || now(),
+      cloudCreatedAt:row.cloud_created_at || "",
+      cloudOrderId:row.id || "",
+      recordSource:"云端订单"
+    };
+  }
+  function backupBeforeCloudMerge(){
+    var key = "backup_before_merge_" + Date.now();
+    var backup = {key:key, createdAt:now(), localStorage:{}};
+    for(var i=0;i<localStorage.length;i++){
+      var name = localStorage.key(i);
+      backup.localStorage[name] = localStorage.getItem(name);
+    }
+    localStorage.setItem(key, JSON.stringify(backup));
+    localStorage.setItem("cangjie_last_cloud_merge_backup_key", key);
+    return key;
+  }
+  async function mergeCloudOrdersToLocal(){
+    var client = initSupabaseClient();
+    if(!client){
+      var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
+      setCloudOrdersReadStatus("云端订单读取失败：" + initError);
+      return {merged:0, skipped:0, total:0, error:initError};
+    }
+    setCloudOrdersReadStatus("合并前备份中...");
+    try{
+      var backupKey = backupBeforeCloudMerge();
+      var raw = localStorage.getItem(PERSIST_KEY) || localStorage.getItem("tudou2_data");
+      var localData = raw ? JSON.parse(raw) : {};
+      var localOrders = Array.isArray(localData.orders) ? localData.orders.slice() : [];
+      var finalRows = Array.isArray(localData.finalOrders) ? localData.finalOrders : [];
+      var existing = {};
+      localOrders.concat(finalRows).forEach(function(row){
+        var key = localOrderNoV1(row);
+        if(key) existing[key] = true;
+      });
+      setCloudOrdersReadStatus("读取云端订单中...");
+      var result = await publicOrdersTable(client)
+        .select("*")
+        .eq("merchant_id", "mch_08230i")
+        .order("cloud_created_at", {ascending:false});
+      if(result.error){
+        var message = result.error.message || String(result.error);
+        setCloudOrdersReadStatus("云端订单读取失败：" + message);
+        return {merged:0, skipped:0, total:0, error:result.error, backupKey:backupKey};
+      }
+      var rows = result.data || [];
+      var merged = 0;
+      var skipped = 0;
+      rows.forEach(function(row){
+        var key = cloudOrderNoV1(row);
+        if(!key || existing[key]){
+          skipped++;
+          return;
+        }
+        localOrders.push(cloudRowToLocalOrder(row));
+        existing[key] = true;
+        merged++;
+      });
+      localData.orders = localOrders;
+      localData.cloudMergedAt = now();
+      localData.cloudMergeBackupKey = backupKey;
+      localStorage.setItem(PERSIST_KEY, JSON.stringify(localData));
+      setCloudOrdersReadStatus("云端订单数量：" + rows.length + "｜新增到本地：" + merged + "｜跳过重复：" + skipped);
+      renderCloudOrdersList(rows);
+      console.log("云端订单合并结果:", JSON.stringify({cloudTotal:rows.length, merged:merged, skipped:skipped, backupKey:backupKey}));
+      return {merged:merged, skipped:skipped, total:rows.length, backupKey:backupKey, error:null};
+    }catch(err){
+      var errText = err && err.message ? err.message : String(err);
+      setCloudOrdersReadStatus("云端订单读取失败：" + errText);
+      console.error("云端订单合并异常:", err);
+      return {merged:0, skipped:0, total:0, error:err};
+    }
+  }
   function normalizeOrderItemsForCloud(order){
     var items = order && (order.lines || order.items || order.goods || order.details);
     if(!Array.isArray(items)) items = [];
@@ -28211,6 +28308,7 @@ body.show-profile-v92 #inventoryView{
   window.pushBusinessSnapshot = pushBusinessSnapshot;
   window.pushLatestOrderToCloud = pushLatestOrderToCloud;
   window.readCloudOrders = readCloudOrders;
+  window.mergeCloudOrdersToLocal = mergeCloudOrdersToLocal;
   window.readBusinessSnapshot = readBusinessSnapshot;
   window.readLatestBusinessSnapshot = readLatestBusinessSnapshot;
   window.restoreLatestBusinessSnapshotSafely = restoreLatestBusinessSnapshotSafely;
