@@ -26060,6 +26060,38 @@ body.account-blocked-v93 #profileCenterRootV92{
   outline:none;
   box-sizing:border-box;
 }
+.employee-v93-permissions{
+  grid-column:1 / -1;
+  border:1px solid #e5e8df;
+  border-radius:14px;
+  background:#fbfcf8;
+  padding:12px;
+}
+.employee-v93-permissions b{
+  display:block;
+  margin-bottom:10px;
+  color:#263028;
+  font-size:13px;
+  font-weight:950;
+}
+.employee-v93-permission-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+.employee-v93-permission-grid label{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-height:34px;
+  border:1px solid #d9ddd3;
+  border-radius:10px;
+  background:#fff;
+  padding:0 10px;
+  color:#263028;
+  font-size:13px;
+  font-weight:900;
+}
 .employee-v93-table-wrap{
   margin-top:14px;
   border:1px solid #e5e8df;
@@ -26173,6 +26205,9 @@ body.account-blocked-v93 #profileCenterRootV92{
 @media(max-width:640px){
   .employee-v93-form{
     grid-template-columns:1fr;
+  }
+  .employee-v93-permission-grid{
+    grid-template-columns:1fr 1fr;
   }
   .account-v93-pill{
     right:10px;
@@ -26667,6 +26702,23 @@ body.show-profile-v92 #inventoryView{
   var ACCOUNT_KEY = "cangjieCurrentAccountV94";
   var FILTER_KEY = "cangjieOrderCashierFilterV94";
   var orderFilter = localStorage.getItem(FILTER_KEY) || "all";
+  var PERMISSIONS = ["收银","订单","库存","批次","货主","买家管理","报表","配置"];
+  var PAGE_PERMISSIONS = {
+    cashier:"收银",
+    orders:"订单",
+    inventoryStep1:"库存",
+    stock:"库存",
+    inbound:"批次",
+    ownerStep1:"货主",
+    owner:"货主",
+    buyersStep1:"买家管理",
+    buyer:"买家管理",
+    buyers:"买家管理",
+    reportsStep1:"报表",
+    reports:"报表",
+    configStep1:"配置",
+    config:"配置"
+  };
 
   function e(v){
     return String(v == null ? "" : v).replace(/[&<>"']/g, function(m){
@@ -26683,21 +26735,62 @@ body.show-profile-v92 #inventoryView{
   function write(key, value){
     localStorage.setItem(key, JSON.stringify(value));
   }
+  function allPermissions(){
+    return PERMISSIONS.slice();
+  }
+  function normalizeStatus(status){
+    return status === "停用" || status === "禁用" ? "禁用" : "启用";
+  }
+  function defaultPermissions(role){
+    if(role === "只读") return ["订单","库存","批次","货主","买家管理","报表"];
+    if(role === "收银员") return ["收银","订单","库存"];
+    return allPermissions();
+  }
+  function normalizePermissions(perms, role){
+    var list = Array.isArray(perms) ? perms : [];
+    list = list.filter(function(item){ return PERMISSIONS.indexOf(item) >= 0; });
+    return list.length ? Array.from(new Set(list)) : defaultPermissions(role);
+  }
+  function normalizeEmployee(row){
+    row = row || {};
+    var role = row.role && row.role !== "员工" ? row.role : "收银员";
+    var employeeId = row.employee_id || row.employeeId || row.id || ("emp_" + Date.now());
+    var employeeName = row.employee_name || row.employeeName || row.name || "";
+    return {
+      id:employeeId,
+      employee_id:employeeId,
+      employee_name:employeeName,
+      name:employeeName,
+      phone:row.phone || "",
+      wechat:row.wechat || "",
+      role:role,
+      status:normalizeStatus(row.status),
+      permissions:normalizePermissions(row.permissions, role)
+    };
+  }
+  function permissionChecksHtml(selected){
+    selected = Array.isArray(selected) ? selected : allPermissions();
+    return '<div class="employee-v93-permissions"><b>权限项预留</b><div class="employee-v93-permission-grid">'
+      + PERMISSIONS.map(function(item){
+        return '<label><input type="checkbox" class="employeePermissionV94" value="'+e(item)+'" '+(selected.indexOf(item) >= 0 ? "checked" : "")+'> '+e(item)+'</label>';
+      }).join("")
+      + '</div></div>';
+  }
   function merchant(){
     try{ if(typeof getCangjieMerchantProfileV92 === "function") return getCangjieMerchantProfileV92(); }catch(err){}
     return {};
   }
   function employees(){
     var rows = read(EMP_KEY, []);
-    return Array.isArray(rows) ? rows : [];
+    return Array.isArray(rows) ? rows.map(normalizeEmployee) : [];
   }
   function saveEmployees(rows){
-    write(EMP_KEY, rows || []);
+    write(EMP_KEY, (rows || []).map(normalizeEmployee));
   }
   function defaultAdmin(){
     var m = merchant();
     var oldLogin = read("cangjieMerchantLoginV92", {});
-    return {id:"admin", role:"管理员", name:"管理员", phone:oldLogin.phone || m.phone || "", wechat:oldLogin.wechat || "", status:"启用", authorized:true};
+    return {id:"owner", employee_id:"owner", employee_name:"主账号", role:"owner", name:"主账号", phone:oldLogin.phone || m.phone || "", wechat:oldLogin.wechat || "", status:"启用", permissions:allPermissions(), authorized:true};
   }
   function account(){
     return read(ACCOUNT_KEY, null) || defaultAdmin();
@@ -26711,7 +26804,39 @@ body.show-profile-v92 #inventoryView{
   }
   function isAdmin(){
     var a = account();
-    return !a.blocked && a.role === "管理员";
+    return !a.blocked && (a.role === "owner" || a.role === "管理员");
+  }
+  function accountEmployeeId(a){
+    a = a || account();
+    return a.employee_id || a.employeeId || a.id || (isAdmin() ? "owner" : "");
+  }
+  function accountPermissions(a){
+    a = a || account();
+    return isAdmin() ? allPermissions() : normalizePermissions(a.permissions, a.role);
+  }
+  function pagePermission(page, label){
+    page = String(page || "");
+    if(page === "profileV92" || page === "profile" || page === "personalCenter") return "";
+    if(PAGE_PERMISSIONS[page]) return PAGE_PERMISSIONS[page];
+    label = String(label || "").trim();
+    return PAGE_PERMISSIONS[label] || label || "";
+  }
+  function canOpenPage(page, label){
+    var a = account();
+    if(page === "profileV92" || page === "profile" || page === "personalCenter") return true;
+    if(a.blocked) return false;
+    if(isAdmin()) return true;
+    var perm = pagePermission(page, label);
+    return !perm || accountPermissions(a).indexOf(perm) >= 0;
+  }
+  function applyNavPermissions(){
+    var nav = document.getElementById("globalUnifiedNavV41");
+    if(!nav) return;
+    Array.from(nav.querySelectorAll("[data-page]")).forEach(function(btn){
+      var page = btn.getAttribute("data-page") || "";
+      var allow = canOpenPage(page, btn.textContent || "");
+      btn.style.display = allow ? "" : "none";
+    });
   }
   function accountLabel(a){
     a = a || account();
@@ -26729,22 +26854,34 @@ body.show-profile-v92 #inventoryView{
     try{ return Array.isArray(finalOrders) ? finalOrders : []; }catch(err){ return []; }
   }
   function orderKey(order){
-    if(order && order.cashierRole === "员工") return "emp:" + (order.cashierPhone || order.cashierName || "");
+    var role = order && (order.employeeRole || order.cashierRole || "");
+    if(order && role && role !== "管理员" && role !== "owner") return "emp:" + (order.employee_id || order.employeeId || order.cashierPhone || order.cashierName || "");
     return "admin";
   }
   function stampOrder(order){
     var a = account();
     if(!order || a.blocked) return order;
-    order.cashierName = a.name || (a.role === "员工" ? "员工" : "管理员");
+    var employeeId = accountEmployeeId(a);
+    var employeeName = a.employee_name || a.name || (isAdmin() ? "主账号" : "员工");
+    order.employee_id = order.employee_id || employeeId;
+    order.employeeId = order.employeeId || employeeId;
+    order.employee_name = order.employee_name || employeeName;
+    order.employeeName = order.employeeName || employeeName;
+    order.employeeRole = order.employeeRole || (isAdmin() ? "管理员" : a.role);
+    order.userId = order.userId || employeeId;
+    order.cashierName = employeeName;
     order.cashierPhone = a.phone || "";
-    order.cashierRole = a.role === "员工" ? "员工" : "管理员";
+    order.cashierRole = isAdmin() ? "管理员" : a.role;
     return order;
   }
   function stats(row){
+    row = normalizeEmployee(row);
     var count = 0;
     var paid = 0;
     orderRows().forEach(function(order){
-      if(String(order.cashierPhone || "") !== String(row.phone || "")) return;
+      var sameId = String(order.employee_id || order.employeeId || "") === String(row.employee_id || "");
+      var samePhone = String(order.cashierPhone || "") === String(row.phone || "");
+      if(!sameId && !samePhone) return;
       count += 1;
       paid += n(order.paid || order.totalAmount);
     });
@@ -26769,6 +26906,7 @@ body.show-profile-v92 #inventoryView{
     if(status) status.style.display = "inline-flex";
     if(status) status.textContent = "当前账号：" + accountLabel(a);
     document.body.classList.toggle("account-blocked-v93", !!a.blocked);
+    applyNavPermissions();
     if(a.blocked){
       var profile = document.getElementById("profileCenterRootV92");
       if(profile) profile.style.setProperty("display", "block", "important");
@@ -26783,15 +26921,17 @@ body.show-profile-v92 #inventoryView{
     var card = document.createElement("div");
     card.id = "employeeCardV94";
     card.className = "profile-v92-card employee-v93-card";
-    card.innerHTML = '<h2>员工账号管理</h2><p>管理员可新增员工账号、启用或停用权限；员工登录后订单会记录开单人。</p>'
+    card.innerHTML = '<h2>员工权限管理</h2><p>主账号可新增员工账号并配置模块权限；员工登录后只能看到已授权模块，订单会记录开单人。</p>'
       + '<div id="employeeAuthWarningV94"></div>'
       + '<div class="employee-v93-form" id="employeeFormV94">'
       + '<div class="profile-v92-field"><label>员工姓名</label><input id="employeeNameV94" placeholder="请输入姓名"></div>'
       + '<div class="profile-v92-field"><label>员工手机号</label><input id="employeePhoneV94" inputmode="tel" placeholder="请输入手机号"></div>'
       + '<div class="profile-v92-field"><label>员工微信号，可选</label><input id="employeeWechatV94" placeholder="请输入微信号"></div>'
-      + '<div class="profile-v92-field"><label>员工状态</label><select id="employeeStatusV94"><option value="启用">启用</option><option value="停用">停用</option></select></div>'
+      + '<div class="profile-v92-field"><label>角色</label><select id="employeeRoleV94"><option value="收银员">收银员</option><option value="管理员">管理员</option><option value="只读">只读</option></select></div>'
+      + '<div class="profile-v92-field"><label>状态</label><select id="employeeStatusV94"><option value="启用">启用</option><option value="禁用">禁用</option></select></div>'
+      + permissionChecksHtml(allPermissions())
       + '<button id="addEmployeeBtnV94" class="profile-v92-btn secondary" type="button">新增员工</button>'
-      + '</div><div class="employee-v93-table-wrap" id="employeeTableWrapV94"><table class="employee-v93-table"><thead><tr><th>员工姓名</th><th>手机号</th><th>微信号</th><th>状态</th><th>已开单数量</th><th>已收金额</th><th>操作</th></tr></thead><tbody id="employeeListV94"></tbody></table></div>';
+      + '</div><div class="employee-v93-table-wrap" id="employeeTableWrapV94"><table class="employee-v93-table"><thead><tr><th>员工ID</th><th>员工姓名</th><th>手机号</th><th>角色</th><th>状态</th><th>权限</th><th>已开单数量</th><th>已收金额</th><th>操作</th></tr></thead><tbody id="employeeListV94"></tbody></table></div>';
     grid.appendChild(card);
   }
   function renderEmployees(){
@@ -26807,12 +26947,14 @@ body.show-profile-v92 #inventoryView{
     var rows = employees();
     tbody.innerHTML = rows.map(function(row){
       var st = stats(row);
-      var next = row.status === "启用" ? "停用" : "启用";
-      return '<tr><td>'+e(row.name)+'</td><td>'+e(row.phone)+'</td><td>'+e(row.wechat || "-")+'</td>'
+      var next = row.status === "启用" ? "禁用" : "启用";
+      return '<tr><td>'+e(row.employee_id)+'</td><td>'+e(row.employee_name)+'</td><td>'+e(row.phone)+'</td>'
+        + '<td>'+e(row.role)+'</td>'
         + '<td><span class="employee-v93-status '+(row.status === "启用" ? "on" : "off")+'">'+e(row.status)+'</span></td>'
+        + '<td>'+e((row.permissions || []).join("、"))+'</td>'
         + '<td>'+st.count+'</td><td>'+moneyText(st.paid)+'</td>'
         + '<td><button class="employee-v93-action" type="button" data-toggle-employee-v94="'+e(row.id)+'">'+next+'</button></td></tr>';
-    }).join("") || '<tr><td colspan="7">暂无员工账号</td></tr>';
+    }).join("") || '<tr><td colspan="9">暂无员工账号</td></tr>';
   }
   function addEmployee(){
     if(!isAdmin()){
@@ -26822,7 +26964,10 @@ body.show-profile-v92 #inventoryView{
     var name = (document.getElementById("employeeNameV94")?.value || "").trim();
     var phone = (document.getElementById("employeePhoneV94")?.value || "").trim();
     var wechat = (document.getElementById("employeeWechatV94")?.value || "").trim();
-    var status = document.getElementById("employeeStatusV94")?.value || "启用";
+    var role = document.getElementById("employeeRoleV94")?.value || "收银员";
+    var status = normalizeStatus(document.getElementById("employeeStatusV94")?.value || "启用");
+    var permissions = Array.from(document.querySelectorAll(".employeePermissionV94:checked")).map(function(el){ return el.value; });
+    permissions = normalizePermissions(permissions, role);
     if(!name || !phone){
       alert("请填写员工姓名和手机号。");
       return;
@@ -26830,12 +26975,15 @@ body.show-profile-v92 #inventoryView{
     var rows = employees();
     var hit = rows.find(function(row){ return row.phone === phone || (wechat && row.wechat === wechat); });
     if(hit){
+      hit.employee_name = name;
       hit.name = name;
       hit.phone = phone;
       hit.wechat = wechat;
+      hit.role = role;
       hit.status = status;
+      hit.permissions = permissions;
     }else{
-      rows.push({id:"emp_" + Date.now(), name:name, phone:phone, wechat:wechat, status:status});
+      rows.push({id:"emp_" + Date.now(), employee_id:"emp_" + Date.now(), employee_name:name, name:name, phone:phone, wechat:wechat, role:role, status:status, permissions:permissions});
     }
     saveEmployees(rows);
     ["employeeNameV94","employeePhoneV94","employeeWechatV94"].forEach(function(id){
@@ -26843,16 +26991,18 @@ body.show-profile-v92 #inventoryView{
       if(el) el.value = "";
     });
     renderEmployees();
+    applyNavPermissions();
     injectOrderFilter();
     if(typeof toast === "function") toast("员工账号已保存");
   }
   function toggleEmployee(id){
     var rows = employees();
     rows.forEach(function(row){
-      if(row.id === id) row.status = row.status === "启用" ? "停用" : "启用";
+      if(row.id === id) row.status = row.status === "启用" ? "禁用" : "启用";
     });
     saveEmployees(rows);
     renderEmployees();
+    applyNavPermissions();
     injectOrderFilter();
   }
 
@@ -26864,17 +27014,19 @@ body.show-profile-v92 #inventoryView{
     var admin = defaultAdmin();
     var adminLogin = (phone && phone === admin.phone) || (wechat && wechat === admin.wechat);
     if(adminLogin || (!phone && !wechat)){
-      setAccount({id:"admin", role:"管理员", name:"管理员", phone:phone || admin.phone || "", wechat:wechat || admin.wechat || "", status:"启用", authorized:true});
+      setAccount({id:"owner", employee_id:"owner", employee_name:"主账号", role:"owner", name:"主账号", phone:phone || admin.phone || "", wechat:wechat || admin.wechat || "", status:"启用", permissions:allPermissions(), authorized:true});
       if(typeof oldLogin === "function") try{ oldLogin.apply(this, arguments); }catch(err){}
       renderEmployees();
+      applyNavPermissions();
       return;
     }
     var emp = findEmployee(phone, wechat);
     if(emp && emp.status === "启用"){
-      setAccount({id:emp.id, role:"员工", name:emp.name, phone:emp.phone, wechat:emp.wechat || "", status:emp.status, authorized:true});
+      setAccount({id:emp.employee_id, employee_id:emp.employee_id, employee_name:emp.employee_name, role:emp.role, name:emp.employee_name, phone:emp.phone, wechat:emp.wechat || "", status:emp.status, permissions:emp.permissions, authorized:true});
       localStorage.setItem("cangjieMerchantLoginV92", JSON.stringify({loggedIn:true, mode:mode, phone:emp.phone, wechat:emp.wechat || "", time:new Date().toLocaleString("zh-CN",{hour12:false})}));
       renderAccount();
       renderEmployees();
+      applyNavPermissions();
       if(typeof toast === "function") toast("员工已登录");
       return;
     }
@@ -26890,9 +27042,14 @@ body.show-profile-v92 #inventoryView{
       alert("该账号尚未获得商家授权，请联系管理员开通权限");
       return oldShow ? oldShow.call(this, "profileV92") : undefined;
     }
+    if(!canOpenPage(page, "")){
+      alert("当前账号没有该模块权限");
+      return oldShow ? oldShow.call(this, "profileV92") : undefined;
+    }
     var result = oldShow ? oldShow.apply(this, arguments) : undefined;
     setTimeout(function(){
       renderAccount();
+      applyNavPermissions();
       if(page === "profileV92" || page === "profile" || page === "personalCenter") renderEmployees();
       if(page === "orders") injectOrderFilter();
     }, 0);
@@ -26913,8 +27070,12 @@ body.show-profile-v92 #inventoryView{
     window.allOrderRecords = function(){
       var rows = oldAllOrders.apply(this, arguments) || [];
       var a = account();
-      if(a.role === "员工"){
-        return rows.filter(function(order){ return String(order.cashierPhone || "") === String(a.phone || ""); });
+      if(!isAdmin()){
+        return rows.filter(function(order){
+          var sameId = String(order.employee_id || order.employeeId || "") === String(accountEmployeeId(a));
+          var samePhone = String(order.cashierPhone || "") === String(a.phone || "");
+          return sameId || samePhone;
+        });
       }
       if(orderFilter && orderFilter !== "all"){
         return rows.filter(function(order){ return orderKey(order) === orderFilter; });
@@ -26939,9 +27100,9 @@ body.show-profile-v92 #inventoryView{
       });
       head.appendChild(sel);
     }
-    var html = '<option value="all">全部收银员</option><option value="admin">管理员本人</option>';
+    var html = '<option value="all">全部收银员</option><option value="admin">主账号 / 管理员</option>';
     employees().forEach(function(row){
-      html += '<option value="emp:'+e(row.phone || row.name)+'">'+e(row.name + (row.phone ? " " + row.phone : ""))+'</option>';
+      html += '<option value="emp:'+e(row.employee_id)+'">'+e(row.employee_name + (row.phone ? " " + row.phone : "") + "｜" + row.role)+'</option>';
     });
     sel.innerHTML = html;
     sel.value = orderFilter;
@@ -26954,7 +27115,7 @@ body.show-profile-v92 #inventoryView{
     var card = document.createElement("div");
     card.id = "orderCashierInfoV94";
     card.className = "cashier-v93-card";
-    card.innerHTML = '<span>开单人</span><b>'+e((order.cashierName || order.cashierRole || "管理员") + (order.cashierPhone ? " " + order.cashierPhone : ""))+'</b>';
+    card.innerHTML = '<span>开单人</span><b>'+e((order.employee_name || order.employeeName || order.cashierName || order.cashierRole || "管理员") + (order.cashierPhone ? " " + order.cashierPhone : ""))+'</b>';
     grid.appendChild(card);
   }
   var oldDetail = typeof window.renderOrderDetail === "function" ? window.renderOrderDetail : null;
@@ -26999,12 +27160,31 @@ body.show-profile-v92 #inventoryView{
       alert("该账号尚未获得商家授权，请联系管理员开通权限");
       if(typeof window.showAppPage === "function") window.showAppPage("profileV92");
     }
+    if(nav && !canOpenPage(nav.getAttribute("data-page") || "", nav.textContent || "")){
+      ev.preventDefault();
+      ev.stopPropagation();
+      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+      alert("当前账号没有该模块权限");
+      if(typeof window.showAppPage === "function") window.showAppPage("profileV92");
+    }
   }, true);
 
   function boot(){
-    if(!read(ACCOUNT_KEY, null)) setAccount(defaultAdmin());
+    var savedAccount = read(ACCOUNT_KEY, null);
+    if(!savedAccount){
+      setAccount(defaultAdmin());
+    }else if((savedAccount.id === "admin" || !savedAccount.employee_id) && savedAccount.role === "管理员"){
+      savedAccount.id = "owner";
+      savedAccount.employee_id = "owner";
+      savedAccount.employee_name = savedAccount.employee_name || savedAccount.name || "主账号";
+      savedAccount.name = savedAccount.name || "主账号";
+      savedAccount.role = "owner";
+      savedAccount.permissions = allPermissions();
+      setAccount(savedAccount);
+    }
     renderAccount();
     renderEmployees();
+    applyNavPermissions();
     injectOrderFilter();
   }
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
@@ -27200,7 +27380,7 @@ body.show-profile-v92 #inventoryView{
   function currentAccount(){
     return readJson("cangjieCurrentAccountV94", null)
       || readJson("cangjieCurrentAccountV93", null)
-      || {id:"admin", role:"管理员", name:"管理员", phone:"", authorized:true};
+      || {id:"owner", employee_id:"owner", employee_name:"主账号", role:"owner", name:"主账号", phone:"", authorized:true};
   }
   function ensureDeviceId(){
     var id = "";
@@ -27217,7 +27397,7 @@ body.show-profile-v92 #inventoryView{
     var merchantId = "mch_" + hashText([merchant.name, merchant.phone, merchant.address].join("|"));
     return {
       merchantId:merchantId,
-      userId:account.id || (account.role === "员工" ? account.phone : "admin"),
+      userId:account.employee_id || account.employeeId || account.id || (account.role === "owner" ? "owner" : account.phone),
       deviceId:ensureDeviceId(),
       role:account.role || "管理员",
       syncVersion:1,
@@ -28029,8 +28209,8 @@ body.show-profile-v92 #inventoryView{
       merchant_id:m.merchantId,
       order_no:order.billNo || order.orderNo || order.id || String(Date.now()),
       customer_name:order.customerName || order.buyerName || order.customer || "未知客户",
-      employee_id:order.employeeId || order.userId || m.userId || account.id || "admin",
-      employee_name:"管理员",
+      employee_id:order.employee_id || order.employeeId || order.userId || account.employee_id || m.userId || account.id || "owner",
+      employee_name:order.employee_name || order.employeeName || order.cashierName || account.employee_name || account.name || "主账号",
       device_id:order.deviceId || m.deviceId || "dev_local_seed",
       total_amount:total,
       paid_amount:paid,
@@ -28142,7 +28322,7 @@ body.show-profile-v92 #inventoryView{
       syncVersion:m.syncVersion,
       dataUpdatedAt:m.dataUpdatedAt,
       merchants:merchantProfile(),
-      users:readJson("cangjieEmployeesV93", []),
+      users:readJson("cangjieEmployeesV94", readJson("cangjieEmployeesV93", [])),
       permissions:{role:m.role, userId:m.userId},
       products:data.goodsMaster || [],
       owners:data.owners || [],
@@ -28407,7 +28587,10 @@ body.show-profile-v92 #inventoryView{
     next.restoredFromCloudAt = now();
     localStorage.setItem(PERSIST_KEY, JSON.stringify(next));
     if(collections.merchants) localStorage.setItem("cangjieMerchantProfileV92", JSON.stringify(collections.merchants));
-    if(collections.users) localStorage.setItem("cangjieEmployeesV93", JSON.stringify(collections.users));
+    if(collections.users){
+      localStorage.setItem("cangjieEmployeesV93", JSON.stringify(collections.users));
+      localStorage.setItem("cangjieEmployeesV94", JSON.stringify(collections.users));
+    }
     var m = meta();
     m.lastSyncAt = now();
     m.cloudStatus = "已连接";
@@ -28522,8 +28705,12 @@ body.show-profile-v92 #inventoryView{
     var m = meta();
     var account = currentAccount();
     order.merchantId = order.merchantId || m.merchantId;
-    order.userId = order.userId || m.userId;
-    order.employeeName = order.employeeName || order.cashierName || account.name || (m.role === "员工" ? "员工" : "管理员");
+    order.userId = order.userId || account.employee_id || account.employeeId || m.userId;
+    order.employee_id = order.employee_id || order.employeeId || account.employee_id || account.employeeId || order.userId || "owner";
+    order.employeeId = order.employeeId || order.employee_id;
+    order.employee_name = order.employee_name || order.employeeName || order.cashierName || account.employee_name || account.name || (m.role === "owner" ? "主账号" : "员工");
+    order.employeeName = order.employeeName || order.employee_name;
+    order.employeeRole = order.employeeRole || (account.role === "owner" ? "管理员" : (account.role || "管理员"));
     order.deviceId = order.deviceId || m.deviceId;
     order.createdAt = order.createdAt || order.time || now();
     order.cloudUpdatedAt = order.cloudUpdatedAt || "";
