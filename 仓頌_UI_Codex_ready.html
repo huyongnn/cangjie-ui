@@ -13118,7 +13118,7 @@ function goBackToBatchEditFromOverview(){
     document.head.appendChild(style);
     var root = document.createElement("div");
     root.id = "inventoryStep1Root";
-    root.innerHTML = '<div class="inventory-step1-layout"><aside class="inventory-step1-tree"><h1>库存</h1><div id="inventoryStep1Tree"></div></aside><main class="inventory-step1-main"><header class="inventory-step1-top"><div><h2 id="inventoryStep1Title">全部批次</h2><p id="inventoryStep1Sub"></p></div><div class="inventory-step1-actions"><input id="inventoryStep1Search" placeholder="搜索货主 / 批次 / 商品..." oninput="renderInventoryStep1()"><button class="inventory-step1-gray" onclick="showAppPage(\'stock\')">查看批次</button><button class="inventory-step1-greenbtn" onclick="renderInventoryStep1()">刷新库存</button><button id="pushInventorySnapshotStep1V1" class="inventory-step1-greenbtn" type="button" onclick="pushInventorySnapshotToCloud()">上传库存</button><button id="readCloudInventoryStep1V1" class="inventory-step1-gray" type="button" onclick="readCloudInventory()">读取云库存</button><span id="inventoryCloudStatus" class="inventory-cloud-status">未同步云端库存</span></div></header><section class="inventory-step1-summary" id="inventoryStep1Summary"></section><section class="inventory-step1-section"><h3>库存明细</h3><div id="inventoryStep1Table"></div></section><section class="inventory-step1-section"><h3>销售流水</h3><div id="inventoryStep1Ledger"></div></section></main></div>';
+    root.innerHTML = '<div class="inventory-step1-layout"><aside class="inventory-step1-tree"><h1>库存</h1><div id="inventoryStep1Tree"></div></aside><main class="inventory-step1-main"><header class="inventory-step1-top"><div><h2 id="inventoryStep1Title">全部批次</h2><p id="inventoryStep1Sub"></p></div><div class="inventory-step1-actions"><input id="inventoryStep1Search" placeholder="搜索货主 / 批次 / 商品..." oninput="renderInventoryStep1()"><button class="inventory-step1-gray" onclick="showAppPage(\'stock\')">查看批次</button><button class="inventory-step1-greenbtn" onclick="renderInventoryStep1()">刷新库存</button><button id="pushInventorySnapshotStep1V1" class="inventory-step1-greenbtn" type="button" onclick="pushInventorySnapshotToCloud()">上传库存</button><button id="readCloudInventoryStep1V1" class="inventory-step1-gray" type="button" onclick="readCloudInventory()">读取云库存</button><button id="mergeCloudInventoryStep1V1" class="inventory-step1-gray" type="button" onclick="mergeCloudInventoryToLocal()">合并云库存到本地</button><span id="inventoryCloudStatus" class="inventory-cloud-status">未同步云端库存</span></div></header><section class="inventory-step1-summary" id="inventoryStep1Summary"></section><section class="inventory-step1-section"><h3>库存明细</h3><div id="inventoryStep1Table"></div></section><section class="inventory-step1-section"><h3>销售流水</h3><div id="inventoryStep1Ledger"></div></section></main></div>';
     document.body.appendChild(root);
   }
   window.renderInventoryStep1 = renderInventoryStep1;
@@ -27602,6 +27602,22 @@ body.show-profile-v92 #inventoryView{
     var n = Number(value || 0);
     return Number.isFinite(n) ? n : 0;
   }
+  function inventoryCloudKey(row){
+    return String((row && (row.product_id || row.productId || row.goodsId || "")) || "").trim()
+      + "|"
+      + String((row && (row.batch_no || row.batchNo || row.no || "")) || "").trim();
+  }
+  function backupBeforeInventoryMerge(){
+    var key = "backup_before_inventory_merge_" + Date.now();
+    var backup = {key:key, createdAt:now(), localStorage:{}};
+    for(var i=0;i<localStorage.length;i++){
+      var name = localStorage.key(i);
+      backup.localStorage[name] = localStorage.getItem(name);
+    }
+    localStorage.setItem(key, JSON.stringify(backup));
+    localStorage.setItem("cangjie_last_inventory_merge_backup_key", key);
+    return key;
+  }
   function buildInventoryRowsForCloud(){
     var m = meta();
     var at = now();
@@ -27717,6 +27733,7 @@ body.show-profile-v92 #inventoryView{
         renderCloudInventoryList([]);
       }else{
         var rows = result.data || [];
+        window.CANGJIE_LAST_CLOUD_INVENTORY_ROWS = rows;
         setCloudInventoryStatus("读取成功：" + rows.length + " 条云端库存");
         renderCloudInventoryList(rows);
       }
@@ -27728,6 +27745,106 @@ body.show-profile-v92 #inventoryView{
       console.error("云端库存读取异常:", err);
       return {data:null, error:err};
     }
+  }
+  async function mergeCloudInventoryToLocal(){
+    setCloudInventoryStatus("准备合并云端库存...");
+    var readResult = await readCloudInventory();
+    if(readResult.error){
+      var readMessage = readResult.error && readResult.error.message ? readResult.error.message : String(readResult.error);
+      setCloudInventoryStatus("云端库存读取失败：" + readMessage);
+      return {merged:0, skipped:0, cloudTotal:0, backupKey:"", error:readResult.error};
+    }
+    var cloudRows = readResult.data || [];
+    var backupKey = backupBeforeInventoryMerge();
+    var raw = localStorage.getItem(PERSIST_KEY) || localStorage.getItem("tudou2_data");
+    var localData = {};
+    try{ localData = raw ? JSON.parse(raw) : {}; }catch(err){ localData = {}; }
+    var localBatches = [];
+    try{
+      if(typeof batches !== "undefined" && Array.isArray(batches)) localBatches = batches;
+    }catch(err){}
+    if(!localBatches.length){
+      localBatches = Array.isArray(localData.batches) ? localData.batches : [];
+    }
+    if(!Array.isArray(localBatches)){
+      localBatches = [];
+    }
+    var existing = {};
+    localBatches.forEach(function(batch){
+      (Array.isArray(batch.items) ? batch.items : []).forEach(function(item){
+        var key = inventoryCloudKey({
+          product_id:item.goodsId || item.productId || item.id,
+          batch_no:batch.no || batch.batchNo || batch.id
+        });
+        if(key !== "|") existing[key] = true;
+      });
+    });
+    var merged = 0;
+    var skipped = 0;
+    cloudRows.forEach(function(row){
+      var key = inventoryCloudKey(row);
+      if(!key || key === "|" || existing[key]){
+        skipped++;
+        return;
+      }
+      var batchNo = String(row.batch_no || "").trim() || ("cloud_" + Date.now().toString(36));
+      var batch = localBatches.find(function(b){
+        return String(b.no || b.batchNo || b.id || "") === batchNo;
+      });
+      if(!batch){
+        batch = {
+          id:"cloud_batch_" + Math.random().toString(36).slice(2,9),
+          owner:row.owner_name || "云端库存",
+          no:batchNo,
+          tag:"云端",
+          fee:0,
+          remark:"云端库存安全合并",
+          confirmed:true,
+          inboundConfirmedAt:now(),
+          cloudMergedAt:now(),
+          items:[]
+        };
+        localBatches.push(batch);
+      }
+      if(!Array.isArray(batch.items)) batch.items = [];
+      var stockQty = numberV1(row.stock_qty);
+      var stockWeight = numberV1(row.stock_weight);
+      var soldQty = numberV1(row.sold_qty);
+      var soldWeight = numberV1(row.sold_weight);
+      batch.items.push({
+        id:"cloud_item_" + Math.random().toString(36).slice(2,9),
+        goodsId:String(row.product_id || ""),
+        name:row.product_name || "云端商品",
+        type:"非",
+        pack:"非定装",
+        spec:"",
+        unit:"件",
+        qty:stockQty + soldQty,
+        weight:stockWeight + soldWeight,
+        purchasePrice:0,
+        costPrice:0,
+        salePrice:0,
+        fixedPrice:0,
+        sold:soldQty,
+        soldWeight:soldWeight,
+        cloudInventoryId:row.id || "",
+        cloudDeviceId:row.device_id || "",
+        cloudUpdatedAt:row.cloud_updated_at || ""
+      });
+      existing[key] = true;
+      merged++;
+    });
+    localData.batches = localBatches;
+    localData.savedAt = new Date().toLocaleString("zh-CN", {hour12:false});
+    try{ if(typeof batches !== "undefined") batches = localBatches; }catch(err){}
+    localStorage.setItem(PERSIST_KEY, JSON.stringify(localData));
+    try{ if(typeof renderInventoryStep1 === "function") renderInventoryStep1(); }catch(err){}
+    try{ if(typeof renderCashierAll === "function") renderCashierAll(); }catch(err){}
+    try{ if(typeof renderCashierProducts === "function") renderCashierProducts(); }catch(err){}
+    var statusText = "云端库存：" + cloudRows.length + " 条｜新增本地：" + merged + " 条｜跳过重复：" + skipped + " 条";
+    setCloudInventoryStatus(statusText);
+    console.log("云端库存合并结果:", {cloudTotal:cloudRows.length, merged:merged, skipped:skipped, backupKey:backupKey});
+    return {merged:merged, skipped:skipped, cloudTotal:cloudRows.length, backupKey:backupKey, error:null};
   }
   function setCloudOrdersReadStatus(text){
     var el = document.getElementById("cloudOrdersStatusV1");
@@ -28507,6 +28624,7 @@ body.show-profile-v92 #inventoryView{
   window.mergeCloudOrdersToLocal = mergeCloudOrdersToLocal;
   window.pushInventorySnapshotToCloud = pushInventorySnapshotToCloud;
   window.readCloudInventory = readCloudInventory;
+  window.mergeCloudInventoryToLocal = mergeCloudInventoryToLocal;
   window.readBusinessSnapshot = readBusinessSnapshot;
   window.readLatestBusinessSnapshot = readLatestBusinessSnapshot;
   window.restoreLatestBusinessSnapshotSafely = restoreLatestBusinessSnapshotSafely;
