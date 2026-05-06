@@ -4299,6 +4299,124 @@ body.batch-create-mode #inboundRoot .app{
 .v53-batch-cancel{background:#e5e8e0;color:#263028;}
 .v53-batch-save{background:#2f8e40;color:#fff;}
 
+.merchant-entry-v1{
+  display:none;
+  min-height:100vh;
+  padding:32px 18px;
+  box-sizing:border-box;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+  color:#111827;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;
+}
+.merchant-entry-card-v1{
+  width:min(420px,100%);
+  border:1px solid rgba(148,163,184,.26);
+  border-radius:8px;
+  padding:34px 30px 28px;
+  background:rgba(255,255,255,.9);
+  box-shadow:0 24px 70px rgba(15,23,42,.13);
+  backdrop-filter:blur(18px);
+}
+.merchant-entry-logo-v1{
+  width:58px;
+  height:58px;
+  border-radius:16px;
+  display:grid;
+  place-items:center;
+  margin:0 auto 18px;
+  background:#111827;
+  color:#fff;
+  font-size:22px;
+  font-weight:950;
+  letter-spacing:0;
+}
+.merchant-entry-card-v1 h1{
+  margin:0;
+  text-align:center;
+  font-size:28px;
+  line-height:1.18;
+  letter-spacing:0;
+  color:#0f172a;
+}
+.merchant-entry-card-v1 p{
+  margin:10px 0 24px;
+  text-align:center;
+  color:#64748b;
+  line-height:1.55;
+  font-size:14px;
+}
+.merchant-entry-field-v1{
+  display:block;
+  margin:0 0 14px;
+  color:#475569;
+  font-size:13px;
+  font-weight:800;
+}
+.merchant-entry-field-v1 input{
+  width:100%;
+  margin-top:8px;
+  height:48px;
+  box-sizing:border-box;
+  border:1px solid #d8dee8;
+  border-radius:8px;
+  padding:0 14px;
+  background:#fff;
+  color:#0f172a;
+  font-size:16px;
+  outline:none;
+}
+.merchant-entry-field-v1 input:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 4px rgba(37,99,235,.12);
+}
+.merchant-entry-actions-v1{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin:14px 0 12px;
+}
+.merchant-entry-card-v1 button{
+  height:46px;
+  border:0;
+  border-radius:8px;
+  font-size:15px;
+  font-weight:900;
+  cursor:pointer;
+  letter-spacing:0;
+}
+.merchant-entry-phone-v1{background:#111827;color:#fff;}
+.merchant-entry-wechat-v1{background:#e8f5ed;color:#176a34;}
+.merchant-entry-system-v1{width:100%;background:#2563eb;color:#fff;}
+.merchant-entry-status-v1{
+  min-height:20px;
+  margin-top:14px;
+  text-align:center;
+  color:#64748b;
+  font-size:13px;
+  line-height:1.45;
+}
+body.merchant-entry-locked-v1{overflow:hidden;background:#f8fafc;}
+body.merchant-entry-locked-v1 #merchantEntryV1{display:flex!important;}
+body.merchant-entry-locked-v1 #globalUnifiedNavV41,
+body.merchant-entry-locked-v1 #inboundRoot,
+body.merchant-entry-locked-v1 #cashierRoot,
+body.merchant-entry-locked-v1 #stockRoot,
+body.merchant-entry-locked-v1 #ordersRoot,
+body.merchant-entry-locked-v1 #inventoryStep1Root,
+body.merchant-entry-locked-v1 #ownerStep1Root,
+body.merchant-entry-locked-v1 #reportsStep1Root,
+body.merchant-entry-locked-v1 #configStep1Root,
+body.merchant-entry-locked-v1 #profileCenterRootV92,
+body.merchant-entry-locked-v1 #buyerManagerModalV47,
+body.merchant-entry-locked-v1 #customerPanel{display:none!important;}
+@media (max-width:520px){
+  .merchant-entry-v1{padding:18px 14px}
+  .merchant-entry-card-v1{padding:28px 20px 24px}
+  .merchant-entry-actions-v1{grid-template-columns:1fr}
+}
+
 </style>
 <script src="./storage.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -4358,7 +4476,25 @@ body.batch-create-mode #inboundRoot .app{
 })();
 </script>
 </head>
-<body>
+<body class="merchant-entry-locked-v1">
+
+<section id="merchantEntryV1" class="merchant-entry-v1" aria-label="商户登录入口">
+  <div class="merchant-entry-card-v1">
+    <div class="merchant-entry-logo-v1">仓颉</div>
+    <h1>商户登录</h1>
+    <p>请先登录商户账号，登录成功后进入收银、批次、库存和订单。</p>
+    <label class="merchant-entry-field-v1" for="merchantEntryPhoneV1">
+      手机号登录
+      <input id="merchantEntryPhoneV1" type="tel" inputmode="tel" autocomplete="tel" placeholder="请输入手机号">
+    </label>
+    <div class="merchant-entry-actions-v1">
+      <button type="button" class="merchant-entry-phone-v1" onclick="loginMerchantEntryPhoneV1()">手机号登录</button>
+      <button type="button" class="merchant-entry-wechat-v1" onclick="merchantEntryWechatPlaceholderV1()">微信登录</button>
+    </div>
+    <button type="button" class="merchant-entry-system-v1" onclick="enterMerchantAppV1()">进入系统</button>
+    <div id="merchantEntryStatusV1" class="merchant-entry-status-v1">未登录</div>
+  </div>
+</section>
 
 <nav id="globalUnifiedNavV41">
   <div class="v41-logo">仓頡</div>
@@ -5644,7 +5780,7 @@ function renderCashierCatbar(){
   if(!box) return;
 
   // 右侧竖排栏按“当前可售商品名称首字”显示：
-  // 土豆=土，茶叶=茶，苹果=苹。
+  // 商品快捷码默认取名称首字。
   const products = getCashierProducts ? getCashierProducts(true) : [];
   const letters = [];
   products.forEach(p=>{
@@ -6629,7 +6765,7 @@ function renderCashierCatbar(){
   if(!box) return;
 
   // 右侧竖排栏按“当前可售商品名称首字”显示：
-  // 土豆=土，茶叶=茶，苹果=苹。
+  // 商品快捷码默认取名称首字。
   const products = getCashierProducts ? getCashierProducts(true) : [];
   const letters = [];
   products.forEach(p=>{
@@ -7555,7 +7691,7 @@ function renderCashierCatbar(){
   if(!box) return;
 
   // 右侧竖排栏按“当前可售商品名称首字”显示：
-  // 土豆=土，茶叶=茶，苹果=苹。
+  // 商品快捷码默认取名称首字。
   const products = getCashierProducts ? getCashierProducts(true) : [];
   const letters = [];
   products.forEach(p=>{
@@ -11216,7 +11352,7 @@ function printBuyerV47Bill(){
     </div>
     <div class="v51-batch-edit-body">
       <label>货主 / 来源</label>
-      <input id="v51EditBatchOwner" placeholder="例如：天南 / 张老板">
+      <input id="v51EditBatchOwner" placeholder="请输入货主名称">
       <label>批次号</label>
       <input id="v51EditBatchNo" placeholder="例如：001">
       <label>批次类型</label>
@@ -11243,7 +11379,7 @@ function printBuyerV47Bill(){
     </div>
     <div class="v52-batch-edit-body">
       <label>货主 / 来源</label>
-      <input id="v52EditBatchOwner" placeholder="例如：天南 / 张老板">
+      <input id="v52EditBatchOwner" placeholder="请输入货主名称">
       <label>批次号</label>
       <input id="v52EditBatchNo" placeholder="例如：001">
       <label>批次类型</label>
@@ -11270,7 +11406,7 @@ function printBuyerV47Bill(){
     </div>
     <div class="v53-batch-edit-body">
       <label>货主 / 来源</label>
-      <input id="v53EditBatchOwner" placeholder="例如：天南 / 张老板">
+      <input id="v53EditBatchOwner" placeholder="请输入货主名称">
       <label>批次号</label>
       <input id="v53EditBatchNo" placeholder="例如：001">
       <label>批次类型</label>
@@ -30969,6 +31105,135 @@ body.show-profile-v92 #inventoryView{
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", initCommercialSync);
   else initCommercialSync();
   setTimeout(initCommercialSync, 600);
+})();
+</script>
+
+<script>
+/* ===== 客户测试版入口页：本地模拟登录，不连接数据库 ===== */
+(function(){
+  var LOGIN_KEY = "cangjieMerchantLoginV92";
+  var ACCOUNT_KEY = "cangjieCurrentAccountV94";
+  var DEFAULT_PAGE = "cashier";
+
+  function readJSON(key, fallback){
+    try{
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    }catch(err){
+      return fallback;
+    }
+  }
+  function writeJSON(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(value)); }catch(err){}
+  }
+  function login(){
+    return readJSON(LOGIN_KEY, {}) || {};
+  }
+  function isLoggedIn(){
+    var row = login();
+    return row && row.loggedIn === true && !!(row.phone || row.wechat);
+  }
+  function status(text){
+    var el = document.getElementById("merchantEntryStatusV1");
+    if(el) el.textContent = text || "";
+  }
+  function lockEntry(text){
+    if(document.body) document.body.classList.add("merchant-entry-locked-v1");
+    status(text || "未登录");
+    setTimeout(function(){
+      var input = document.getElementById("merchantEntryPhoneV1");
+      if(input) input.focus();
+    }, 0);
+  }
+  function unlockEntry(text){
+    if(document.body) document.body.classList.remove("merchant-entry-locked-v1");
+    status(text || "已登录");
+  }
+  function ensureDefaultAccount(phone){
+    var account = readJSON(ACCOUNT_KEY, null);
+    if(account && account.authorized !== false) return;
+    writeJSON(ACCOUNT_KEY, {
+      id:"local_merchant",
+      role:"管理员",
+      name:"商户",
+      phone:phone || "",
+      wechat:"",
+      status:"启用",
+      authorized:true
+    });
+  }
+  function showDefaultPage(){
+    var oldShow = window.__merchantEntryOldShowAppPageV1 || window.showAppPage;
+    if(typeof oldShow === "function") oldShow.call(window, DEFAULT_PAGE);
+  }
+
+  window.loginMerchantEntryPhoneV1 = function(){
+    var input = document.getElementById("merchantEntryPhoneV1");
+    var phone = input ? String(input.value || "").trim() : "";
+    if(!phone){
+      status("请输入手机号后再登录");
+      if(input) input.focus();
+      return;
+    }
+    writeJSON(LOGIN_KEY, {
+      loggedIn:true,
+      mode:"phone",
+      phone:phone,
+      wechat:"",
+      time:new Date().toLocaleString("zh-CN", {hour12:false}),
+      localMock:true
+    });
+    ensureDefaultAccount(phone);
+    unlockEntry("手机号已登录");
+    setTimeout(showDefaultPage, 0);
+  };
+
+  window.merchantEntryWechatPlaceholderV1 = function(){
+    status("微信登录即将接入，请先使用手机号登录");
+  };
+
+  window.enterMerchantAppV1 = function(){
+    if(!isLoggedIn()){
+      lockEntry("请先完成手机号登录");
+      return;
+    }
+    unlockEntry("已进入系统");
+    showDefaultPage();
+  };
+
+  function installGuard(){
+    if(window.showAppPage && !window.showAppPage.__merchantEntryGuardV1){
+      window.__merchantEntryOldShowAppPageV1 = window.showAppPage;
+      window.showAppPage = function(page){
+        if(!isLoggedIn()){
+          lockEntry("请先登录后进入系统");
+          return undefined;
+        }
+        unlockEntry("已登录");
+        return window.__merchantEntryOldShowAppPageV1.apply(this, arguments);
+      };
+      window.showAppPage.__merchantEntryGuardV1 = true;
+    }
+  }
+  function boot(){
+    installGuard();
+    var input = document.getElementById("merchantEntryPhoneV1");
+    if(input && !input.__merchantEntryEnterV1){
+      input.addEventListener("keydown", function(ev){
+        if(ev.key === "Enter") window.loginMerchantEntryPhoneV1();
+      });
+      input.__merchantEntryEnterV1 = true;
+    }
+    if(isLoggedIn()){
+      unlockEntry("已登录");
+    }else{
+      lockEntry("未登录");
+    }
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+  setTimeout(boot, 800);
 })();
 </script>
 
