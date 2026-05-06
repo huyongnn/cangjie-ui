@@ -26764,6 +26764,8 @@ body.show-profile-v92 #inventoryView{
 (function(){
   var EMP_KEY = "cangjieEmployeesV94";
   var ACCOUNT_KEY = "cangjieCurrentAccountV94";
+  var OWNER_KEY = "cangjieOwnerAccountV96";
+  var CURRENT_USER_KEY = "currentUser";
   var FILTER_KEY = "cangjieOrderCashierFilterV94";
   var orderFilter = localStorage.getItem(FILTER_KEY) || "all";
   var NO_PERMISSION_TEXT = "当前账号无权限访问该模块，请联系主账号授权。";
@@ -26814,6 +26816,9 @@ body.show-profile-v92 #inventoryView{
   function write(key, value){
     localStorage.setItem(key, JSON.stringify(value));
   }
+  function isAdminAccount(a){
+    return !!(a && !a.blocked && (a.role === "owner" || a.role === "管理员"));
+  }
   function allPermissions(){
     return PERMISSIONS.slice();
   }
@@ -26859,6 +26864,25 @@ body.show-profile-v92 #inventoryView{
     try{ if(typeof getCangjieMerchantProfileV92 === "function") return getCangjieMerchantProfileV92(); }catch(err){}
     return {};
   }
+  function ownerSeed(){
+    var savedOwner = read(OWNER_KEY, null) || {};
+    var savedAccount = read(ACCOUNT_KEY, null) || {};
+    var m = merchant();
+    var oldLogin = read("cangjieMerchantLoginV92", {}) || {};
+    var accountIsOwner = isAdminAccount(savedAccount);
+    return {
+      id:"owner",
+      employee_id:"owner",
+      employee_name:"主账号",
+      role:"owner",
+      name:"主账号",
+      phone:savedOwner.phone || (accountIsOwner ? savedAccount.phone : "") || m.phone || ((oldLogin.loggedIn && oldLogin.mode === "phone") ? oldLogin.phone : "") || "",
+      wechat:savedOwner.wechat || (accountIsOwner ? savedAccount.wechat : "") || ((oldLogin.loggedIn && oldLogin.mode === "wechat") ? oldLogin.wechat : "") || "",
+      status:"启用",
+      permissions:allPermissions(),
+      authorized:true
+    };
+  }
   function employees(){
     var rows = read(EMP_KEY, []);
     return Array.isArray(rows) ? rows.map(normalizeEmployee) : [];
@@ -26867,15 +26891,55 @@ body.show-profile-v92 #inventoryView{
     write(EMP_KEY, (rows || []).map(normalizeEmployee));
   }
   function defaultAdmin(){
-    var m = merchant();
-    var oldLogin = read("cangjieMerchantLoginV92", {});
-    return {id:"owner", employee_id:"owner", employee_name:"主账号", role:"owner", name:"主账号", phone:oldLogin.phone || m.phone || "", wechat:oldLogin.wechat || "", status:"启用", permissions:allPermissions(), authorized:true};
+    return ownerSeed();
   }
   function account(){
     return read(ACCOUNT_KEY, null) || defaultAdmin();
   }
+  function userFromAccount(a){
+    a = a || defaultAdmin();
+    var admin = isAdminAccount(a);
+    return {
+      phone:a.phone || "",
+      employee_id:a.employee_id || a.employeeId || a.id || (admin ? "owner" : ""),
+      employee_name:a.employee_name || a.employeeName || a.name || (admin ? "主账号" : "员工"),
+      role:a.role || (admin ? "owner" : "员工"),
+      permissions:admin ? allPermissions() : normalizePermissions(a.permissions, a.role)
+    };
+  }
+  function persistCurrentUser(a){
+    var user = userFromAccount(a || account());
+    write(CURRENT_USER_KEY, user);
+    window.currentUser = user;
+    return user;
+  }
+  function currentUser(){
+    var a = account();
+    var saved = read(CURRENT_USER_KEY, null);
+    if(saved && String(saved.phone || "") === String(a.phone || "") && String(saved.employee_id || "") === String(a.employee_id || a.employeeId || a.id || "")){
+      window.currentUser = saved;
+      return saved;
+    }
+    return persistCurrentUser(a);
+  }
   function setAccount(next){
-    write(ACCOUNT_KEY, next || defaultAdmin());
+    next = next || defaultAdmin();
+    if(isAdminAccount(next)){
+      write(OWNER_KEY, {
+        id:"owner",
+        employee_id:"owner",
+        employee_name:"主账号",
+        role:"owner",
+        name:"主账号",
+        phone:next.phone || ownerSeed().phone || "",
+        wechat:next.wechat || ownerSeed().wechat || "",
+        status:"启用",
+        permissions:allPermissions(),
+        authorized:true
+      });
+    }
+    write(ACCOUNT_KEY, next);
+    persistCurrentUser(next);
     renderAccount();
   }
   function isBlocked(){
@@ -26883,7 +26947,7 @@ body.show-profile-v92 #inventoryView{
   }
   function isAdmin(){
     var a = account();
-    return !a.blocked && (a.role === "owner" || a.role === "管理员");
+    return isAdminAccount(a);
   }
   function accountEmployeeId(a){
     a = a || account();
@@ -26989,19 +27053,20 @@ body.show-profile-v92 #inventoryView{
   function stampOrder(order){
     var a = account();
     if(!order || a.blocked) return order;
-    var employeeId = accountEmployeeId(a);
-    var employeeName = a.employee_name || a.name || (isAdmin() ? "主账号" : "员工");
+    var user = currentUser();
+    var employeeId = user.employee_id || accountEmployeeId(a);
+    var employeeName = user.employee_name || a.employee_name || a.name || (isAdmin() ? "主账号" : "员工");
     order.employee_id = order.employee_id || employeeId;
     order.employeeId = order.employeeId || employeeId;
     order.employee_name = order.employee_name || employeeName;
     order.employeeName = order.employeeName || employeeName;
-    order.employeeRole = order.employeeRole || (isAdmin() ? "管理员" : a.role);
+    order.employeeRole = order.employeeRole || (isAdmin() ? "管理员" : (user.role || a.role));
     order.userId = order.userId || employeeId;
-    order.employee_phone = order.employee_phone || a.phone || "";
-    order.employeePhone = order.employeePhone || a.phone || "";
+    order.employee_phone = order.employee_phone || user.phone || a.phone || "";
+    order.employeePhone = order.employeePhone || user.phone || a.phone || "";
     order.cashierName = employeeName;
-    order.cashierPhone = a.phone || "";
-    order.cashierRole = isAdmin() ? "管理员" : a.role;
+    order.cashierPhone = user.phone || a.phone || "";
+    order.cashierRole = isAdmin() ? "管理员" : (user.role || a.role);
     return order;
   }
   function stats(row){
@@ -27042,7 +27107,93 @@ body.show-profile-v92 #inventoryView{
       if(profile) profile.style.setProperty("display", "block", "important");
       document.body.classList.add("show-profile-v92");
     }
+    renderPhoneLoginCard();
   }
+
+  function ensurePhoneLoginCard(){
+    var root = document.getElementById("profileCenterRootV92");
+    var grid = root && root.querySelector(".profile-v92-grid");
+    if(!grid || document.getElementById("phoneSwitchCardV96")) return;
+    var card = document.createElement("div");
+    card.id = "phoneSwitchCardV96";
+    card.className = "profile-v92-card";
+    card.innerHTML = '<h2>手机号登录 / 切换账号</h2><p>输入主账号手机号或已授权员工手机号，系统会按身份加载对应权限。</p>'
+      + '<div class="profile-v92-form"><div class="profile-v92-field"><label>手机号</label><input id="phoneSwitchInputV96" inputmode="tel" placeholder="请输入主账号或员工手机号"></div><button id="phoneSwitchLoginBtnV96" class="profile-v92-btn secondary" type="button">登录 / 切换账号</button></div>'
+      + '<div id="currentUserCardV96" class="profile-v92-info" style="margin-top:14px"></div>';
+    grid.insertBefore(card, grid.children[1] || null);
+    var btn = document.getElementById("phoneSwitchLoginBtnV96");
+    if(btn) btn.addEventListener("click", function(){ window.loginByPhoneV96(); });
+    var input = document.getElementById("phoneSwitchInputV96");
+    if(input) input.addEventListener("keydown", function(ev){
+      if(ev.key === "Enter"){
+        ev.preventDefault();
+        window.loginByPhoneV96();
+      }
+    });
+  }
+  function renderPhoneLoginCard(){
+    ensurePhoneLoginCard();
+    var card = document.getElementById("currentUserCardV96");
+    var input = document.getElementById("phoneSwitchInputV96");
+    var a = account();
+    var user = currentUser();
+    if(input && !input.value) input.value = user.phone || a.phone || "";
+    if(card){
+      if(a.blocked){
+        card.innerHTML = '<div class="profile-v92-info-row"><span>当前登录身份</span><b>未授权手机号</b></div>'
+          + '<div class="profile-v92-info-row"><span>手机号</span><b>'+e(user.phone || a.phone || "-")+'</b></div>'
+          + '<div class="profile-v92-info-row"><span>状态</span><b>该手机号尚未被主账号授权</b></div>';
+      }else{
+        card.innerHTML = '<div class="profile-v92-info-row"><span>当前登录身份</span><b>'+e(isAdminAccount(a) ? "主账号" : (user.role || "员工"))+'</b></div>'
+          + '<div class="profile-v92-info-row"><span>姓名</span><b>'+e(user.employee_name || "-")+'</b></div>'
+          + '<div class="profile-v92-info-row"><span>手机号</span><b>'+e(user.phone || "-")+'</b></div>'
+          + '<div class="profile-v92-info-row"><span>员工ID</span><b>'+e(user.employee_id || "-")+'</b></div>'
+          + '<div class="profile-v92-info-row"><span>权限</span><b>'+e((user.permissions || []).join("、") || "-")+'</b></div>';
+      }
+    }
+  }
+  function loginByPhone(phone){
+    phone = String(phone || "").trim();
+    if(!phone){
+      alert("请先填写手机号。");
+      return false;
+    }
+    var admin = defaultAdmin();
+    if(admin.phone && phone === admin.phone){
+      setAccount({id:"owner", employee_id:"owner", employee_name:"主账号", role:"owner", name:"主账号", phone:phone, wechat:admin.wechat || "", status:"启用", permissions:allPermissions(), authorized:true});
+      localStorage.setItem("cangjieMerchantLoginV92", JSON.stringify({loggedIn:true, mode:"phone", phone:phone, wechat:admin.wechat || "", time:new Date().toLocaleString("zh-CN",{hour12:false})}));
+      renderPhoneLoginCard();
+      renderEmployees();
+      applyNavPermissions();
+      injectOrderFilter();
+      if(typeof renderProfileV92 === "function") try{ renderProfileV92(); }catch(err){}
+      if(typeof toast === "function") toast("主账号已登录");
+      return true;
+    }
+    var emp = findEmployee(phone, "");
+    if(emp && emp.status === "启用"){
+      setAccount({id:emp.employee_id, employee_id:emp.employee_id, employee_name:emp.employee_name, role:emp.role, name:emp.employee_name, phone:emp.phone, wechat:emp.wechat || "", status:emp.status, permissions:emp.permissions, authorized:true});
+      localStorage.setItem("cangjieMerchantLoginV92", JSON.stringify({loggedIn:true, mode:"phone", phone:emp.phone, wechat:emp.wechat || "", time:new Date().toLocaleString("zh-CN",{hour12:false})}));
+      renderPhoneLoginCard();
+      renderEmployees();
+      applyNavPermissions();
+      injectOrderFilter();
+      if(typeof renderProfileV92 === "function") try{ renderProfileV92(); }catch(err){}
+      if(typeof toast === "function") toast("员工已登录");
+      return true;
+    }
+    setAccount({id:"blocked_" + Date.now(), employee_id:"", employee_name:"未授权账号", role:"未授权", name:"未授权账号", phone:phone, wechat:"", status:"禁用", permissions:[], blocked:true, authorized:false});
+    localStorage.setItem("cangjieMerchantLoginV92", JSON.stringify({loggedIn:false, mode:"phone", phone:phone, blocked:true}));
+    renderPhoneLoginCard();
+    renderEmployees();
+    applyNavPermissions();
+    alert("该手机号尚未被主账号授权，请联系主账号添加员工权限。");
+    return false;
+  }
+  window.loginByPhoneV96 = function(){
+    var phone = (document.getElementById("phoneSwitchInputV96")?.value || document.getElementById("profilePhoneV92")?.value || "").trim();
+    return loginByPhone(phone);
+  };
 
   function ensureEmployeeCard(){
     var root = document.getElementById("profileCenterRootV92");
@@ -27065,6 +27216,7 @@ body.show-profile-v92 #inventoryView{
     grid.appendChild(card);
   }
   function renderEmployees(){
+    renderPhoneLoginCard();
     ensureEmployeeCard();
     var warning = document.getElementById("employeeAuthWarningV94");
     if(warning) warning.innerHTML = isBlocked() ? '<div class="employee-v93-auth-warning">该账号尚未获得商家授权，请联系管理员开通权限。</div>' : "";
@@ -27151,6 +27303,9 @@ body.show-profile-v92 #inventoryView{
     var mode = document.getElementById("profileWechatTabV92")?.classList.contains("active") ? "wechat" : "phone";
     var phone = (document.getElementById("profilePhoneV92")?.value || "").trim();
     var wechat = (document.getElementById("profileWechatV92")?.value || "").trim();
+    if(mode === "phone"){
+      return loginByPhone(phone);
+    }
     var admin = defaultAdmin();
     var adminLogin = (phone && phone === admin.phone) || (wechat && wechat === admin.wechat);
     if(adminLogin || (!phone && !wechat)){
@@ -27328,6 +27483,7 @@ body.show-profile-v92 #inventoryView{
   window.renderEmployeesV94 = renderEmployees;
   window.getEmployeesV94 = employees;
   window.saveEmployeesV94 = saveEmployees;
+  window.getCurrentUserV96 = currentUser;
   window.cangjieCurrentAccountV94 = account;
   window.cangjieCanViewAllOrdersV94 = canViewAllOrders;
   window.cangjieOrderBelongsToCurrentAccountV94 = function(order){ return orderBelongsToAccount(order, account()); };
