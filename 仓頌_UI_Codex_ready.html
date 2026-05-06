@@ -27403,6 +27403,16 @@ body.show-profile-v92 #inventoryView{
       if(typeof toast === "function") toast("员工已登录");
       return true;
     }
+    if(typeof window.createCustomerTestLoginV1 === "function"){
+      window.createCustomerTestLoginV1(phone);
+      renderPhoneLoginCard();
+      renderEmployees();
+      applyNavPermissions();
+      injectOrderFilter();
+      if(typeof renderProfileV92 === "function") try{ renderProfileV92(); }catch(err){}
+      if(typeof toast === "function") toast("客户测试账号已登录");
+      return true;
+    }
     setAccount({id:"blocked_" + Date.now(), employee_id:"", employee_name:"未授权账号", role:"未授权", name:"未授权账号", phone:phone, wechat:"", status:"禁用", permissions:[], blocked:true, authorized:false});
     localStorage.setItem("cangjieMerchantLoginV92", JSON.stringify({loggedIn:false, mode:"phone", phone:phone, blocked:true}));
     renderPhoneLoginCard();
@@ -28244,10 +28254,18 @@ body.show-profile-v92 #inventoryView{
       || readJson("cangjieCurrentAccountV93", null)
       || {id:"owner", employee_id:"owner", employee_name:"主账号", role:"owner", name:"主账号", phone:"", authorized:true};
   }
+  function isDeveloperMode(){
+    try{
+      return localStorage.getItem("cangjieDeveloperModeV1") === "true"
+        || sessionStorage.getItem("cangjieDeveloperModeV1") === "true";
+    }catch(err){
+      return false;
+    }
+  }
   function canShowAdminSyncTools(){
     var account = currentAccount() || {};
     var role = String(account.role || "").trim();
-    return !account.blocked && (role === "owner" || role === "管理员" || role === "admin");
+    return isDeveloperMode() && !account.blocked && (role === "owner" || role === "管理员" || role === "admin");
   }
   function ensureDeviceId(){
     var id = "";
@@ -30954,6 +30972,9 @@ body.show-profile-v92 #inventoryView{
     renderRlsFreezePanel();
     renderRlsPolicyDraftPanel();
     renderRlsEnableChecklistPanel();
+    var panel = document.getElementById("commercialSyncPanelV1");
+    if(panel) panel.style.display = canShowAdminSyncTools() ? "" : "none";
+    if(!canShowAdminSyncTools()) return;
     var box = document.getElementById("commercialSyncGridV1");
     if(!box) return;
     var m = meta();
@@ -31129,6 +31150,15 @@ body.show-profile-v92 #inventoryView{
   function login(){
     return readJSON(LOGIN_KEY, {}) || {};
   }
+  function stableId(value){
+    var text = String(value || "customer");
+    var h = 0;
+    for(var i=0;i<text.length;i++){
+      h = ((h << 5) - h) + text.charCodeAt(i);
+      h |= 0;
+    }
+    return Math.abs(h).toString(36).padStart(6, "0");
+  }
   function isLoggedIn(){
     var row = login();
     return row && row.loggedIn === true && !!(row.phone || row.wechat);
@@ -31150,18 +31180,69 @@ body.show-profile-v92 #inventoryView{
     status(text || "已登录");
   }
   function ensureDefaultAccount(phone){
-    var account = readJSON(ACCOUNT_KEY, null);
-    if(account && account.authorized !== false) return;
     writeJSON(ACCOUNT_KEY, {
-      id:"local_merchant",
-      role:"管理员",
-      name:"商户",
+      id:"owner",
+      employee_id:"owner",
+      employee_name:"主账号",
+      role:"owner",
+      name:"主账号",
       phone:phone || "",
+      wechat:"",
+      status:"启用",
+      permissions:["收银","批次","库存","订单","货主","买家管理","报表","配置","个人中心"],
+      authorized:true
+    });
+  }
+  window.createCustomerTestLoginV1 = function(phone){
+    phone = String(phone || "").trim();
+    var merchantId = "mch_test_" + stableId(phone);
+    var time = new Date().toLocaleString("zh-CN", {hour12:false});
+    writeJSON(LOGIN_KEY, {
+      loggedIn:true,
+      mode:"phone",
+      phone:phone,
+      wechat:"",
+      time:time,
+      localMock:true,
+      customerTest:true,
+      merchantId:merchantId
+    });
+    ensureDefaultAccount(phone);
+    writeJSON("cangjieCurrentAccountV93", {
+      id:"owner",
+      role:"owner",
+      name:"主账号",
+      phone:phone,
       wechat:"",
       status:"启用",
       authorized:true
     });
-  }
+    writeJSON("cangjieAdminAccountV93", {
+      id:"owner",
+      role:"owner",
+      name:"主账号",
+      phone:phone,
+      wechat:"",
+      status:"启用"
+    });
+    var profile = readJSON("cangjieMerchantProfileV92", {}) || {};
+    writeJSON("cangjieMerchantProfileV92", {
+      title:profile.title || "仓颉",
+      name:profile.name || "客户测试商户",
+      address:profile.address || "客户测试地址",
+      phone:profile.phone || phone
+    });
+    var meta = readJSON("cangjieCommercialSyncV1", {}) || {};
+    meta.merchantId = merchantId;
+    meta.userId = "owner";
+    meta.role = "owner";
+    meta.currentPhone = phone;
+    meta.dataUpdatedAt = new Date().toISOString();
+    meta.offlineAvailable = true;
+    meta.customerTestLogin = true;
+    writeJSON("cangjieCommercialSyncV1", meta);
+    return {merchantId:merchantId, phone:phone};
+  };
   function showDefaultPage(){
     var oldShow = window.__merchantEntryOldShowAppPageV1 || window.showAppPage;
     if(typeof oldShow === "function") oldShow.call(window, DEFAULT_PAGE);
@@ -31175,30 +31256,8 @@ body.show-profile-v92 #inventoryView{
       if(input) input.focus();
       return;
     }
-    if(typeof window.loginByPhoneV96 === "function"){
-      if(typeof window.renderProfileV92 === "function") try{ window.renderProfileV92(); }catch(err){}
-      var profilePhone = document.getElementById("profilePhoneV92");
-      var switchPhone = document.getElementById("phoneSwitchInputV96");
-      if(profilePhone) profilePhone.value = phone;
-      if(switchPhone) switchPhone.value = phone;
-      var ok = await window.loginByPhoneV96();
-      if(ok){
-        unlockEntry("手机号已登录");
-        setTimeout(showDefaultPage, 0);
-      }else{
-        lockEntry("手机号未授权，请在个人中心或员工权限中确认");
-      }
-      return;
-    }
-    writeJSON(LOGIN_KEY, {
-      loggedIn:true,
-      mode:"phone",
-      phone:phone,
-      wechat:"",
-      time:new Date().toLocaleString("zh-CN", {hour12:false}),
-      localMock:true
-    });
-    ensureDefaultAccount(phone);
+    window.createCustomerTestLoginV1(phone);
+    if(typeof window.renderProfileV92 === "function") try{ window.renderProfileV92(); }catch(err){}
     unlockEntry("手机号已登录");
     setTimeout(showDefaultPage, 0);
   };
