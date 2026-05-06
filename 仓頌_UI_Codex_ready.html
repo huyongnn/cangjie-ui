@@ -29238,6 +29238,44 @@ body.show-profile-v92 #inventoryView{
     var sql = document.getElementById("rlsPolicyDraftSqlV1");
     if(sql) sql.textContent = rlsPolicyDraftSql();
   }
+  function rlsEnableChecklistItems(){
+    return [
+      "已备份当前 Supabase 数据",
+      "orders 策略已确认",
+      "inventory 策略已确认",
+      "employees 策略已确认",
+      "cloud_snapshots 策略已确认",
+      "回滚 SQL 已准备",
+      "测试账号已准备",
+      "开启后测试读取/写入",
+      "失败时立即执行回滚"
+    ];
+  }
+  function ensureRlsEnableChecklistPanel(){
+    var root = document.getElementById("profileCenterRootV92");
+    var grid = root && root.querySelector(".profile-v92-grid");
+    if(!grid || document.getElementById("rlsEnableChecklistPanelV1")) return;
+    var card = document.createElement("div");
+    card.id = "rlsEnableChecklistPanelV1";
+    card.className = "profile-v92-card commercial-sync-v1-card";
+    card.innerHTML = '<div class="sync-console-v1-head"><div><h2>RLS 开启执行清单</h2><p>正式开启前逐项确认；本清单只读展示，不执行 SQL、不修改数据库。</p></div><span class="commercial-sync-v1-status">未开启</span></div>'
+      + '<div class="commercial-sync-v1-note">当前阶段仅用于上线前人工确认。禁止在本页面自动开启 RLS；开启前必须完成备份、策略复核、测试账号和回滚预案。</div>'
+      + '<div id="rlsEnableChecklistBodyV1" class="commercial-sync-v1-grid" style="margin-top:12px"></div>';
+    var after = document.getElementById("rlsPolicyDraftPanelV1");
+    if(after && after.parentNode === grid) grid.insertBefore(card, after.nextSibling);
+    else grid.appendChild(card);
+  }
+  function renderRlsEnableChecklistPanel(){
+    ensureRlsEnableChecklistPanel();
+    var panel = document.getElementById("rlsEnableChecklistPanelV1");
+    if(panel) panel.style.display = canShowAdminSyncTools() ? "" : "none";
+    if(!canShowAdminSyncTools()) return;
+    var body = document.getElementById("rlsEnableChecklistBodyV1");
+    if(!body) return;
+    body.innerHTML = rlsEnableChecklistItems().map(function(item, index){
+      return '<div class="commercial-sync-v1-item"><span>'+e("确认项 " + (index + 1))+'</span><b>'+e(item)+'</b></div>';
+    }).join("");
+  }
   function setSyncConsoleGlobalStatus(text){
     var value = text || "未检查";
     var el = document.getElementById("syncConsoleStatusV1");
@@ -30536,6 +30574,7 @@ body.show-profile-v92 #inventoryView{
     renderSyncConsolePanel();
     renderRlsPreflightPanel();
     renderRlsPolicyDraftPanel();
+    renderRlsEnableChecklistPanel();
     var box = document.getElementById("commercialSyncGridV1");
     if(!box) return;
     var m = meta();
