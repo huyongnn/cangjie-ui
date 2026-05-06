@@ -10880,16 +10880,19 @@ function buyerV47IdOfOrder(o){
 function buyerV47OrdersFor(id){
   const buyer = (cashierCustomers || []).find(c=>c.id === id);
   if(!buyer) return [];
-  return (finalOrders || []).filter(o => o.customerId === buyer.id || o.customerName === buyer.name)
+  const sourceOrders = typeof window.cangjieFilterOrdersForCurrentAccountV94 === "function" ? window.cangjieFilterOrdersForCurrentAccountV94(finalOrders || []) : (finalOrders || []);
+  return sourceOrders.filter(o => o.customerId === buyer.id || o.customerName === buyer.name)
     .sort((a,b)=>String(b.time || "").localeCompare(String(a.time || "")));
 }
 
 function buyerV47PaymentsFor(id){
   const buyer = (cashierCustomers || []).find(c=>c.id === id);
   if(!buyer) return [];
-  const p1 = Array.isArray(buyer.payments) ? buyer.payments : [];
+  const canViewAll = typeof window.cangjieCanViewAllOrdersV94 === "function" ? window.cangjieCanViewAllOrdersV94() : true;
+  const p1 = canViewAll && Array.isArray(buyer.payments) ? buyer.payments : [];
   const p2 = [];
-  (finalOrders || []).forEach(o=>{
+  const sourceOrders = typeof window.cangjieFilterOrdersForCurrentAccountV94 === "function" ? window.cangjieFilterOrdersForCurrentAccountV94(finalOrders || []) : (finalOrders || []);
+  sourceOrders.forEach(o=>{
     if(o.customerId === buyer.id || o.customerName === buyer.name){
       (o.payments || []).forEach(p=>p2.push({...p, orderNo:o.orderNo || o.billNo || ""}));
     }
@@ -15056,7 +15059,9 @@ body.show-inbound #inboundRoot button{
   window.buyerV47OrdersFor = function(id){
     var ids = familyIdsStep1(id);
     var family = ids.map(buyerByIdStep1).filter(Boolean);
-    var rows = (typeof finalOrders !== "undefined" && Array.isArray(finalOrders) ? finalOrders : []).filter(function(o){
+    var sourceOrders = (typeof finalOrders !== "undefined" && Array.isArray(finalOrders) ? finalOrders : []);
+    if(typeof window.cangjieFilterOrdersForCurrentAccountV94 === "function") sourceOrders = window.cangjieFilterOrdersForCurrentAccountV94(sourceOrders);
+    var rows = sourceOrders.filter(function(o){
       return family.some(function(b){ return buyerMatchesOrderStep1(b, o); });
     });
     if(!rows.length && baseBuyerOrdersForStep1) rows = baseBuyerOrdersForStep1(id) || [];
@@ -15068,13 +15073,18 @@ body.show-inbound #inboundRoot button{
     var ids = familyIdsStep1(id);
     var family = ids.map(buyerByIdStep1).filter(Boolean);
     var direct = [];
-    family.forEach(function(b){
-      (Array.isArray(b.payments) ? b.payments : []).forEach(function(p){
-        direct.push(Object.assign({buyerName:b.name}, p));
+    var canViewAll = typeof window.cangjieCanViewAllOrdersV94 === "function" ? window.cangjieCanViewAllOrdersV94() : true;
+    if(canViewAll){
+      family.forEach(function(b){
+        (Array.isArray(b.payments) ? b.payments : []).forEach(function(p){
+          direct.push(Object.assign({buyerName:b.name}, p));
+        });
       });
-    });
+    }
     var fromOrders = [];
-    (typeof finalOrders !== "undefined" && Array.isArray(finalOrders) ? finalOrders : []).forEach(function(o){
+    var sourceOrders = (typeof finalOrders !== "undefined" && Array.isArray(finalOrders) ? finalOrders : []);
+    if(typeof window.cangjieFilterOrdersForCurrentAccountV94 === "function") sourceOrders = window.cangjieFilterOrdersForCurrentAccountV94(sourceOrders);
+    sourceOrders.forEach(function(o){
       if(family.some(function(b){ return buyerMatchesOrderStep1(b, o); })){
         (o.payments || []).forEach(function(p){
           fromOrders.push(Object.assign({buyerName:o.customerName || "", orderNo:o.orderNo || o.billNo || ""}, p));
@@ -16512,7 +16522,11 @@ body.show-inbound #inboundRoot button{
   function eReportStep1(v){ return typeof esc === "function" ? esc(v) : String(v ?? "").replace(/[&<>"']/g, function(m){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]; }); }
   function mReportStep1(v){ return typeof money === "function" ? money(v) : nReportStep1(v).toFixed(2); }
   function batchesReportStep1(){ return (typeof batches !== "undefined" && Array.isArray(batches)) ? batches : []; }
-  function ordersReportStep1(){ return (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders : []; }
+  function ordersReportStep1(){
+    var rows = (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders : [];
+    if(typeof window.cangjieFilterOrdersForCurrentAccountV94 === "function") return window.cangjieFilterOrdersForCurrentAccountV94(rows);
+    return rows;
+  }
   function itemsReportStep1(b){ return Array.isArray(b && b.items) ? b.items : []; }
   function batchNoReportStep1(b){ return String((b && (b.no || b.batchNo)) || ""); }
   function isSelfBatchReportStep1(b){ return String((b && (b.tag || b.type)) || "自营") !== "代卖"; }
@@ -16617,7 +16631,7 @@ body.show-inbound #inboundRoot button{
     document.head.appendChild(style);
     var root = document.createElement("div");
     root.id = "reportsStep1Root";
-    root.innerHTML = '<header class="reports-step1-top"><div><h1>报表</h1><p>区分自营利润和代卖货主结算，连接批次、订单和费用。</p></div><div class="reports-step1-filters"><input id="reportsStep1Start" type="date"><span>至</span><input id="reportsStep1End" type="date"><button type="button" onclick="renderReportsStep1()">查询</button></div></header><div class="reports-step1-tabs"><button id="reportsSelfTabStep1" type="button" onclick="setReportsStep1Tab(\'self\')">自营利润</button><button id="reportsConsignTabStep1" type="button" onclick="setReportsStep1Tab(\'consign\')">代卖结算</button></div><section class="reports-step1-summary" id="reportsStep1Summary"></section><section class="reports-step1-section"><h2 id="reportsStep1TableTitle">自营批次利润汇总</h2><div id="reportsStep1Table"></div></section>';
+    root.innerHTML = '<header class="reports-step1-top"><div><h1>报表</h1><p>区分自营利润和代卖货主结算，连接批次、订单和费用。</p></div><div class="reports-step1-filters"><input id="reportsStep1Start" type="date"><span>至</span><input id="reportsStep1End" type="date"><button type="button" onclick="renderReportsStep1()">查询</button></div></header><div class="reports-step1-tabs"><button id="reportsSelfTabStep1" type="button" onclick="setReportsStep1Tab(\'self\')">自营利润</button><button id="reportsConsignTabStep1" type="button" onclick="setReportsStep1Tab(\'consign\')">代卖结算</button><button id="reportsEmployeeTabStep1" type="button" onclick="setReportsStep1Tab(\'employee\')">员工销售汇总</button></div><section class="reports-step1-summary" id="reportsStep1Summary"></section><section class="reports-step1-section"><h2 id="reportsStep1TableTitle">自营批次利润汇总</h2><div id="reportsStep1Table"></div></section>';
     document.body.appendChild(root);
     document.getElementById("reportsStep1Start").value = defaultMonthStartReportStep1();
     document.getElementById("reportsStep1End").value = defaultMonthEndReportStep1();
@@ -16625,7 +16639,7 @@ body.show-inbound #inboundRoot button{
 
   var reportsTabStep1 = "self";
   window.setReportsStep1Tab = function(tab){
-    reportsTabStep1 = tab === "consign" ? "consign" : "self";
+    reportsTabStep1 = tab === "consign" ? "consign" : (tab === "employee" ? "employee" : "self");
     renderReportsStep1();
   };
 
@@ -16635,6 +16649,27 @@ body.show-inbound #inboundRoot button{
     var end = document.getElementById("reportsStep1End").value || "";
     document.getElementById("reportsSelfTabStep1").classList.toggle("active", reportsTabStep1 === "self");
     document.getElementById("reportsConsignTabStep1").classList.toggle("active", reportsTabStep1 === "consign");
+    var employeeTab = document.getElementById("reportsEmployeeTabStep1");
+    if(employeeTab) employeeTab.classList.toggle("active", reportsTabStep1 === "employee");
+    if(reportsTabStep1 === "employee"){
+      var reportOrders = ordersReportStep1().filter(function(order){
+        if(order && (order.voided || order.status === "已作废" || order.displayStatus === "已作废")) return false;
+        return inDateRangeReportStep1(order.time || order.createdAt || order.editedAt || "", start, end);
+      });
+      var summaryRows = typeof window.cangjieEmployeeSalesSummaryV94 === "function" ? window.cangjieEmployeeSalesSummaryV94(reportOrders) : [];
+      var salesTotal = summaryRows.reduce(function(s,r){ return s + nReportStep1(r.salesAmount); }, 0);
+      var paidTotal = summaryRows.reduce(function(s,r){ return s + nReportStep1(r.paidAmount); }, 0);
+      var debtTotal = summaryRows.reduce(function(s,r){ return s + nReportStep1(r.debtAmount); }, 0);
+      var summary = document.getElementById("reportsStep1Summary");
+      var table = document.getElementById("reportsStep1Table");
+      var title = document.getElementById("reportsStep1TableTitle");
+      title.textContent = "员工销售汇总";
+      summary.innerHTML = '<div class="reports-step1-card"><span>员工数</span><b>'+summaryRows.length+'</b></div><div class="reports-step1-card"><span>销售金额</span><b>'+mReportStep1(salesTotal)+'</b></div><div class="reports-step1-card"><span>收款金额</span><b>'+mReportStep1(paidTotal)+'</b></div><div class="reports-step1-card"><span>欠款金额</span><b>'+mReportStep1(debtTotal)+'</b></div>';
+      table.innerHTML = summaryRows.length ? '<div class="reports-step1-table-wrap"><table class="reports-step1-table"><thead><tr><th>员工姓名</th><th>手机号</th><th>订单数量</th><th>销售金额</th><th>收款金额</th><th>欠款金额</th></tr></thead><tbody>' + summaryRows.map(function(r){
+        return '<tr><td>'+eReportStep1(r.employee_name)+'</td><td>'+eReportStep1(r.phone || "-")+'</td><td>'+nReportStep1(r.orderCount)+'</td><td>'+mReportStep1(r.salesAmount)+'</td><td>'+mReportStep1(r.paidAmount)+'</td><td>'+mReportStep1(r.debtAmount)+'</td></tr>';
+      }).join("") + '</tbody></table></div>' : '<div class="reports-step1-empty">当前日期内暂无员工销售记录。</div>';
+      return;
+    }
     var rows = batchesReportStep1().filter(function(b){ return b && b.confirmed; }).map(function(b){
       var sales = salesAmountReportStep1(b, start, end);
       var reportDate = reportDateForBatchStep1(b, sales);
@@ -16646,6 +16681,8 @@ body.show-inbound #inboundRoot button{
       return {batch:b, sales:sales, reportDate:reportDate, inRange:inRange, purchase:purchase, baseFee:baseFee, principal:principal, feeEffect:feeEffect, settlement:sales.amount + feeEffect, profit:sales.amount - principal};
     }).filter(function(r){
       if(!r.inRange) return false;
+      var canViewAllReport = typeof window.cangjieCanViewAllOrdersV94 === "function" ? window.cangjieCanViewAllOrdersV94() : true;
+      if(!canViewAllReport && r.sales.amount <= 0) return false;
       if(reportsTabStep1 === "self") return isSelfBatchReportStep1(r.batch) && isSoldDoneReportStep1(r.batch);
       return !isSelfBatchReportStep1(r.batch) && isSoldDoneReportStep1(r.batch);
     });
@@ -26731,6 +26768,7 @@ body.show-profile-v92 #inventoryView{
   var orderFilter = localStorage.getItem(FILTER_KEY) || "all";
   var NO_PERMISSION_TEXT = "当前账号无权限访问该模块，请联系主账号授权。";
   var PERMISSIONS = ["收银","批次","库存","订单","货主","买家管理","报表","配置","个人中心"];
+  var SPECIAL_PERMISSIONS = ["查看全部订单"];
   var PAGE_PERMISSIONS = {
     cashier:"收银",
     inbound:"批次",
@@ -26789,7 +26827,7 @@ body.show-profile-v92 #inventoryView{
   }
   function normalizePermissions(perms, role){
     var list = Array.isArray(perms) ? perms : [];
-    list = list.filter(function(item){ return PERMISSIONS.indexOf(item) >= 0; });
+    list = list.filter(function(item){ return PERMISSIONS.indexOf(item) >= 0 || SPECIAL_PERMISSIONS.indexOf(item) >= 0; });
     return list.length ? Array.from(new Set(list)) : defaultPermissions(role);
   }
   function normalizeEmployee(row){
@@ -26812,7 +26850,7 @@ body.show-profile-v92 #inventoryView{
   function permissionChecksHtml(selected){
     selected = Array.isArray(selected) ? selected : allPermissions();
     return '<div class="employee-v93-permissions"><b>权限项预留</b><div class="employee-v93-permission-grid">'
-      + PERMISSIONS.map(function(item){
+      + PERMISSIONS.concat(SPECIAL_PERMISSIONS).map(function(item){
         return '<label><input type="checkbox" class="employeePermissionV94" value="'+e(item)+'" '+(selected.indexOf(item) >= 0 ? "checked" : "")+'> '+e(item)+'</label>';
       }).join("")
       + '</div></div>';
@@ -26864,6 +26902,10 @@ body.show-profile-v92 #inventoryView{
   function canManageEmployees(){
     var a = account();
     return !a.blocked && (isAdmin() || hasPermission("配置", a));
+  }
+  function canViewAllOrders(a){
+    a = a || account();
+    return isAdmin() || hasPermission("查看全部订单", a);
   }
   function pagePermission(page, label){
     page = String(page || "");
@@ -26929,6 +26971,20 @@ body.show-profile-v92 #inventoryView{
     var role = order && (order.employeeRole || order.cashierRole || "");
     if(order && role && role !== "管理员" && role !== "owner") return "emp:" + (order.employee_id || order.employeeId || order.cashierPhone || order.cashierName || "");
     return "admin";
+  }
+  function orderBelongsToAccount(order, a){
+    a = a || account();
+    if(canViewAllOrders(a)) return true;
+    var employeeId = accountEmployeeId(a);
+    var sameId = String(order && (order.employee_id || order.employeeId || order.userId || "")) === String(employeeId || "");
+    var samePhone = String(order && (order.employee_phone || order.employeePhone || order.cashierPhone || "")) === String(a.phone || "");
+    return sameId || samePhone;
+  }
+  function filterOrdersForAccount(rows, a){
+    rows = Array.isArray(rows) ? rows : [];
+    a = a || account();
+    if(canViewAllOrders(a)) return rows;
+    return rows.filter(function(order){ return orderBelongsToAccount(order, a); });
   }
   function stampOrder(order){
     var a = account();
@@ -27154,12 +27210,8 @@ body.show-profile-v92 #inventoryView{
     window.allOrderRecords = function(){
       var rows = oldAllOrders.apply(this, arguments) || [];
       var a = account();
-      if(!isAdmin()){
-        return rows.filter(function(order){
-          var sameId = String(order.employee_id || order.employeeId || "") === String(accountEmployeeId(a));
-          var samePhone = String(order.cashierPhone || "") === String(a.phone || "");
-          return sameId || samePhone;
-        });
+      if(!canViewAllOrders(a)){
+        return filterOrdersForAccount(rows, a);
       }
       if(orderFilter && orderFilter !== "all"){
         return rows.filter(function(order){ return orderKey(order) === orderFilter; });
@@ -27276,6 +27328,44 @@ body.show-profile-v92 #inventoryView{
   window.renderEmployeesV94 = renderEmployees;
   window.getEmployeesV94 = employees;
   window.saveEmployeesV94 = saveEmployees;
+  window.cangjieCurrentAccountV94 = account;
+  window.cangjieCanViewAllOrdersV94 = canViewAllOrders;
+  window.cangjieOrderBelongsToCurrentAccountV94 = function(order){ return orderBelongsToAccount(order, account()); };
+  window.cangjieFilterOrdersForCurrentAccountV94 = function(rows){ return filterOrdersForAccount(rows, account()); };
+  window.cangjieEmployeeSalesSummaryV94 = function(rows){
+    rows = Array.isArray(rows) ? rows : [];
+    var map = {};
+    function ensure(id, name, phone){
+      id = id || "owner";
+      if(!map[id]){
+        map[id] = {employee_id:id, employee_name:name || (id === "owner" ? "主账号" : "未命名员工"), phone:phone || "", orderCount:0, salesAmount:0, paidAmount:0, debtAmount:0};
+      }
+      if(name && map[id].employee_name === "未命名员工") map[id].employee_name = name;
+      if(phone && !map[id].phone) map[id].phone = phone;
+      return map[id];
+    }
+    if(canViewAllOrders(account())){
+      var admin = defaultAdmin();
+      ensure("owner", "主账号", admin.phone || "");
+      employees().forEach(function(emp){ ensure(emp.employee_id, emp.employee_name, emp.phone); });
+    }else{
+      var a = account();
+      ensure(accountEmployeeId(a), a.employee_name || a.name || "员工", a.phone || "");
+    }
+    rows.forEach(function(order){
+      if(order && (order.voided || order.status === "已作废" || order.displayStatus === "已作废")) return;
+      var id = order.employee_id || order.employeeId || order.userId || "owner";
+      var row = ensure(id, order.employee_name || order.employeeName || order.cashierName || "", order.employee_phone || order.employeePhone || order.cashierPhone || "");
+      var total = n(order.totalAmount || order.total || order.amount);
+      var paid = n(order.paidAmount || order.paid || (String(order.status || order.displayStatus || "").includes("收银") ? total : 0));
+      var debt = n(order.debtAmount || order.debt || Math.max(total - paid, 0));
+      row.orderCount += 1;
+      row.salesAmount += total;
+      row.paidAmount += paid;
+      row.debtAmount += debt;
+    });
+    return Object.keys(map).map(function(key){ return map[key]; });
+  };
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
   setTimeout(boot, 300);
