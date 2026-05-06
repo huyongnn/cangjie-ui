@@ -29158,6 +29158,85 @@ body.show-profile-v92 #inventoryView{
     writeSyncLog("rls_preflight", allOk ? "已连接" : "同步失败", state.summary, {merchantId:state.merchantId, modules:state.modules});
     return state;
   }
+  function rlsPolicyDraftSql(){
+    var tables = ["orders", "inventory", "employees", "cloud_snapshots"];
+    var claim = "nullif(auth.jwt() ->> 'merchant_id', '')";
+    var lines = [
+      "-- RLS strategy draft only. Do not run in production until merchant_id JWT claims are issued and verified.",
+      "-- This draft is generated for review; the current page does not execute any SQL.",
+      ""
+    ];
+    tables.forEach(function(table){
+      lines.push("-- " + table + ": enable row level security");
+      lines.push("alter table public." + table + " enable row level security;");
+      lines.push("");
+      lines.push("-- " + table + ": select own merchant rows only");
+      lines.push("drop policy if exists " + table + "_merchant_select on public." + table + ";");
+      lines.push("create policy " + table + "_merchant_select");
+      lines.push("on public." + table);
+      lines.push("for select");
+      lines.push("to authenticated");
+      lines.push("using (merchant_id = " + claim + ");");
+      lines.push("");
+      lines.push("-- " + table + ": insert own merchant rows only");
+      lines.push("drop policy if exists " + table + "_merchant_insert on public." + table + ";");
+      lines.push("create policy " + table + "_merchant_insert");
+      lines.push("on public." + table);
+      lines.push("for insert");
+      lines.push("to authenticated");
+      lines.push("with check (merchant_id = " + claim + ");");
+      lines.push("");
+      lines.push("-- " + table + ": update own merchant rows only");
+      lines.push("drop policy if exists " + table + "_merchant_update on public." + table + ";");
+      lines.push("create policy " + table + "_merchant_update");
+      lines.push("on public." + table);
+      lines.push("for update");
+      lines.push("to authenticated");
+      lines.push("using (merchant_id = " + claim + ")");
+      lines.push("with check (merchant_id = " + claim + ");");
+      lines.push("");
+      lines.push("-- " + table + ": delete own merchant rows only");
+      lines.push("drop policy if exists " + table + "_merchant_delete on public." + table + ";");
+      lines.push("create policy " + table + "_merchant_delete");
+      lines.push("on public." + table);
+      lines.push("for delete");
+      lines.push("to authenticated");
+      lines.push("using (merchant_id = " + claim + ");");
+      lines.push("");
+    });
+    lines.push("-- Rollback SQL");
+    tables.forEach(function(table){
+      lines.push("drop policy if exists " + table + "_merchant_select on public." + table + ";");
+      lines.push("drop policy if exists " + table + "_merchant_insert on public." + table + ";");
+      lines.push("drop policy if exists " + table + "_merchant_update on public." + table + ";");
+      lines.push("drop policy if exists " + table + "_merchant_delete on public." + table + ";");
+      lines.push("alter table public." + table + " disable row level security;");
+      lines.push("");
+    });
+    return lines.join("\n");
+  }
+  function ensureRlsPolicyDraftPanel(){
+    var root = document.getElementById("profileCenterRootV92");
+    var grid = root && root.querySelector(".profile-v92-grid");
+    if(!grid || document.getElementById("rlsPolicyDraftPanelV1")) return;
+    var card = document.createElement("div");
+    card.id = "rlsPolicyDraftPanelV1";
+    card.className = "profile-v92-card commercial-sync-v1-card";
+    card.innerHTML = '<div class="sync-console-v1-head"><div><h2>RLS策略草案</h2><p>仅生成 SQL 草案；不连接数据库、不执行 ALTER TABLE、不启用 RLS。</p></div><span class="commercial-sync-v1-status">草案模式</span></div>'
+      + '<div class="commercial-sync-v1-note">策略目标：orders / inventory / employees / cloud_snapshots 均按 merchant_id 隔离。执行前必须先完成登录态 merchant_id claim 方案，否则会影响现有同步。</div>'
+      + '<pre id="rlsPolicyDraftSqlV1" style="margin-top:12px;max-height:520px;overflow:auto;white-space:pre-wrap;background:#111b16;color:#edf7ef;border-radius:10px;padding:14px;font-size:12px;line-height:1.55"></pre>';
+    var after = document.getElementById("rlsPreflightPanelV1");
+    if(after && after.parentNode === grid) grid.insertBefore(card, after.nextSibling);
+    else grid.appendChild(card);
+  }
+  function renderRlsPolicyDraftPanel(){
+    ensureRlsPolicyDraftPanel();
+    var panel = document.getElementById("rlsPolicyDraftPanelV1");
+    if(panel) panel.style.display = canShowAdminSyncTools() ? "" : "none";
+    if(!canShowAdminSyncTools()) return;
+    var sql = document.getElementById("rlsPolicyDraftSqlV1");
+    if(sql) sql.textContent = rlsPolicyDraftSql();
+  }
   function setSyncConsoleGlobalStatus(text){
     var value = text || "未检查";
     var el = document.getElementById("syncConsoleStatusV1");
@@ -30455,6 +30534,7 @@ body.show-profile-v92 #inventoryView{
     ensureCommercialSyncPanel();
     renderSyncConsolePanel();
     renderRlsPreflightPanel();
+    renderRlsPolicyDraftPanel();
     var box = document.getElementById("commercialSyncGridV1");
     if(!box) return;
     var m = meta();
