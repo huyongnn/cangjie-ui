@@ -27721,7 +27721,7 @@ body.show-profile-v92 #inventoryView{
 .sync-console-v1-table{
   width:100%;
   border-collapse:collapse;
-  min-width:820px;
+  min-width:980px;
   font-size:13px;
 }
 .sync-console-v1-table th,
@@ -27747,6 +27747,34 @@ body.show-profile-v92 #inventoryView{
 .sync-console-v1-error{
   color:#b42318;
   font-weight:900;
+}
+.sync-console-v1-health{
+  display:inline-flex;
+  align-items:center;
+  min-height:26px;
+  border-radius:999px;
+  padding:0 10px;
+  font-weight:950;
+  border:1px solid #dde2d8;
+  background:#f7f8f3;
+}
+.sync-console-v1-health.normal{
+  color:#2f7a3f;
+  border-color:#cfe3d2;
+  background:#f1faf2;
+}
+.sync-console-v1-health.warning{
+  color:#9a5b00;
+  border-color:#efd7a2;
+  background:#fff8e6;
+}
+.sync-console-v1-health.error{
+  color:#b42318;
+  border-color:#f0c5bf;
+  background:#fff2f0;
+}
+.sync-console-v1-health.pending{
+  color:#657068;
 }
 @media(max-width:980px){
   .commercial-sync-v1-grid{
@@ -28244,6 +28272,8 @@ body.show-profile-v92 #inventoryView{
       lastReadAt:"",
       lastResult:result || "尚未检查",
       cloudCount:"-",
+      healthStatus:"未检测",
+      lastHealthCheckAt:"",
       hasError:false,
       error:""
     };
@@ -28252,6 +28282,9 @@ body.show-profile-v92 #inventoryView{
     var m = meta();
     return {
       updatedAt:"",
+      overallHealthStatus:"未检测",
+      lastHealthCheckAt:"",
+      lastHealthSummary:"尚未进行同步健康检查",
       modules:{
         orders:blankSyncConsoleModule("订单同步", m.lastCloudOrderSyncAt || "", m.lastCloudOrderSyncResult || "尚未检查订单"),
         inventory:blankSyncConsoleModule("库存同步", "", "尚未检查库存"),
@@ -28283,6 +28316,41 @@ body.show-profile-v92 #inventoryView{
     renderSyncConsolePanel();
     return state.modules[key];
   }
+  function healthClass(status){
+    if(status === "正常") return "normal";
+    if(status === "警告") return "warning";
+    if(status === "异常") return "error";
+    return "pending";
+  }
+  function healthBadge(status){
+    status = status || "未检测";
+    return '<span class="sync-console-v1-health '+healthClass(status)+'">'+e(status)+'</span>';
+  }
+  function healthStatusFromResult(result, count){
+    if(result && result.error) return "异常";
+    if(Number(count || 0) <= 0) return "警告";
+    return "正常";
+  }
+  function computeOverallHealth(state){
+    state = state || syncConsoleState();
+    var keys = ["orders","inventory","employees","snapshots"];
+    var statuses = keys.map(function(key){ return (state.modules[key] && state.modules[key].healthStatus) || "未检测"; });
+    if(statuses.some(function(status){ return status === "异常"; })) return "异常";
+    if(statuses.some(function(status){ return status === "警告"; })) return "警告";
+    if(statuses.every(function(status){ return status === "正常"; })) return "正常";
+    return "未检测";
+  }
+  function setOverallHealth(status, summary, at){
+    var state = syncConsoleState();
+    state.overallHealthStatus = status || computeOverallHealth(state);
+    state.lastHealthCheckAt = at || now();
+    state.lastHealthSummary = summary || "";
+    state.updatedAt = now();
+    saveSyncConsoleState(state);
+    setSyncConsoleGlobalStatus("总体同步状态：" + state.overallHealthStatus);
+    renderSyncConsolePanel();
+    return state;
+  }
   function syncConsoleConfigs(){
     return {
       orders:{label:"订单同步", latestField:"cloud_created_at", table:publicOrdersTable},
@@ -28307,7 +28375,7 @@ body.show-profile-v92 #inventoryView{
     var client = initSupabaseClient();
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
-      setSyncConsoleModule(key, {lastReadAt:now(), lastResult:"检查失败：" + initError, hasError:true, error:initError});
+      setSyncConsoleModule(key, {lastReadAt:now(), lastHealthCheckAt:now(), healthStatus:"异常", lastResult:"检查失败：" + initError, hasError:true, error:initError});
       return {key:key, data:null, error:initError};
     }
     setSyncConsoleModule(key, {lastResult:"检查中...", hasError:false, error:""});
@@ -28323,11 +28391,14 @@ body.show-profile-v92 #inventoryView{
       var row = (latestResult.data || [])[0] || null;
       var count = typeof countResult.count === "number" ? countResult.count : ((latestResult.data || []).length || 0);
       var latestAt = syncConsoleLatestTime(row, cfg.latestField);
+      var health = healthStatusFromResult(null, count);
       var module = setSyncConsoleModule(key, {
         label:cfg.label,
         lastUploadAt:latestAt || syncConsoleState().modules[key].lastUploadAt || "",
         lastReadAt:now(),
-        lastResult:"检查成功：" + count + " 条云端记录",
+        lastHealthCheckAt:now(),
+        healthStatus:health,
+        lastResult:health === "警告" ? "同步警告：云端暂无记录" : "检查成功：" + count + " 条云端记录",
         cloudCount:count,
         hasError:false,
         error:""
@@ -28336,7 +28407,7 @@ body.show-profile-v92 #inventoryView{
       return {key:key, data:{count:count, latest:row}, error:null};
     }catch(err){
       var message = err && err.message ? err.message : String(err);
-      setSyncConsoleModule(key, {lastReadAt:now(), lastResult:"检查失败：" + message, hasError:true, error:message});
+      setSyncConsoleModule(key, {lastReadAt:now(), lastHealthCheckAt:now(), healthStatus:"异常", lastResult:"检查失败：" + message, hasError:true, error:message});
       updateSyncStatus("同步失败");
       return {key:key, data:null, error:err};
     }
@@ -28357,6 +28428,45 @@ body.show-profile-v92 #inventoryView{
     setSyncConsoleGlobalStatus(errors ? "检查完成：" + errors + " 个模块有错误" : "检查完成：全部正常");
     return result;
   }
+  async function runSyncHealthCheck(){
+    setSyncConsoleGlobalStatus("同步健康检查中...");
+    var checkedAt = now();
+    var result = await Promise.all([
+      checkOrderSyncConsole(),
+      checkInventorySyncConsole(),
+      checkEmployeeSyncConsole(),
+      checkSnapshotSyncConsole()
+    ]);
+    var state = syncConsoleState();
+    var overall = computeOverallHealth(state);
+    var warnings = Object.keys(state.modules || {}).filter(function(key){
+      return state.modules[key] && state.modules[key].healthStatus === "警告";
+    }).length;
+    var errors = Object.keys(state.modules || {}).filter(function(key){
+      return state.modules[key] && state.modules[key].healthStatus === "异常";
+    }).length;
+    var summary = overall === "正常"
+      ? "全部模块请求成功且云端已有数据"
+      : (overall === "异常" ? "发现 " + errors + " 个异常模块" : "发现 " + warnings + " 个警告模块");
+    setOverallHealth(overall, summary, checkedAt);
+    return {overall:overall, summary:summary, result:result};
+  }
+  function clearSyncConsoleErrors(){
+    var state = syncConsoleState();
+    Object.keys(state.modules || {}).forEach(function(key){
+      state.modules[key].hasError = false;
+      state.modules[key].error = "";
+      if(state.modules[key].healthStatus === "异常") state.modules[key].healthStatus = "未检测";
+      if(String(state.modules[key].lastResult || "").indexOf("检查失败：") === 0) state.modules[key].lastResult = "错误提示已清除";
+    });
+    state.overallHealthStatus = computeOverallHealth(state);
+    state.lastHealthSummary = "错误提示已清除";
+    state.updatedAt = now();
+    saveSyncConsoleState(state);
+    setSyncConsoleGlobalStatus("错误提示已清除");
+    renderSyncConsolePanel();
+    return state;
+  }
   function setSyncConsoleGlobalStatus(text){
     var el = document.getElementById("syncConsoleStatusV1");
     if(el) el.textContent = text || "未检查";
@@ -28370,8 +28480,8 @@ body.show-profile-v92 #inventoryView{
     card.className = "profile-v92-card commercial-sync-v1-card";
     card.innerHTML = '<div class="sync-console-v1-head"><div><h2>同步总控制台</h2><p>集中检查订单、库存、员工和云端快照状态；所有检查只读，不会覆盖本地数据。</p></div><span id="syncConsoleStatusV1" class="commercial-sync-v1-status">未检查</span></div>'
       + '<div id="syncConsoleIdentityV1" class="commercial-sync-v1-grid" style="margin-top:12px"></div>'
-      + '<div class="commercial-sync-v1-actions"><button class="commercial-sync-v1-btn" type="button" onclick="checkOrderSyncConsole()">检查订单同步</button><button class="commercial-sync-v1-btn" type="button" onclick="checkInventorySyncConsole()">检查库存同步</button><button class="commercial-sync-v1-btn" type="button" onclick="checkEmployeeSyncConsole()">检查员工同步</button><button class="commercial-sync-v1-btn" type="button" onclick="checkSnapshotSyncConsole()">检查云快照</button><button class="commercial-sync-v1-btn" type="button" onclick="checkAllSyncConsole()">一键检查全部</button></div>'
-      + '<div class="sync-console-v1-table-wrap" style="margin-top:12px"><table class="sync-console-v1-table"><thead><tr><th>模块</th><th>最近上传时间</th><th>最近读取时间</th><th>最近同步结果</th><th>云端记录数量</th><th>是否有错误</th></tr></thead><tbody id="syncConsoleBodyV1"></tbody></table></div>'
+      + '<div class="commercial-sync-v1-actions"><button class="commercial-sync-v1-btn" type="button" onclick="checkOrderSyncConsole()">检查订单同步</button><button class="commercial-sync-v1-btn" type="button" onclick="checkInventorySyncConsole()">检查库存同步</button><button class="commercial-sync-v1-btn" type="button" onclick="checkEmployeeSyncConsole()">检查员工同步</button><button class="commercial-sync-v1-btn" type="button" onclick="checkSnapshotSyncConsole()">检查云快照</button><button class="commercial-sync-v1-btn" type="button" onclick="checkAllSyncConsole()">一键检查全部</button><button class="commercial-sync-v1-btn" type="button" onclick="runSyncHealthCheck()">同步健康检查</button><button class="commercial-sync-v1-btn" type="button" onclick="clearSyncConsoleErrors()">清除错误提示</button></div>'
+      + '<div class="sync-console-v1-table-wrap" style="margin-top:12px"><table class="sync-console-v1-table"><thead><tr><th>模块</th><th>健康状态</th><th>最近上传时间</th><th>最近读取时间</th><th>最近一次检查时间</th><th>最近同步结果</th><th>云端记录数量</th><th>错误详情</th></tr></thead><tbody id="syncConsoleBodyV1"></tbody></table></div>'
       + '<div class="commercial-sync-v1-note">只读检查：不会调用合并、恢复、清空、覆盖或自动同步流程。</div>';
     var after = document.getElementById("commercialSyncPanelV1");
     if(after && after.parentNode === grid) grid.insertBefore(card, after.nextSibling);
@@ -28384,23 +28494,30 @@ body.show-profile-v92 #inventoryView{
     if(!idBox || !body) return;
     var m = meta();
     var account = currentAccount();
+    var state = syncConsoleState();
+    setSyncConsoleGlobalStatus("总体同步状态：" + (state.overallHealthStatus || "未检测"));
     idBox.innerHTML = [
       ["当前登录账号", (account.employee_name || account.name || account.role || "主账号") + (account.phone ? " " + account.phone : "")],
       ["当前设备ID", m.deviceId || ""],
-      ["当前商户ID", m.merchantId || ""]
+      ["当前商户ID", m.merchantId || ""],
+      ["总体同步状态", healthBadge(state.overallHealthStatus || "未检测")],
+      ["最近健康检查", state.lastHealthCheckAt || "尚未检测"],
+      ["健康摘要", state.lastHealthSummary || "尚未进行同步健康检查"]
     ].map(function(row){
-      return '<div class="commercial-sync-v1-item"><span>'+e(row[0])+'</span><b>'+e(row[1] || "-")+'</b></div>';
+      var value = String(row[1] || "-");
+      return '<div class="commercial-sync-v1-item"><span>'+e(row[0])+'</span><b>'+(value.indexOf("sync-console-v1-health") >= 0 ? value : e(value))+'</b></div>';
     }).join("");
-    var state = syncConsoleState();
     var keys = ["orders","inventory","employees","snapshots"];
     body.innerHTML = keys.map(function(key){
       var row = state.modules[key] || {};
       return '<tr><td>'+e(row.label || key)+'</td>'
+        + '<td>'+healthBadge(row.healthStatus || "未检测")+'</td>'
         + '<td>'+e(row.lastUploadAt || "尚未记录")+'</td>'
         + '<td>'+e(row.lastReadAt || "尚未读取")+'</td>'
+        + '<td>'+e(row.lastHealthCheckAt || "尚未检测")+'</td>'
         + '<td>'+e(row.lastResult || "尚未检查")+'</td>'
         + '<td>'+e(row.cloudCount == null ? "-" : row.cloudCount)+'</td>'
-        + '<td class="'+(row.hasError ? "sync-console-v1-error" : "sync-console-v1-ok")+'">'+(row.hasError ? "有错误" : "无")+(row.error ? "｜"+e(row.error) : "")+'</td></tr>';
+        + '<td class="'+(row.hasError ? "sync-console-v1-error" : "sync-console-v1-ok")+'">'+(row.error ? e(row.error) : "无")+'</td></tr>';
     }).join("");
   }
   function setEmployeeCloudStatus(text){
@@ -29645,6 +29762,8 @@ body.show-profile-v92 #inventoryView{
   window.checkEmployeeSyncConsole = checkEmployeeSyncConsole;
   window.checkSnapshotSyncConsole = checkSnapshotSyncConsole;
   window.checkAllSyncConsole = checkAllSyncConsole;
+  window.runSyncHealthCheck = runSyncHealthCheck;
+  window.clearSyncConsoleErrors = clearSyncConsoleErrors;
   window.toggleAutoSyncEnabled = toggleAutoSyncEnabled;
   window.pullCloudSnapshot = pullCloudSnapshot;
   window.pushLocalChanges = pushLocalChanges;
