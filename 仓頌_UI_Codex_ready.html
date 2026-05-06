@@ -4437,8 +4437,8 @@ body.batch-create-mode #inboundRoot .app{
   <section class="right-panel">
     <div class="topbar">
       <div class="batch-info">
-        <h1 id="activeOwner">天南</h1>
-        <p>批次：<span id="activeBatchNo">001</span></p>
+        <h1 id="activeOwner">暂无批次</h1>
+        <p>批次：<span id="activeBatchNo">-</span></p>
       </div>
       <div class="tools">
         <input id="detailSearch" class="tool-search" placeholder="搜货品..." oninput="renderDetail()">
@@ -4920,39 +4920,14 @@ body.batch-create-mode #inboundRoot .app{
 <script>
 const categories = ["全","自","次","粉","红","尖","螺","泡","青","丝"];
 let productCategories = ["根茎类","叶菜类","瓜果类","调料类"];
-let owners = ["天南","张老板","李货主"];
-let newBatchState = {owner:"天南", type:"自营"};
+let owners = [];
+let newBatchState = {owner:"", type:"自营"};
 
-const goodsMaster = [
-  {id:"gm1", name:"土豆", type:"非", category:"根茎类", pack:"定装", spec:40, unit:"件", price:0},
-  {id:"gm2", name:"茶叶", type:"非", category:"调料类", pack:"非定装", spec:"", unit:"件", price:0},
-  {id:"gm3", name:"苹果", type:"非", category:"瓜果类", pack:"定装", spec:30, unit:"件", price:0},
-  {id:"gm4", name:"菠菜", type:"非", category:"叶菜类", pack:"非定装", spec:"", unit:"件", price:0},
-  {id:"gm5", name:"尖椒", type:"非", category:"瓜果类", pack:"非定装", spec:"", unit:"件", price:0},
-  {id:"gm6", name:"青瓜", type:"非", category:"瓜果类", pack:"非定装", spec:"", unit:"件", price:0},
-  {id:"gm7", name:"螺丝椒绿带", type:"非", category:"瓜果类", pack:"非定装", spec:"", unit:"件", price:0},
-  {id:"gm8", name:"丝瓜白带", type:"非", category:"瓜果类", pack:"非定装", spec:"", unit:"件", price:0},
-  {id:"gm9", name:"上海青", type:"非", category:"叶菜类", pack:"非定装", spec:"", unit:"件", price:0},
-  {id:"gm10", name:"黄白", type:"非", category:"叶菜类", pack:"非定装", spec:"", unit:"件", price:0},
-  {id:"gm11", name:"箱娃", type:"非", category:"叶菜类", pack:"非定装", spec:"", unit:"件", price:0},
-  {id:"gm12", name:"次黄瓜", type:"非", category:"瓜果类", pack:"非定装", spec:"", unit:"件", price:0}
-];
+const goodsMaster = [];
 
-let batches = [
-  {
-    id:"b1", owner:"天南", no:"001", tag:"自营", fee:0, remark:"",
-    items:[
-      {id:"i1", goodsId:"gm1", name:"土豆", type:"非", pack:"定装", spec:40, unit:"件", qty:20, weight:800, purchasePrice:0, costPrice:0, salePrice:0, fixedPrice:0, sold:0},
-      {id:"i2", goodsId:"gm2", name:"茶叶", type:"非", pack:"非定装", spec:"", unit:"件", qty:15, weight:"", purchasePrice:0, costPrice:0, sold:0},
-      {id:"i3", goodsId:"gm3", name:"苹果", type:"非", pack:"定装", spec:30, unit:"件", qty:25, weight:750, purchasePrice:0, costPrice:0, salePrice:0, fixedPrice:0, sold:0},
-      {id:"i4", goodsId:"gm4", name:"菠菜", type:"非", pack:"非定装", spec:"", unit:"件", qty:10, weight:5, purchasePrice:0, costPrice:0, sold:0}
-    ]
-  },
-  {id:"b2", owner:"张老板", no:"002", tag:"代卖", fee:0, remark:"", items:[]},
-  {id:"b3", owner:"李货主", no:"003", tag:"代卖", fee:0, remark:"", items:[]}
-];
+let batches = [];
 
-let activeBatchId = "b1";
+let activeBatchId = "";
 let modalState = {
   grade:"不分级",
   pack:"定装",
@@ -4998,7 +4973,7 @@ function renderGoods(){
   const batch = activeBatch();
   const list = goodsMaster.filter(g => [g.name,g.category,g.pack].join(" ").toLowerCase().includes(q));
   document.getElementById("goodsGrid").innerHTML = list.map(g => {
-    const selected = batch.items.some(i => i.goodsId === g.id);
+    const selected = !!(batch && Array.isArray(batch.items) && batch.items.some(i => i.goodsId === g.id));
     return `
       <div class="goods-card ${selected?'selected':''}" onclick="toggleGoodsToBatch('${g.id}')">
         <div class="tick"></div>
@@ -5084,6 +5059,19 @@ function patchBatchDetailSaleButtonsStep1(){
 }
 function renderDetail(){
   const batch = activeBatch();
+  if(!batch){
+    document.getElementById("activeOwner").textContent = "暂无批次";
+    document.getElementById("activeBatchNo").textContent = "-";
+    const detailBody = document.getElementById("detailBody");
+    const mobileDetail = document.getElementById("mobileDetailList");
+    const feeTotalEl = document.getElementById("feeTotal");
+    const costTotalEl = document.getElementById("costTotal");
+    if(detailBody) detailBody.innerHTML = '<tr><td colspan="11" class="hint">暂无批次。请先新增货主和批次。</td></tr>';
+    if(mobileDetail) mobileDetail.innerHTML = '<div class="hint">暂无批次。请先新增货主和批次。</div>';
+    if(feeTotalEl) feeTotalEl.textContent = money(0);
+    if(costTotalEl) costTotalEl.textContent = money(0);
+    return;
+  }
   document.getElementById("activeOwner").textContent = batch.owner;
   document.getElementById("activeBatchNo").textContent = batch.no;
   const q = document.getElementById("detailSearch").value.trim().toLowerCase();
@@ -5272,6 +5260,10 @@ function selectBatch(id){
 }
 function toggleGoodsToBatch(goodsId){
   const batch = activeBatch();
+  if(!batch){
+    toast("请先新增批次");
+    return;
+  }
   const exists = batch.items.find(i => i.goodsId === goodsId);
   if(exists){
     batch.items = batch.items.filter(i => i.goodsId !== goodsId);
@@ -5340,7 +5332,7 @@ function nextBatchNoForOwner(owner){
   return String(next).padStart(2, "0");
 }
 function refreshBatchPreview(){
-  const owner = document.getElementById("batchOwnerSelect")?.value || newBatchState.owner || "天南";
+  const owner = document.getElementById("batchOwnerSelect")?.value || newBatchState.owner || "";
   newBatchState.owner = owner;
   const preview = document.getElementById("batchNoPreview");
   if(preview) preview.textContent = nextBatchNoForOwner(owner);
@@ -5356,7 +5348,7 @@ function addBatch(){
 }
 function openBatchModal(){
   renderOwnerOptions();
-  newBatchState.owner = owners[0] || "天南";
+  newBatchState.owner = owners[0] || "";
   newBatchState.type = "自营";
   const sel = document.getElementById("batchOwnerSelect");
   if(sel) sel.value = newBatchState.owner;
@@ -5384,7 +5376,11 @@ function addOwnerFromBatchModal(){
   toast("货主已新增");
 }
 function saveBatchFromModal(){
-  const owner = document.getElementById("batchOwnerSelect").value;
+  const owner = (document.getElementById("batchOwnerSelect").value || "").trim();
+  if(!owner){
+    alert("请先新增货主");
+    return;
+  }
   const no = nextBatchNoForOwner(owner);
   const type = newBatchState.type === "代卖" ? "代卖" : "自营";
   const id = "b" + Date.now();
@@ -5396,6 +5392,10 @@ function saveBatchFromModal(){
 }
 function renameBatch(){
   const batch = activeBatch();
+  if(!batch){
+    toast("暂无批次");
+    return;
+  }
   const owner = prompt("修改货主名称：", batch.owner);
   if(!owner) return;
   const no = prompt("修改批次号：", batch.no);
@@ -5418,16 +5418,26 @@ function deleteBatch(){
   toast("批次已删除");
 }
 function addFee(){
-  const val = prompt("请输入费用金额：", String(activeBatch().fee || 0));
+  const batch = activeBatch();
+  if(!batch){
+    toast("暂无批次");
+    return;
+  }
+  const val = prompt("请输入费用金额：", String(batch.fee || 0));
   if(val === null) return;
-  activeBatch().fee = Number(val || 0);
+  batch.fee = Number(val || 0);
   renderDetail();
   toast("费用已更新");
 }
 function addRemark(){
-  const val = prompt("请输入备注：", activeBatch().remark || "");
+  const batch = activeBatch();
+  if(!batch){
+    toast("暂无批次");
+    return;
+  }
+  const val = prompt("请输入备注：", batch.remark || "");
   if(val === null) return;
-  activeBatch().remark = val;
+  batch.remark = val;
   toast("备注已保存");
 }
 function confirmInbound(){
@@ -5537,9 +5547,7 @@ document.body.classList.add("show-inbound");
 let cashierSelectedBatch = "";
 let cashierSelectedCat = "全部";
 let cashierCustomers = [
-  {id:"c1", name:"临时客户", debt:0},
-  {id:"c2", name:"华东蔬菜店", debt:0},
-  {id:"c3", name:"老王餐馆", debt:0}
+  {id:"c1", name:"临时客户", debt:0, payments:[], parentId:"", disabled:false}
 ];
 let currentCodeBillItems = [];
 let savedCodeBills = [];
@@ -10716,7 +10724,7 @@ setTimeout(v44PatchBatchOverview,1000);
 
 /* ===== V45 创建批次弹窗优化逻辑 ===== */
 if(typeof newBatchState === 'object'){
-  newBatchState = Object.assign({owner:'天南', type:'自营', no:'', remark:'', carryGoods:false}, newBatchState || {});
+  newBatchState = Object.assign({owner:'', type:'自营', no:'', remark:'', carryGoods:false}, newBatchState || {});
 }
 function inferOwnerType(owner){
   const found = batches.find(b => b.owner === owner && (b.tag === '自营' || b.tag === '代卖'));
@@ -10737,7 +10745,7 @@ function focusBatchOwnerSearch(){
   if(el) el.focus();
 }
 function refreshBatchPreview(){
-  const owner = newBatchState.owner || owners[0] || '天南';
+  const owner = newBatchState.owner || owners[0] || '';
   newBatchState.owner = owner;
   newBatchState.type = inferOwnerType(owner);
   const ownerName = document.getElementById('batchSelectedOwnerName');
@@ -10790,8 +10798,7 @@ function renderOwnerListForBatchModal(){
   }).join('');
 }
 function openBatchModal(){
-  if(!owners.length) owners = ['天南'];
-  const defaultOwner = activeBatch() ? activeBatch().owner : (owners[0] || '天南');
+  const defaultOwner = activeBatch() ? activeBatch().owner : (owners[0] || '');
   newBatchState.owner = defaultOwner;
   newBatchState.type = inferOwnerType(defaultOwner);
   newBatchState.remark = '';
@@ -12603,7 +12610,11 @@ function goBackToBatchEditFromOverview(){
   function applyTudou2DataV57(data){
     if(!data || typeof data !== "object") return;
 
-    try{ if(data.goodsMaster && typeof goodsMaster !== "undefined") goodsMaster = data.goodsMaster; }catch(e){}
+    try{
+      if(Array.isArray(data.goodsMaster) && typeof goodsMaster !== "undefined"){
+        goodsMaster.splice.apply(goodsMaster, [0, goodsMaster.length].concat(data.goodsMaster));
+      }
+    }catch(e){}
     try{ if(data.batches && typeof batches !== "undefined") batches = data.batches; }catch(e){}
     try{ if(data.owners && typeof owners !== "undefined") owners = data.owners; }catch(e){}
     try{ if(data.customers && typeof customers !== "undefined") customers = data.customers; }catch(e){}
@@ -12617,7 +12628,7 @@ function goBackToBatchEditFromOverview(){
     try{ if(data.buyerV47List && typeof buyerV47List !== "undefined") buyerV47List = data.buyerV47List; }catch(e){}
     try{ if(data.buyers && typeof buyers !== "undefined") buyers = data.buyers; }catch(e){}
     try{ if(data.repayments && typeof repayments !== "undefined") repayments = data.repayments; }catch(e){}
-    try{ if(data.activeBatchId && typeof activeBatchId !== "undefined") activeBatchId = data.activeBatchId; }catch(e){}
+    try{ if(typeof data.activeBatchId !== "undefined" && typeof activeBatchId !== "undefined") activeBatchId = data.activeBatchId; }catch(e){}
     try{ if(typeof data.cashierSelectedBatch !== "undefined" && typeof cashierSelectedBatch !== "undefined") cashierSelectedBatch = data.cashierSelectedBatch; }catch(e){}
     try{ if(data.cashierSelectedCat && typeof cashierSelectedCat !== "undefined") cashierSelectedCat = data.cashierSelectedCat; }catch(e){}
   }
