@@ -29260,7 +29260,9 @@ body.show-profile-v92 #inventoryView{
     card.className = "profile-v92-card commercial-sync-v1-card";
     card.innerHTML = '<div class="sync-console-v1-head"><div><h2>RLS 开启执行清单</h2><p>正式开启前逐项确认；本清单只读展示，不执行 SQL、不修改数据库。</p></div><span class="commercial-sync-v1-status">未开启</span></div>'
       + '<div class="commercial-sync-v1-note">当前阶段仅用于上线前人工确认。禁止在本页面自动开启 RLS；开启前必须完成备份、策略复核、测试账号和回滚预案。</div>'
-      + '<div id="rlsEnableChecklistBodyV1" class="commercial-sync-v1-grid" style="margin-top:12px"></div>';
+      + '<div id="rlsEnableChecklistBodyV1" class="commercial-sync-v1-grid" style="margin-top:12px"></div>'
+      + '<div class="commercial-sync-v1-actions"><button class="commercial-sync-v1-btn" type="button" onclick="generateRlsPreEnableBackup()">生成 RLS 前备份</button><span id="rlsPreEnableBackupStatusV1" class="commercial-sync-v1-status">尚未备份</span></div>'
+      + '<div id="rlsPreEnableBackupSummaryV1" class="commercial-sync-v1-grid" style="margin-top:12px"></div>';
     var after = document.getElementById("rlsPolicyDraftPanelV1");
     if(after && after.parentNode === grid) grid.insertBefore(card, after.nextSibling);
     else grid.appendChild(card);
@@ -29275,6 +29277,95 @@ body.show-profile-v92 #inventoryView{
     body.innerHTML = rlsEnableChecklistItems().map(function(item, index){
       return '<div class="commercial-sync-v1-item"><span>'+e("确认项 " + (index + 1))+'</span><b>'+e(item)+'</b></div>';
     }).join("");
+    renderRlsPreEnableBackupSummary();
+  }
+  function rlsPreEnableBackupLastKey(){
+    try{ return localStorage.getItem("cangjieLastRlsPreEnableBackupKeyV1") || ""; }
+    catch(err){ return ""; }
+  }
+  function rlsPreEnableBackupState(){
+    var key = rlsPreEnableBackupLastKey();
+    return key ? readJson(key, null) : null;
+  }
+  function setRlsPreEnableBackupStatus(text){
+    var el = document.getElementById("rlsPreEnableBackupStatusV1");
+    if(el) el.textContent = text || "尚未备份";
+  }
+  function renderRlsPreEnableBackupSummary(){
+    var box = document.getElementById("rlsPreEnableBackupSummaryV1");
+    if(!box) return;
+    var backup = rlsPreEnableBackupState();
+    if(!backup){
+      box.innerHTML = '<div class="commercial-sync-v1-item"><span>备份状态</span><b>尚未生成 RLS 前备份</b></div>';
+      setRlsPreEnableBackupStatus("尚未备份");
+      return;
+    }
+    var counts = backup.counts || {};
+    setRlsPreEnableBackupStatus("已备份：" + (backup.createdAt || ""));
+    box.innerHTML = [
+      ["备份时间", backup.createdAt || ""],
+      ["本地备份键", backup.id || ""],
+      ["orders 数量", counts.orders || 0],
+      ["inventory 数量", counts.inventory || 0],
+      ["employees 数量", counts.employees || 0],
+      ["cloud_snapshots 数量", counts.cloud_snapshots || 0]
+    ].map(function(row){
+      return '<div class="commercial-sync-v1-item"><span>'+e(row[0])+'</span><b>'+e(row[1])+'</b></div>';
+    }).join("");
+  }
+  async function readRlsBackupTableRows(client, builder){
+    var query = builder(client).select("*").eq("merchant_id", getCurrentMerchantId()).range(0, 9999);
+    var result = await query;
+    if(result.error) throw result.error;
+    return result.data || [];
+  }
+  async function generateRlsPreEnableBackup(){
+    if(!canUseCloudSync()){
+      setRlsPreEnableBackupStatus(window.CANGJIE_LAST_CLOUD_SYNC_BLOCK_MESSAGE || "云同步不可用");
+      return {data:null, error:window.CANGJIE_LAST_CLOUD_SYNC_BLOCK_MESSAGE || "云同步不可用", blocked:true};
+    }
+    var client = initSupabaseClient();
+    if(!client){
+      var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
+      setRlsPreEnableBackupStatus("备份失败：" + initError);
+      return {data:null, error:initError};
+    }
+    setRlsPreEnableBackupStatus("生成备份中...");
+    try{
+      var rows = {
+        orders:await readRlsBackupTableRows(client, publicOrdersTable),
+        inventory:await readRlsBackupTableRows(client, publicInventoryTable),
+        employees:await readRlsBackupTableRows(client, publicEmployeesTable),
+        cloud_snapshots:await readRlsBackupTableRows(client, function(c){ return c.from("cloud_snapshots"); })
+      };
+      var createdAt = now();
+      var key = "rls_backup_" + createdAt.replace(/[^0-9A-Za-z]/g, "");
+      var backup = {
+        id:key,
+        createdAt:createdAt,
+        merchantId:getCurrentMerchantId(),
+        source:"rls_pre_enable_backup",
+        note:"本地 RLS 开启前备份；只读 Supabase 并保存到 localStorage，未写入数据库。",
+        counts:{
+          orders:rows.orders.length,
+          inventory:rows.inventory.length,
+          employees:rows.employees.length,
+          cloud_snapshots:rows.cloud_snapshots.length
+        },
+        tables:rows
+      };
+      writeJson(key, backup);
+      localStorage.setItem("cangjieLastRlsPreEnableBackupKeyV1", key);
+      var index = readJson("cangjieRlsPreEnableBackupIndexV1", []);
+      index.unshift({id:key, createdAt:createdAt, merchantId:backup.merchantId, counts:backup.counts});
+      writeJson("cangjieRlsPreEnableBackupIndexV1", index.slice(0, 20));
+      renderRlsPreEnableBackupSummary();
+      return {data:backup, error:null};
+    }catch(err){
+      var message = err && err.message ? err.message : String(err);
+      setRlsPreEnableBackupStatus("备份失败：" + message);
+      return {data:null, error:err};
+    }
   }
   function setSyncConsoleGlobalStatus(text){
     var value = text || "未检查";
@@ -30648,6 +30739,7 @@ body.show-profile-v92 #inventoryView{
   window.runSyncHealthCheck = runSyncHealthCheck;
   window.clearSyncConsoleErrors = clearSyncConsoleErrors;
   window.runRlsCommercialPrecheck = runRlsCommercialPrecheck;
+  window.generateRlsPreEnableBackup = generateRlsPreEnableBackup;
   window.getCurrentMerchantId = getCurrentMerchantId;
   window.canUseCloudSync = canUseCloudSync;
   window.updateCloudSyncButtonsV1 = updateCloudSyncButtonsV1;
