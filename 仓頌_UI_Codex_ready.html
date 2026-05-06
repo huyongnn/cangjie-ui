@@ -27705,6 +27705,49 @@ body.show-profile-v92 #inventoryView{
   font-size:12px;
   font-weight:900;
 }
+.sync-console-v1-head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+  flex-wrap:wrap;
+}
+.sync-console-v1-table-wrap{
+  overflow:auto;
+  border:1px solid #e5e8df;
+  border-radius:14px;
+  background:#fff;
+}
+.sync-console-v1-table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:820px;
+  font-size:13px;
+}
+.sync-console-v1-table th,
+.sync-console-v1-table td{
+  padding:11px 12px;
+  border-bottom:1px solid #edf0e7;
+  text-align:left;
+  vertical-align:top;
+  white-space:nowrap;
+}
+.sync-console-v1-table th{
+  color:#657068;
+  font-weight:900;
+  background:#f7f8f3;
+}
+.sync-console-v1-table tr:last-child td{
+  border-bottom:0;
+}
+.sync-console-v1-ok{
+  color:#2f7a3f;
+  font-weight:900;
+}
+.sync-console-v1-error{
+  color:#b42318;
+  font-weight:900;
+}
 @media(max-width:980px){
   .commercial-sync-v1-grid{
     grid-template-columns:1fr 1fr;
@@ -27723,6 +27766,7 @@ body.show-profile-v92 #inventoryView{
   var META_KEY = "cangjieCommercialSyncV1";
   var SCHEMA_KEY = "cangjieCloudSchemaV1";
   var PERSIST_KEY = "tudou2_v57_persistent_data";
+  var SYNC_CONSOLE_KEY = "cangjieSyncConsoleV1";
   const SUPABASE_URL = "https://dsutthgfzyopkzpwawkb.supabase.co";
   const SUPABASE_KEY = "sb_publishable_JKxs11pjPZ2DbQVEi_1A1A_GPaWnn7r";
   let supabaseInitError = "";
@@ -28180,6 +28224,184 @@ body.show-profile-v92 #inventoryView{
     return (client && typeof client.schema === "function")
       ? client.schema("public").from("employees")
       : client.from("employees");
+  }
+  function uniqueStrings(list){
+    var map = {};
+    return (list || []).map(function(v){ return String(v || "").trim(); }).filter(function(v){
+      if(!v || map[v]) return false;
+      map[v] = true;
+      return true;
+    });
+  }
+  function syncConsoleMerchantIds(){
+    var m = meta();
+    return uniqueStrings([m.merchantId, "mch_08230i"]);
+  }
+  function blankSyncConsoleModule(label, uploadAt, result){
+    return {
+      label:label,
+      lastUploadAt:uploadAt || "",
+      lastReadAt:"",
+      lastResult:result || "尚未检查",
+      cloudCount:"-",
+      hasError:false,
+      error:""
+    };
+  }
+  function defaultSyncConsoleState(){
+    var m = meta();
+    return {
+      updatedAt:"",
+      modules:{
+        orders:blankSyncConsoleModule("订单同步", m.lastCloudOrderSyncAt || "", m.lastCloudOrderSyncResult || "尚未检查订单"),
+        inventory:blankSyncConsoleModule("库存同步", "", "尚未检查库存"),
+        employees:blankSyncConsoleModule("员工同步", "", "尚未检查员工"),
+        snapshots:blankSyncConsoleModule("云端快照", m.cloudUpdatedAt || "", "尚未检查快照")
+      }
+    };
+  }
+  function syncConsoleState(){
+    var base = defaultSyncConsoleState();
+    var saved = readJson(SYNC_CONSOLE_KEY, {});
+    var next = Object.assign({}, base, saved || {});
+    next.modules = Object.assign({}, base.modules, (saved && saved.modules) || {});
+    Object.keys(base.modules).forEach(function(key){
+      next.modules[key] = Object.assign({}, base.modules[key], next.modules[key] || {});
+    });
+    return next;
+  }
+  function saveSyncConsoleState(next){
+    writeJson(SYNC_CONSOLE_KEY, next);
+    return next;
+  }
+  function setSyncConsoleModule(key, patch){
+    var state = syncConsoleState();
+    if(!state.modules[key]) state.modules[key] = blankSyncConsoleModule(key, "", "");
+    state.modules[key] = Object.assign({}, state.modules[key], patch || {});
+    state.updatedAt = now();
+    saveSyncConsoleState(state);
+    renderSyncConsolePanel();
+    return state.modules[key];
+  }
+  function syncConsoleConfigs(){
+    return {
+      orders:{label:"订单同步", latestField:"cloud_created_at", table:publicOrdersTable},
+      inventory:{label:"库存同步", latestField:"cloud_updated_at", table:publicInventoryTable},
+      employees:{label:"员工同步", latestField:"cloud_updated_at", table:publicEmployeesTable},
+      snapshots:{label:"云端快照", latestField:"cloud_updated_at", table:function(client){ return client.from("cloud_snapshots"); }, snapshot:true}
+    };
+  }
+  function applySyncConsoleFilters(query, key){
+    var ids = syncConsoleMerchantIds();
+    if(ids.length > 1 && typeof query.in === "function") query = query.in("merchant_id", ids);
+    else if(ids.length) query = query.eq("merchant_id", ids[0]);
+    if(key === "snapshots") query = query.eq("data_type", "full_snapshot");
+    return query;
+  }
+  function syncConsoleLatestTime(row, field){
+    return (row && (row[field] || row.cloud_updated_at || row.cloud_created_at || row.local_updated_at || row.local_created_at)) || "";
+  }
+  async function checkSyncConsoleModule(key){
+    var cfg = syncConsoleConfigs()[key];
+    if(!cfg) return {key:key, error:"未知模块"};
+    var client = initSupabaseClient();
+    if(!client){
+      var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
+      setSyncConsoleModule(key, {lastReadAt:now(), lastResult:"检查失败：" + initError, hasError:true, error:initError});
+      return {key:key, data:null, error:initError};
+    }
+    setSyncConsoleModule(key, {lastResult:"检查中...", hasError:false, error:""});
+    try{
+      var countQuery = applySyncConsoleFilters(cfg.table(client).select("id", {count:"exact", head:true}), key);
+      var countResult = await countQuery;
+      if(countResult.error) throw countResult.error;
+      var latestQuery = applySyncConsoleFilters(cfg.table(client).select("*"), key)
+        .order(cfg.latestField, {ascending:false})
+        .limit(1);
+      var latestResult = await latestQuery;
+      if(latestResult.error) throw latestResult.error;
+      var row = (latestResult.data || [])[0] || null;
+      var count = typeof countResult.count === "number" ? countResult.count : ((latestResult.data || []).length || 0);
+      var latestAt = syncConsoleLatestTime(row, cfg.latestField);
+      var module = setSyncConsoleModule(key, {
+        label:cfg.label,
+        lastUploadAt:latestAt || syncConsoleState().modules[key].lastUploadAt || "",
+        lastReadAt:now(),
+        lastResult:"检查成功：" + count + " 条云端记录",
+        cloudCount:count,
+        hasError:false,
+        error:""
+      });
+      updateSyncStatus("已连接", {lastSyncAt:module.lastReadAt});
+      return {key:key, data:{count:count, latest:row}, error:null};
+    }catch(err){
+      var message = err && err.message ? err.message : String(err);
+      setSyncConsoleModule(key, {lastReadAt:now(), lastResult:"检查失败：" + message, hasError:true, error:message});
+      updateSyncStatus("同步失败");
+      return {key:key, data:null, error:err};
+    }
+  }
+  async function checkOrderSyncConsole(){ return checkSyncConsoleModule("orders"); }
+  async function checkInventorySyncConsole(){ return checkSyncConsoleModule("inventory"); }
+  async function checkEmployeeSyncConsole(){ return checkSyncConsoleModule("employees"); }
+  async function checkSnapshotSyncConsole(){ return checkSyncConsoleModule("snapshots"); }
+  async function checkAllSyncConsole(){
+    setSyncConsoleGlobalStatus("一键检查中...");
+    var result = await Promise.all([
+      checkOrderSyncConsole(),
+      checkInventorySyncConsole(),
+      checkEmployeeSyncConsole(),
+      checkSnapshotSyncConsole()
+    ]);
+    var errors = result.filter(function(row){ return row && row.error; }).length;
+    setSyncConsoleGlobalStatus(errors ? "检查完成：" + errors + " 个模块有错误" : "检查完成：全部正常");
+    return result;
+  }
+  function setSyncConsoleGlobalStatus(text){
+    var el = document.getElementById("syncConsoleStatusV1");
+    if(el) el.textContent = text || "未检查";
+  }
+  function ensureSyncConsolePanel(){
+    var root = document.getElementById("profileCenterRootV92");
+    var grid = root && root.querySelector(".profile-v92-grid");
+    if(!grid || document.getElementById("syncConsolePanelV1")) return;
+    var card = document.createElement("div");
+    card.id = "syncConsolePanelV1";
+    card.className = "profile-v92-card commercial-sync-v1-card";
+    card.innerHTML = '<div class="sync-console-v1-head"><div><h2>同步总控制台</h2><p>集中检查订单、库存、员工和云端快照状态；所有检查只读，不会覆盖本地数据。</p></div><span id="syncConsoleStatusV1" class="commercial-sync-v1-status">未检查</span></div>'
+      + '<div id="syncConsoleIdentityV1" class="commercial-sync-v1-grid" style="margin-top:12px"></div>'
+      + '<div class="commercial-sync-v1-actions"><button class="commercial-sync-v1-btn" type="button" onclick="checkOrderSyncConsole()">检查订单同步</button><button class="commercial-sync-v1-btn" type="button" onclick="checkInventorySyncConsole()">检查库存同步</button><button class="commercial-sync-v1-btn" type="button" onclick="checkEmployeeSyncConsole()">检查员工同步</button><button class="commercial-sync-v1-btn" type="button" onclick="checkSnapshotSyncConsole()">检查云快照</button><button class="commercial-sync-v1-btn" type="button" onclick="checkAllSyncConsole()">一键检查全部</button></div>'
+      + '<div class="sync-console-v1-table-wrap" style="margin-top:12px"><table class="sync-console-v1-table"><thead><tr><th>模块</th><th>最近上传时间</th><th>最近读取时间</th><th>最近同步结果</th><th>云端记录数量</th><th>是否有错误</th></tr></thead><tbody id="syncConsoleBodyV1"></tbody></table></div>'
+      + '<div class="commercial-sync-v1-note">只读检查：不会调用合并、恢复、清空、覆盖或自动同步流程。</div>';
+    var after = document.getElementById("commercialSyncPanelV1");
+    if(after && after.parentNode === grid) grid.insertBefore(card, after.nextSibling);
+    else grid.appendChild(card);
+  }
+  function renderSyncConsolePanel(){
+    ensureSyncConsolePanel();
+    var idBox = document.getElementById("syncConsoleIdentityV1");
+    var body = document.getElementById("syncConsoleBodyV1");
+    if(!idBox || !body) return;
+    var m = meta();
+    var account = currentAccount();
+    idBox.innerHTML = [
+      ["当前登录账号", (account.employee_name || account.name || account.role || "主账号") + (account.phone ? " " + account.phone : "")],
+      ["当前设备ID", m.deviceId || ""],
+      ["当前商户ID", m.merchantId || ""]
+    ].map(function(row){
+      return '<div class="commercial-sync-v1-item"><span>'+e(row[0])+'</span><b>'+e(row[1] || "-")+'</b></div>';
+    }).join("");
+    var state = syncConsoleState();
+    var keys = ["orders","inventory","employees","snapshots"];
+    body.innerHTML = keys.map(function(key){
+      var row = state.modules[key] || {};
+      return '<tr><td>'+e(row.label || key)+'</td>'
+        + '<td>'+e(row.lastUploadAt || "尚未记录")+'</td>'
+        + '<td>'+e(row.lastReadAt || "尚未读取")+'</td>'
+        + '<td>'+e(row.lastResult || "尚未检查")+'</td>'
+        + '<td>'+e(row.cloudCount == null ? "-" : row.cloudCount)+'</td>'
+        + '<td class="'+(row.hasError ? "sync-console-v1-error" : "sync-console-v1-ok")+'">'+(row.hasError ? "有错误" : "无")+(row.error ? "｜"+e(row.error) : "")+'</td></tr>';
+    }).join("");
   }
   function setEmployeeCloudStatus(text){
     var el = document.getElementById("employeeCloudStatus");
@@ -29363,6 +29585,7 @@ body.show-profile-v92 #inventoryView{
   }
   function renderCommercialSyncPanel(){
     ensureCommercialSyncPanel();
+    renderSyncConsolePanel();
     var box = document.getElementById("commercialSyncGridV1");
     if(!box) return;
     var m = meta();
@@ -29417,6 +29640,11 @@ body.show-profile-v92 #inventoryView{
   window.readBusinessSnapshot = readBusinessSnapshot;
   window.readLatestBusinessSnapshot = readLatestBusinessSnapshot;
   window.restoreLatestBusinessSnapshotSafely = restoreLatestBusinessSnapshotSafely;
+  window.checkOrderSyncConsole = checkOrderSyncConsole;
+  window.checkInventorySyncConsole = checkInventorySyncConsole;
+  window.checkEmployeeSyncConsole = checkEmployeeSyncConsole;
+  window.checkSnapshotSyncConsole = checkSnapshotSyncConsole;
+  window.checkAllSyncConsole = checkAllSyncConsole;
   window.toggleAutoSyncEnabled = toggleAutoSyncEnabled;
   window.pullCloudSnapshot = pullCloudSnapshot;
   window.pushLocalChanges = pushLocalChanges;
