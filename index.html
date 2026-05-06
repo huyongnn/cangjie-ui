@@ -31167,12 +31167,27 @@ body.show-profile-v92 #inventoryView{
     if(typeof oldShow === "function") oldShow.call(window, DEFAULT_PAGE);
   }
 
-  window.loginMerchantEntryPhoneV1 = function(){
+  window.loginMerchantEntryPhoneV1 = async function(){
     var input = document.getElementById("merchantEntryPhoneV1");
     var phone = input ? String(input.value || "").trim() : "";
     if(!phone){
       status("请输入手机号后再登录");
       if(input) input.focus();
+      return;
+    }
+    if(typeof window.loginByPhoneV96 === "function"){
+      if(typeof window.renderProfileV92 === "function") try{ window.renderProfileV92(); }catch(err){}
+      var profilePhone = document.getElementById("profilePhoneV92");
+      var switchPhone = document.getElementById("phoneSwitchInputV96");
+      if(profilePhone) profilePhone.value = phone;
+      if(switchPhone) switchPhone.value = phone;
+      var ok = await window.loginByPhoneV96();
+      if(ok){
+        unlockEntry("手机号已登录");
+        setTimeout(showDefaultPage, 0);
+      }else{
+        lockEntry("手机号未授权，请在个人中心或员工权限中确认");
+      }
       return;
     }
     writeJSON(LOGIN_KEY, {
