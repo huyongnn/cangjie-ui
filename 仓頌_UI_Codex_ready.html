@@ -29215,6 +29215,141 @@ body.show-profile-v92 #inventoryView{
     });
     return lines.join("\n");
   }
+  function sqlLiteral(value){
+    return "'" + String(value == null ? "" : value).replace(/'/g, "''") + "'";
+  }
+  function ordersRlsManualPackageSql(){
+    var merchantId = getCurrentMerchantId();
+    var merchant = sqlLiteral(merchantId);
+    var testOrderNo = sqlLiteral("RLS_TEST_" + merchantId);
+    return [
+      "-- orders_rls_test isolated RLS manual test package only.",
+      "-- This package creates and tests public.orders_rls_test. It does not modify public.orders.",
+      "-- Copy to Supabase SQL Editor manually after confirming backup and rollback readiness.",
+      "-- This page only displays SQL text; it never executes SQL.",
+      "",
+      "-- 1. Create isolated test table by copying orders structure",
+      "drop table if exists public.orders_rls_test;",
+      "create table public.orders_rls_test (like public.orders including all);",
+      "",
+      "-- 2. Copy 1-2 existing merchant-scoped rows from orders into orders_rls_test",
+      "insert into public.orders_rls_test",
+      "select *",
+      "from public.orders",
+      "where merchant_id = " + merchant,
+      "order by cloud_created_at desc",
+      "limit 2;",
+      "",
+      "-- 3. Enable RLS for orders_rls_test only",
+      "alter table public.orders_rls_test enable row level security;",
+      "",
+      "-- 4. SELECT policy: current merchant can read only its own test rows",
+      "drop policy if exists orders_rls_test_merchant_select on public.orders_rls_test;",
+      "create policy orders_rls_test_merchant_select",
+      "on public.orders_rls_test",
+      "for select",
+      "to anon, authenticated",
+      "using (merchant_id = " + merchant + ");",
+      "",
+      "-- 5. INSERT policy: current merchant can insert only its own test rows",
+      "drop policy if exists orders_rls_test_merchant_insert on public.orders_rls_test;",
+      "create policy orders_rls_test_merchant_insert",
+      "on public.orders_rls_test",
+      "for insert",
+      "to anon, authenticated",
+      "with check (merchant_id = " + merchant + ");",
+      "",
+      "-- 6. UPDATE policy: current merchant can update only its own test rows",
+      "drop policy if exists orders_rls_test_merchant_update on public.orders_rls_test;",
+      "create policy orders_rls_test_merchant_update",
+      "on public.orders_rls_test",
+      "for update",
+      "to anon, authenticated",
+      "using (merchant_id = " + merchant + ")",
+      "with check (merchant_id = " + merchant + ");",
+      "",
+      "-- 7. DELETE policy: current merchant can delete only its own test rows",
+      "drop policy if exists orders_rls_test_merchant_delete on public.orders_rls_test;",
+      "create policy orders_rls_test_merchant_delete",
+      "on public.orders_rls_test",
+      "for delete",
+      "to anon, authenticated",
+      "using (merchant_id = " + merchant + ");",
+      "",
+      "-- 8. Test SQL",
+      "-- Read test: must return only orders for merchant_id = " + merchant,
+      "select id, merchant_id, order_no, status, cloud_created_at",
+      "from public.orders_rls_test",
+      "where merchant_id = " + merchant,
+      "order by cloud_created_at desc",
+      "limit 10;",
+      "",
+      "-- Insert test: creates one temporary orders_rls_test row for this merchant",
+      "insert into public.orders_rls_test (merchant_id, order_no, customer_name, employee_id, employee_name, device_id, total_amount, paid_amount, debt_amount, status, items_json, local_created_at, cloud_created_at)",
+      "values (" + merchant + ", " + testOrderNo + ", 'RLS测试客户', 'rls_test', 'RLS测试账号', 'rls_test_device', 0, 0, 0, 'RLS测试', '[]'::jsonb, now(), now())",
+      "returning id, merchant_id, order_no;",
+      "",
+      "-- Update test: updates only the temporary test row",
+      "update public.orders_rls_test",
+      "set status = 'RLS测试已更新'",
+      "where merchant_id = " + merchant,
+      "  and order_no = " + testOrderNo,
+      "returning id, merchant_id, order_no, status;",
+      "",
+      "-- Delete test: removes only the temporary test row",
+      "delete from public.orders_rls_test",
+      "where merchant_id = " + merchant,
+      "  and order_no = " + testOrderNo,
+      "returning id, merchant_id, order_no;",
+      "",
+      "-- 9. Rollback SQL for isolated test table only",
+      "drop policy if exists orders_rls_test_merchant_select on public.orders_rls_test;",
+      "drop policy if exists orders_rls_test_merchant_insert on public.orders_rls_test;",
+      "drop policy if exists orders_rls_test_merchant_update on public.orders_rls_test;",
+      "drop policy if exists orders_rls_test_merchant_delete on public.orders_rls_test;",
+      "alter table public.orders_rls_test disable row level security;",
+      "drop table if exists public.orders_rls_test;",
+      "",
+      "-- Rollback verification",
+      "select to_regclass('public.orders_rls_test') as orders_rls_test_table;"
+    ].join("\n");
+  }
+  function ensureRlsFreezePanel(){
+    var root = document.getElementById("profileCenterRootV92");
+    var grid = root && root.querySelector(".profile-v92-grid");
+    if(!grid || document.getElementById("rlsFreezePanelV1")) return;
+    var card = document.createElement("div");
+    card.id = "rlsFreezePanelV1";
+    card.className = "profile-v92-card commercial-sync-v1-card";
+    card.innerHTML = '<div class="sync-console-v1-head"><div><h2>RLS 安全验证冻结</h2><p>当前状态：沙盒验证通过，正式 RLS 暂缓启用。</p></div><span class="commercial-sync-v1-status">已验证｜暂缓</span></div>'
+      + '<div id="rlsFreezeStatusGridV1" class="commercial-sync-v1-grid" style="margin-top:12px"></div>'
+      + '<div class="commercial-sync-v1-note">冻结说明：正式开启 RLS、执行 SQL、回滚 SQL 均暂停；SQL 区域仅作为归档展示，不能作为页面执行入口。保留 RLS 草案、执行清单、RLS 前备份和 orders_rls_test 沙盒记录。</div>';
+    var after = document.getElementById("rlsPreflightPanelV1");
+    if(after && after.parentNode === grid) grid.insertBefore(card, after.nextSibling);
+    else grid.appendChild(card);
+  }
+  function renderRlsFreezePanel(){
+    ensureRlsFreezePanel();
+    var panel = document.getElementById("rlsFreezePanelV1");
+    if(panel) panel.style.display = canShowAdminSyncTools() ? "" : "none";
+    if(!canShowAdminSyncTools()) return;
+    var grid = document.getElementById("rlsFreezeStatusGridV1");
+    if(!grid) return;
+    var rows = [
+      ["当前状态", "沙盒验证通过，正式 RLS 暂缓启用"],
+      ["orders_rls_test", "已创建并完成 RLS 沙盒验证"],
+      ["orders_rls_test SELECT policy", "已验证"],
+      ["orders_rls_test INSERT policy", "已创建"],
+      ["正式 orders", "未开启 RLS"],
+      ["正式 inventory", "未开启 RLS"],
+      ["正式 employees", "未开启 RLS"],
+      ["正式 cloud_snapshots", "未开启 RLS"],
+      ["正式业务影响", "未受影响"]
+    ];
+    grid.innerHTML = rows.map(function(row){
+      return '<div class="commercial-sync-v1-item"><span>'+e(row[0])+'</span><b>'+e(row[1])+'</b></div>';
+    }).join("");
+  }
   function ensureRlsPolicyDraftPanel(){
     var root = document.getElementById("profileCenterRootV92");
     var grid = root && root.querySelector(".profile-v92-grid");
@@ -29222,10 +29357,13 @@ body.show-profile-v92 #inventoryView{
     var card = document.createElement("div");
     card.id = "rlsPolicyDraftPanelV1";
     card.className = "profile-v92-card commercial-sync-v1-card";
-    card.innerHTML = '<div class="sync-console-v1-head"><div><h2>RLS策略草案</h2><p>仅生成 SQL 草案；不连接数据库、不执行 ALTER TABLE、不启用 RLS。</p></div><span class="commercial-sync-v1-status">草案模式</span></div>'
+    card.innerHTML = '<div class="sync-console-v1-head"><div><h2>RLS策略草案</h2><p>冻结归档展示；不连接数据库、不执行 ALTER TABLE、不启用 RLS。</p></div><span class="commercial-sync-v1-status">冻结归档</span></div>'
       + '<div class="commercial-sync-v1-note">策略目标：orders / inventory / employees / cloud_snapshots 均按 merchant_id 隔离。执行前必须先完成登录态 merchant_id claim 方案，否则会影响现有同步。</div>'
-      + '<div class="commercial-sync-v1-note">展示内容：orders、inventory、employees、cloud_snapshots 的 enable/select/insert/update/delete policy，以及完整回滚 SQL。</div>'
-      + '<pre id="rlsPolicyDraftSqlV1" style="margin-top:12px;max-height:520px;overflow:auto;white-space:pre-wrap;background:#111b16;color:#edf7ef;border-radius:10px;padding:14px;font-size:12px;line-height:1.55"></pre>';
+      + '<div class="commercial-sync-v1-note">展示内容：orders、inventory、employees、cloud_snapshots 的 enable/select/insert/update/delete policy，以及完整回滚 SQL。当前已冻结，暂不执行。</div>'
+      + '<pre id="rlsPolicyDraftSqlV1" style="margin-top:12px;max-height:360px;overflow:auto;white-space:pre-wrap;background:#111b16;color:#edf7ef;border-radius:10px;padding:14px;font-size:12px;line-height:1.55;opacity:.58"></pre>'
+      + '<div class="sync-console-v1-head" style="margin-top:14px"><div><h2>orders_rls_test RLS 沙盒记录</h2><p>沙盒验证记录已冻结；不继续开启正式 orders RLS。页面不会自动执行。</p></div><span class="commercial-sync-v1-status">冻结归档</span></div>'
+      + '<div class="commercial-sync-v1-note">保留 orders_rls_test 建表、ENABLE RLS、SELECT/INSERT/UPDATE/DELETE policy、CRUD 测试 SQL、回滚 SQL 作为记录；不修改正式 orders，不包含任何 secret key。</div>'
+      + '<pre id="ordersRlsManualPackageSqlV1" style="margin-top:12px;max-height:360px;overflow:auto;white-space:pre-wrap;background:#111b16;color:#edf7ef;border-radius:10px;padding:14px;font-size:12px;line-height:1.55;opacity:.58"></pre>';
     var after = document.getElementById("rlsPreflightPanelV1");
     if(after && after.parentNode === grid) grid.insertBefore(card, after.nextSibling);
     else grid.appendChild(card);
@@ -29237,6 +29375,8 @@ body.show-profile-v92 #inventoryView{
     if(!canShowAdminSyncTools()) return;
     var sql = document.getElementById("rlsPolicyDraftSqlV1");
     if(sql) sql.textContent = rlsPolicyDraftSql();
+    var ordersSql = document.getElementById("ordersRlsManualPackageSqlV1");
+    if(ordersSql) ordersSql.textContent = ordersRlsManualPackageSql();
   }
   function rlsEnableChecklistItems(){
     return [
@@ -30664,6 +30804,7 @@ body.show-profile-v92 #inventoryView{
     ensureCommercialSyncPanel();
     renderSyncConsolePanel();
     renderRlsPreflightPanel();
+    renderRlsFreezePanel();
     renderRlsPolicyDraftPanel();
     renderRlsEnableChecklistPanel();
     var box = document.getElementById("commercialSyncGridV1");
