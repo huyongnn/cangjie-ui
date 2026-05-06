@@ -13105,6 +13105,7 @@ function goBackToBatchEditFromOverview(){
       .inventory-step1-actions input{height:40px;width:280px;border:1px solid #cfd6cb;border-radius:10px;padding:0 10px;font-weight:800}
       .inventory-step1-actions button{height:40px;border:0;border-radius:10px;padding:0 14px;font-weight:950;cursor:pointer}
       .inventory-step1-gray{background:#e5e8e0;color:#263028}.inventory-step1-greenbtn{background:#2f8e40;color:#fff}
+      .inventory-cloud-status{flex-basis:100%;color:#687268;font-size:12px;font-weight:900;text-align:right}
       .inventory-step1-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:14px 18px;background:#fbfcf8;border-bottom:1px solid #e5e8df}
       .inventory-step1-card{border:1px solid #d9ddd3;border-radius:14px;background:#fff;padding:12px}.inventory-step1-card span{display:block;color:#687268;font-size:12px;font-weight:900}.inventory-step1-card b{font-size:20px;font-weight:950}
       .inventory-step1-section{padding:14px 18px}.inventory-step1-section h3{margin:0 0 10px;font-size:20px;font-weight:950}
@@ -13117,7 +13118,7 @@ function goBackToBatchEditFromOverview(){
     document.head.appendChild(style);
     var root = document.createElement("div");
     root.id = "inventoryStep1Root";
-    root.innerHTML = '<div class="inventory-step1-layout"><aside class="inventory-step1-tree"><h1>库存</h1><div id="inventoryStep1Tree"></div></aside><main class="inventory-step1-main"><header class="inventory-step1-top"><div><h2 id="inventoryStep1Title">全部批次</h2><p id="inventoryStep1Sub"></p></div><div class="inventory-step1-actions"><input id="inventoryStep1Search" placeholder="搜索货主 / 批次 / 商品..." oninput="renderInventoryStep1()"><button class="inventory-step1-gray" onclick="showAppPage(\'stock\')">查看批次</button><button class="inventory-step1-greenbtn" onclick="renderInventoryStep1()">刷新库存</button></div></header><section class="inventory-step1-summary" id="inventoryStep1Summary"></section><section class="inventory-step1-section"><h3>库存明细</h3><div id="inventoryStep1Table"></div></section><section class="inventory-step1-section"><h3>销售流水</h3><div id="inventoryStep1Ledger"></div></section></main></div>';
+    root.innerHTML = '<div class="inventory-step1-layout"><aside class="inventory-step1-tree"><h1>库存</h1><div id="inventoryStep1Tree"></div></aside><main class="inventory-step1-main"><header class="inventory-step1-top"><div><h2 id="inventoryStep1Title">全部批次</h2><p id="inventoryStep1Sub"></p></div><div class="inventory-step1-actions"><input id="inventoryStep1Search" placeholder="搜索货主 / 批次 / 商品..." oninput="renderInventoryStep1()"><button class="inventory-step1-gray" onclick="showAppPage(\'stock\')">查看批次</button><button class="inventory-step1-greenbtn" onclick="renderInventoryStep1()">刷新库存</button><button id="pushInventorySnapshotStep1V1" class="inventory-step1-greenbtn" type="button" onclick="pushInventorySnapshotToCloud()">上传库存</button><button id="readCloudInventoryStep1V1" class="inventory-step1-gray" type="button" onclick="readCloudInventory()">读取云库存</button><span id="inventoryCloudStatus" class="inventory-cloud-status">未同步云端库存</span></div></header><section class="inventory-step1-summary" id="inventoryStep1Summary"></section><section class="inventory-step1-section"><h3>库存明细</h3><div id="inventoryStep1Table"></div></section><section class="inventory-step1-section"><h3>销售流水</h3><div id="inventoryStep1Ledger"></div></section></main></div>';
     document.body.appendChild(root);
   }
   window.renderInventoryStep1 = renderInventoryStep1;
@@ -27584,8 +27585,11 @@ body.show-profile-v92 #inventoryView{
       : client.from("inventory");
   }
   function setCloudInventoryStatus(text){
+    var value = text || "未同步云端库存";
     var el = document.getElementById("cloudInventoryStatusV1");
-    if(el) el.textContent = text || "未同步云端库存";
+    if(el) el.textContent = value;
+    var inventoryEl = document.getElementById("inventoryCloudStatus");
+    if(inventoryEl) inventoryEl.textContent = value;
   }
   function localBatchesForInventoryCloud(){
     try{
@@ -27634,7 +27638,7 @@ body.show-profile-v92 #inventoryView{
     return rows;
   }
   function renderCloudInventoryList(rows){
-    var wrap = document.getElementById("stockTableWrap");
+    var wrap = document.getElementById("inventoryStep1Table") || document.getElementById("stockTableWrap");
     if(!wrap) return;
     if(!rows || !rows.length){
       wrap.innerHTML = '<div class="stock-empty">云端暂无库存数据。</div>';
