@@ -27897,6 +27897,12 @@ body.show-profile-v92 #inventoryView{
   font-size:14px;
   font-weight:850;
 }
+.deployment-v1-test-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
 @media(max-width:980px){
   .commercial-sync-v1-grid{
     grid-template-columns:1fr 1fr;
@@ -27995,6 +28001,20 @@ body.show-profile-v92 #inventoryView{
       };
     }
     return {mode:"cangjie_cloud", url:SUPABASE_URL, key:SUPABASE_KEY, source:deploymentDatabaseSource(config)};
+  }
+  function runtimeSupabaseSettingsFromForm(){
+    var checked = document.querySelector('input[name="deploymentModeV1"]:checked');
+    var mode = checked ? checked.value : deploymentConfig().deploymentMode;
+    if(mode === "private_cloud"){
+      return {
+        mode:"private_cloud",
+        url:String(document.getElementById("privateSupabaseUrlV1")?.value || deploymentConfig().privateSupabaseUrl || "").trim(),
+        key:String(document.getElementById("privateSupabaseKeyV1")?.value || deploymentConfig().privateSupabaseKey || "").trim(),
+        source:"客户私有 Supabase"
+      };
+    }
+    if(mode === "local_only") return {mode:"local_only", url:"", key:"", source:"本地 storage.js / localStorage"};
+    return {mode:"cangjie_cloud", url:SUPABASE_URL, key:SUPABASE_KEY, source:"仓颉云 Supabase"};
   }
   function isLocalOnlyDeployment(){
     return deploymentConfig().deploymentMode === "local_only";
@@ -28259,11 +28279,18 @@ body.show-profile-v92 #inventoryView{
       + '<div id="privateCloudFieldsV1" class="deployment-v1-private">'
       + '<label>Supabase URL<input id="privateSupabaseUrlV1" placeholder="https://xxxx.supabase.co"></label>'
       + '<label>Supabase Key<input id="privateSupabaseKeyV1" placeholder="sb_publishable_..."></label>'
+      + '<div class="deployment-v1-test-row"><button class="config-step1-gray" type="button" onclick="testDeploymentSupabaseConnectionV1()">测试连接</button><span id="privateCloudTestStatusV1" class="config-step1-status">未测试</span></div>'
       + '</div>'
       + '<div class="config-step1-actions"><button class="config-step1-green" type="button" onclick="saveDeploymentConfigV1()">保存部署模式</button><button class="config-step1-gray" type="button" onclick="renderDeploymentConfigV1()">刷新状态</button></div>'
       + '<p class="config-step1-note">本地模式会在框架层禁止 Supabase 上传；仓颉云使用当前项目 Supabase；私有云仅保存客户自己的 URL 和 publishable key，后续同步函数会从这里读取。</p>';
     main.appendChild(title);
     main.appendChild(section);
+  }
+  function setPrivateCloudTestStatusV1(text, cls){
+    var el = document.getElementById("privateCloudTestStatusV1");
+    if(!el) return;
+    el.textContent = text || "未测试";
+    el.className = "config-step1-status " + (cls || "");
   }
   function renderDeploymentConfigV1(){
     ensureDeploymentConfig();
@@ -28284,7 +28311,7 @@ body.show-profile-v92 #inventoryView{
     if(summary){
       summary.innerHTML = [
         ["当前部署模式", deploymentModeLabel(config.deploymentMode)],
-        ["当前云状态", deploymentCloudStatusText()],
+        ["当前连接状态", deploymentCloudStatusText()],
         ["当前数据库来源", deploymentDatabaseSource(config)]
       ].map(function(row){
         return '<div class="deployment-v1-item"><span>'+e(row[0])+'</span><b>'+e(row[1])+'</b></div>';
@@ -28331,8 +28358,12 @@ body.show-profile-v92 #inventoryView{
     };
     window.renderConfigStep1.__deploymentConfigV1 = true;
   }
-  function initSupabaseClient(){
-    var settings = updateSupabaseConfigFromDeployment();
+  function createRuntimeSupabaseClient(options){
+    var settings = options && options.settings ? options.settings : updateSupabaseConfigFromDeployment();
+    window.CANGJIE_SUPABASE_CONFIG.projectUrl = settings.url || "";
+    window.CANGJIE_SUPABASE_CONFIG.anonKey = settings.key || "";
+    window.CANGJIE_SUPABASE_CONFIG.deploymentMode = settings.mode || deploymentConfig().deploymentMode;
+    window.CANGJIE_SUPABASE_CONFIG.databaseSource = settings.source || deploymentDatabaseSource();
     if(settings.mode === "local_only"){
       supabaseInitError = "当前为本地模式，云同步已关闭";
       window.CANGJIE_SUPABASE_CONFIG.connected = false;
@@ -28375,6 +28406,56 @@ body.show-profile-v92 #inventoryView{
       window.CANGJIE_SUPABASE_CONFIG.lastError = supabaseInitError;
       setConnectionText("初始化失败");
       return null;
+    }
+  }
+  function initSupabaseClient(){
+    return createRuntimeSupabaseClient();
+  }
+  async function testDeploymentSupabaseConnectionV1(){
+    var settings = runtimeSupabaseSettingsFromForm();
+    if(settings.mode === "local_only"){
+      setPrivateCloudTestStatusV1("本地模式不初始化", "warn");
+      return {data:null, error:null, skipped:true, reason:"local_only"};
+    }
+    setPrivateCloudTestStatusV1("测试中...", "warn");
+    var client = createRuntimeSupabaseClient({settings:settings});
+    if(!client){
+      var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
+      setPrivateCloudTestStatusV1("连接失败：" + initError, "bad");
+      renderDeploymentConfigV1();
+      return {data:null, error:initError};
+    }
+    try{
+      var result = await client.from("test_orders").select("id").limit(1);
+      var source = "test_orders";
+      if(result.error){
+        result = await client.from("cloud_snapshots").select("id").limit(1);
+        source = "cloud_snapshots";
+      }
+      if(result.error){
+        var message = result.error.message || String(result.error);
+        window.CANGJIE_SUPABASE_CONFIG.connected = false;
+        window.CANGJIE_SUPABASE_CONFIG.lastError = message;
+        setPrivateCloudTestStatusV1("连接失败：" + message, "bad");
+        updateSyncStatus("同步失败");
+        renderDeploymentConfigV1();
+        return {data:result.data, error:result.error};
+      }
+      window.CANGJIE_SUPABASE_CONFIG.connected = true;
+      window.CANGJIE_SUPABASE_CONFIG.lastError = "";
+      window.CANGJIE_SUPABASE_CONFIG.lastTestAt = now();
+      updateSyncStatus("已连接", {lastSyncAt:window.CANGJIE_SUPABASE_CONFIG.lastTestAt});
+      setPrivateCloudTestStatusV1("连接成功：" + source, "ok");
+      renderDeploymentConfigV1();
+      return {data:result.data, error:null, source:source};
+    }catch(err){
+      var errText = err && err.message ? err.message : String(err);
+      window.CANGJIE_SUPABASE_CONFIG.connected = false;
+      window.CANGJIE_SUPABASE_CONFIG.lastError = errText;
+      setPrivateCloudTestStatusV1("连接失败：" + errText, "bad");
+      updateSyncStatus("同步失败");
+      renderDeploymentConfigV1();
+      return {data:null, error:err};
     }
   }
   async function testConnection(){
@@ -30187,6 +30268,8 @@ body.show-profile-v92 #inventoryView{
   window.togglePrivateDeploymentFieldsV1 = togglePrivateDeploymentFieldsV1;
   window.focusDeploymentConfigV1 = focusDeploymentConfigV1;
   window.getDeploymentConfigV1 = deploymentConfig;
+  window.createRuntimeSupabaseClient = createRuntimeSupabaseClient;
+  window.testDeploymentSupabaseConnectionV1 = testDeploymentSupabaseConnectionV1;
   window.toggleAutoSyncEnabled = toggleAutoSyncEnabled;
   window.pullCloudSnapshot = pullCloudSnapshot;
   window.pushLocalChanges = pushLocalChanges;
