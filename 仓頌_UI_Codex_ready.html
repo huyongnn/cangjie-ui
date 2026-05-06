@@ -27075,9 +27075,12 @@ body.show-profile-v92 #inventoryView{
     var client = supabaseForEmployeeLogin();
     if(!client || !phone) return null;
     try{
+      var merchantId = typeof window.getCurrentMerchantId === "function"
+        ? window.getCurrentMerchantId()
+        : ((read("cangjieCommercialSyncV1", {}) || {}).merchantId || "");
       var query = employeeLoginTable(client)
         .select("*")
-        .eq("merchant_id", "mch_08230i")
+        .eq("merchant_id", merchantId)
         .eq("phone", phone)
         .eq("status", "启用")
         .order("cloud_updated_at", {ascending:false})
@@ -27669,6 +27672,14 @@ body.show-profile-v92 #inventoryView{
   font-weight:950;
   cursor:pointer;
 }
+.commercial-sync-v1-btn:disabled,
+.config-step1-actions button:disabled,
+.deployment-v1-test-row button:disabled{
+  background:#d8ddd5 !important;
+  color:#687066 !important;
+  cursor:not-allowed;
+  opacity:.62;
+}
 .commercial-sync-v1-toggle{
   min-height:38px;
   display:inline-flex;
@@ -27926,6 +27937,7 @@ body.show-profile-v92 #inventoryView{
   var PERSIST_KEY = "tudou2_v57_persistent_data";
   var SYNC_CONSOLE_KEY = "cangjieSyncConsoleV1";
   var DEPLOYMENT_CONFIG_KEY = "cangjieDeploymentConfigV1";
+  var RLS_PREFLIGHT_KEY = "cangjieRlsPreflightV1";
   const SUPABASE_URL = "https://dsutthgfzyopkzpwawkb.supabase.co";
   const SUPABASE_KEY = "sb_publishable_JKxs11pjPZ2DbQVEi_1A1A_GPaWnn7r";
   let supabaseInitError = "";
@@ -28074,6 +28086,12 @@ body.show-profile-v92 #inventoryView{
     }catch(err){}
     return readJson("cangjieMerchantProfileV92", {});
   }
+  function getCurrentMerchantId(){
+    var saved = readJson(META_KEY, null);
+    if(saved && saved.merchantId) return String(saved.merchantId);
+    var merchant = merchantProfile();
+    return "mch_" + hashText([merchant.name, merchant.phone, merchant.address].join("|"));
+  }
   function currentAccount(){
     return readJson("cangjieCurrentAccountV94", null)
       || readJson("cangjieCurrentAccountV93", null)
@@ -28097,9 +28115,8 @@ body.show-profile-v92 #inventoryView{
     var merchant = merchantProfile();
     var account = currentAccount();
     var deployment = deploymentConfig();
-    var merchantId = "mch_" + hashText([merchant.name, merchant.phone, merchant.address].join("|"));
     return {
-      merchantId:merchantId,
+      merchantId:getCurrentMerchantId(),
       userId:account.employee_id || account.employeeId || account.id || (account.role === "owner" ? "owner" : account.phone),
       deviceId:ensureDeviceId(),
       role:account.role || "管理员",
@@ -28178,7 +28195,7 @@ body.show-profile-v92 #inventoryView{
     rows.unshift({
       id:"sync_" + Date.now().toString(36),
       time:now(),
-      merchantId:m.merchantId,
+      merchantId:getCurrentMerchantId(),
       deviceId:m.deviceId,
       type:type || "info",
       status:status || m.cloudStatus || "未连接",
@@ -28220,7 +28237,7 @@ body.show-profile-v92 #inventoryView{
   }
   function toggleAutoSyncEnabled(checked){
     var m = meta();
-    if(isLocalOnlyDeployment()) checked = false;
+    if(!canUseCloudSync({silent:true})) checked = false;
     m.autoSyncEnabled = checked === true;
     m.autoSyncMode = m.autoSyncEnabled ? "snapshot_upload_only" : "manual";
     if(typeof m.lastAutoSyncAt === "undefined") m.lastAutoSyncAt = null;
@@ -28248,6 +28265,57 @@ body.show-profile-v92 #inventoryView{
     if(window.CANGJIE_SUPABASE_CONFIG.connected) return "已连接";
     if(window.CANGJIE_SUPABASE_CONFIG.lastError) return "未连接：" + window.CANGJIE_SUPABASE_CONFIG.lastError;
     return "未连接";
+  }
+  function cloudSyncBlockedMessage(settings){
+    settings = settings || activeSupabaseSettings();
+    if(settings.mode === "local_only") return "当前为本地模式，云同步已关闭。";
+    if(settings.mode === "private_cloud" && (!settings.url || !settings.key)) return "请先配置私有云连接。";
+    return "";
+  }
+  function canUseCloudSync(options){
+    options = options || {};
+    var settings = options.settings || updateSupabaseConfigFromDeployment();
+    var message = cloudSyncBlockedMessage(settings);
+    window.CANGJIE_LAST_CLOUD_SYNC_BLOCK_MESSAGE = message;
+    if(message){
+      window.CANGJIE_SUPABASE_CONFIG.connected = false;
+      window.CANGJIE_SUPABASE_CONFIG.lastError = message;
+      if(!options.silent){
+        setConnectionText(message);
+        if(typeof toast === "function") toast(message);
+      }
+      return false;
+    }
+    return true;
+  }
+  function cloudSyncBlockedResult(type, statusSetter){
+    var message = window.CANGJIE_LAST_CLOUD_SYNC_BLOCK_MESSAGE || cloudSyncBlockedMessage(activeSupabaseSettings());
+    if(statusSetter) statusSetter(message);
+    writeSyncLog(type || "cloud_sync_blocked", "未连接", message);
+    return {data:null, error:message, blocked:true};
+  }
+  function updateCloudSyncButtonsV1(){
+    var allowed = canUseCloudSync({silent:true});
+    var message = window.CANGJIE_LAST_CLOUD_SYNC_BLOCK_MESSAGE || "";
+    var buttons = Array.from(document.querySelectorAll("#adminSyncToolsV1 button"));
+    buttons.forEach(function(btn){
+      if(btn && btn.getAttribute("data-local-action-v1") === "1") return;
+      btn.disabled = !allowed;
+      if(message) btn.title = message;
+      else btn.removeAttribute("title");
+    });
+    var autoInput = document.getElementById("autoSyncEnabledV1");
+    if(autoInput){
+      autoInput.disabled = !allowed;
+      autoInput.title = allowed ? "" : message;
+    }
+    var testBtn = document.getElementById("testDeploymentSupabaseV1");
+    if(testBtn){
+      var testAllowed = canUseCloudSync({settings:runtimeSupabaseSettingsFromForm(), silent:true});
+      var testMessage = window.CANGJIE_LAST_CLOUD_SYNC_BLOCK_MESSAGE || "";
+      testBtn.disabled = !testAllowed;
+      testBtn.title = testMessage || "";
+    }
   }
   function ensureDeploymentConfigPanelV1(){
     var root = document.getElementById("configStep1Root");
@@ -28277,9 +28345,9 @@ body.show-profile-v92 #inventoryView{
       + '<label class="deployment-v1-option"><input type="radio" name="deploymentModeV1" value="private_cloud" onchange="togglePrivateDeploymentFieldsV1()"> 私有云</label>'
       + '</div>'
       + '<div id="privateCloudFieldsV1" class="deployment-v1-private">'
-      + '<label>Supabase URL<input id="privateSupabaseUrlV1" placeholder="https://xxxx.supabase.co"></label>'
-      + '<label>Supabase Key<input id="privateSupabaseKeyV1" placeholder="sb_publishable_..."></label>'
-      + '<div class="deployment-v1-test-row"><button class="config-step1-gray" type="button" onclick="testDeploymentSupabaseConnectionV1()">测试连接</button><span id="privateCloudTestStatusV1" class="config-step1-status">未测试</span></div>'
+      + '<label>Supabase URL<input id="privateSupabaseUrlV1" placeholder="https://xxxx.supabase.co" oninput="updateCloudSyncButtonsV1()"></label>'
+      + '<label>Supabase Key<input id="privateSupabaseKeyV1" placeholder="sb_publishable_..." oninput="updateCloudSyncButtonsV1()"></label>'
+      + '<div class="deployment-v1-test-row"><button id="testDeploymentSupabaseV1" class="config-step1-gray" type="button" onclick="testDeploymentSupabaseConnectionV1()">测试连接</button><span id="privateCloudTestStatusV1" class="config-step1-status">未测试</span></div>'
       + '</div>'
       + '<div class="config-step1-actions"><button class="config-step1-green" type="button" onclick="saveDeploymentConfigV1()">保存部署模式</button><button class="config-step1-gray" type="button" onclick="renderDeploymentConfigV1()">刷新状态</button></div>'
       + '<p class="config-step1-note">本地模式会在框架层禁止 Supabase 上传；仓颉云使用当前项目 Supabase；私有云仅保存客户自己的 URL 和 publishable key，后续同步函数会从这里读取。</p>';
@@ -28317,12 +28385,14 @@ body.show-profile-v92 #inventoryView{
         return '<div class="deployment-v1-item"><span>'+e(row[0])+'</span><b>'+e(row[1])+'</b></div>';
       }).join("");
     }
+    updateCloudSyncButtonsV1();
   }
   function togglePrivateDeploymentFieldsV1(){
     var checked = document.querySelector('input[name="deploymentModeV1"]:checked');
     var mode = checked ? checked.value : deploymentConfig().deploymentMode;
     var box = document.getElementById("privateCloudFieldsV1");
     if(box) box.style.display = mode === "private_cloud" ? "grid" : "none";
+    setTimeout(updateCloudSyncButtonsV1, 0);
   }
   function saveDeploymentConfigV1(){
     var checked = document.querySelector('input[name="deploymentModeV1"]:checked');
@@ -28364,13 +28434,7 @@ body.show-profile-v92 #inventoryView{
     window.CANGJIE_SUPABASE_CONFIG.anonKey = settings.key || "";
     window.CANGJIE_SUPABASE_CONFIG.deploymentMode = settings.mode || deploymentConfig().deploymentMode;
     window.CANGJIE_SUPABASE_CONFIG.databaseSource = settings.source || deploymentDatabaseSource();
-    if(settings.mode === "local_only"){
-      supabaseInitError = "当前为本地模式，云同步已关闭";
-      window.CANGJIE_SUPABASE_CONFIG.connected = false;
-      window.CANGJIE_SUPABASE_CONFIG.lastError = supabaseInitError;
-      setConnectionText("本地模式：云同步关闭");
-      return null;
-    }
+    if(!canUseCloudSync({settings:settings, silent:options && options.silent})) return null;
     if(!window.supabase || typeof window.supabase.createClient !== "function"){
       supabaseInitError = "Supabase SDK 未加载";
       window.CANGJIE_SUPABASE_CONFIG.lastError = supabaseInitError;
@@ -28413,9 +28477,9 @@ body.show-profile-v92 #inventoryView{
   }
   async function testDeploymentSupabaseConnectionV1(){
     var settings = runtimeSupabaseSettingsFromForm();
-    if(settings.mode === "local_only"){
-      setPrivateCloudTestStatusV1("本地模式不初始化", "warn");
-      return {data:null, error:null, skipped:true, reason:"local_only"};
+    if(!canUseCloudSync({settings:settings})){
+      setPrivateCloudTestStatusV1(window.CANGJIE_LAST_CLOUD_SYNC_BLOCK_MESSAGE || "云同步不可用", "warn");
+      return {data:null, error:window.CANGJIE_LAST_CLOUD_SYNC_BLOCK_MESSAGE, blocked:true};
     }
     setPrivateCloudTestStatusV1("测试中...", "warn");
     var client = createRuntimeSupabaseClient({settings:settings});
@@ -28429,7 +28493,7 @@ body.show-profile-v92 #inventoryView{
       var result = await client.from("test_orders").select("id").limit(1);
       var source = "test_orders";
       if(result.error){
-        result = await client.from("cloud_snapshots").select("id").limit(1);
+        result = await client.from("cloud_snapshots").select("id").eq("merchant_id", getCurrentMerchantId()).limit(1);
         source = "cloud_snapshots";
       }
       if(result.error){
@@ -28459,6 +28523,7 @@ body.show-profile-v92 #inventoryView{
     }
   }
   async function testConnection(){
+    if(!canUseCloudSync()) return cloudSyncBlockedResult("supabase_test", setConnectionText);
     var client = initSupabaseClient();
     if(!client){
       console.log("连接测试:", null, window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化");
@@ -28502,6 +28567,7 @@ body.show-profile-v92 #inventoryView{
   }
   async function testInsert(){
     console.log("开始写入测试");
+    if(!canUseCloudSync()) return cloudSyncBlockedResult("supabase_insert", setInsertText);
     var client = initSupabaseClient();
     if(!client){
       console.log("写入结果:", null, window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化");
@@ -28541,6 +28607,10 @@ body.show-profile-v92 #inventoryView{
   }
   async function testReadCloud(){
     console.log("开始读取云端数据");
+    if(!canUseCloudSync()){
+      var blockedReadEl = document.getElementById("commercialSyncReadStatusV1");
+      return cloudSyncBlockedResult("supabase_read", function(text){ if(blockedReadEl) blockedReadEl.textContent = text; });
+    }
     var client = initSupabaseClient();
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
@@ -28619,11 +28689,13 @@ body.show-profile-v92 #inventoryView{
   }
   function autoUploadBusinessSnapshotAfterOrder(reason){
     var m = meta();
-    if(isLocalOnlyDeployment()){
-      setAutoUploadResult("本地模式：未自动上传云端", now());
-      return Promise.resolve({skipped:true, reason:"local_only"});
-    }
     if(m.autoSyncEnabled !== true) return Promise.resolve({skipped:true, reason:"auto_sync_off"});
+    if(!canUseCloudSync({silent:true})){
+      var blockMessage = window.CANGJIE_LAST_CLOUD_SYNC_BLOCK_MESSAGE || "云同步不可用";
+      setAutoUploadResult(blockMessage, now());
+      writeSyncLog("auto_snapshot_push", "未连接", blockMessage, {reason:reason || "order_completed"});
+      return Promise.resolve({skipped:true, reason:"cloud_sync_blocked"});
+    }
     m.autoSyncMode = "snapshot_upload_only";
     saveMeta(m);
     setAutoUploadResult("自动上传中...", now());
@@ -28713,8 +28785,7 @@ body.show-profile-v92 #inventoryView{
     });
   }
   function syncConsoleMerchantIds(){
-    var m = meta();
-    return uniqueStrings([m.merchantId, "mch_08230i"]);
+    return uniqueStrings([getCurrentMerchantId()]);
   }
   function blankSyncConsoleModule(label, uploadAt, result){
     return {
@@ -28811,11 +28882,9 @@ body.show-profile-v92 #inventoryView{
     };
   }
   function applySyncConsoleFilters(query, key){
-    var ids = syncConsoleMerchantIds();
-    if(ids.length > 1 && typeof query.in === "function") query = query.in("merchant_id", ids);
-    else if(ids.length) query = query.eq("merchant_id", ids[0]);
-    if(key === "snapshots") query = query.eq("data_type", "full_snapshot");
-    return query;
+      query = query.eq("merchant_id", getCurrentMerchantId());
+      if(key === "snapshots") query = query.eq("data_type", "full_snapshot");
+      return query;
   }
   function syncConsoleLatestTime(row, field){
     return (row && (row[field] || row.cloud_updated_at || row.cloud_created_at || row.local_updated_at || row.local_created_at)) || "";
@@ -28823,6 +28892,11 @@ body.show-profile-v92 #inventoryView{
   async function checkSyncConsoleModule(key){
     var cfg = syncConsoleConfigs()[key];
     if(!cfg) return {key:key, error:"未知模块"};
+    if(!canUseCloudSync()){
+      var blockedMessage = window.CANGJIE_LAST_CLOUD_SYNC_BLOCK_MESSAGE || "云同步不可用";
+      setSyncConsoleModule(key, {lastReadAt:now(), lastHealthCheckAt:now(), healthStatus:"异常", lastResult:blockedMessage, hasError:true, error:blockedMessage});
+      return {key:key, data:null, error:blockedMessage, blocked:true};
+    }
     var client = initSupabaseClient();
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
@@ -28918,6 +28992,172 @@ body.show-profile-v92 #inventoryView{
     renderSyncConsolePanel();
     return state;
   }
+  function rlsPreflightConfigs(){
+    return {
+      orders:{label:"orders", table:publicOrdersTable, readMerchantScoped:true, writeMerchantScoped:true, latestField:"cloud_created_at"},
+      inventory:{label:"inventory", table:publicInventoryTable, readMerchantScoped:true, writeMerchantScoped:true, latestField:"cloud_updated_at"},
+      employees:{label:"employees", table:publicEmployeesTable, readMerchantScoped:true, writeMerchantScoped:true, latestField:"cloud_updated_at"},
+      cloud_snapshots:{label:"cloud_snapshots", table:function(client){ return client.from("cloud_snapshots"); }, readMerchantScoped:true, writeMerchantScoped:true, latestField:"cloud_updated_at", snapshot:true}
+    };
+  }
+  function defaultRlsPreflightState(){
+    var modules = {};
+    Object.keys(rlsPreflightConfigs()).forEach(function(key){
+      modules[key] = {
+        label:rlsPreflightConfigs()[key].label,
+        readMerchantScoped:null,
+        writeMerchantScoped:null,
+        queryMerchantScoped:null,
+        status:"未检测",
+        result:"尚未预检",
+        count:"-",
+        error:""
+      };
+    });
+    return {
+      updatedAt:"",
+      merchantId:getCurrentMerchantId(),
+      overallStatus:"未检测",
+      canEnterRls:false,
+      summary:"尚未进行 RLS 商用安全预检",
+      modules:modules
+    };
+  }
+  function rlsPreflightState(){
+    var base = defaultRlsPreflightState();
+    var saved = readJson(RLS_PREFLIGHT_KEY, {});
+    var next = Object.assign({}, base, saved || {});
+    next.merchantId = getCurrentMerchantId();
+    next.modules = Object.assign({}, base.modules, (saved && saved.modules) || {});
+    Object.keys(base.modules).forEach(function(key){
+      next.modules[key] = Object.assign({}, base.modules[key], next.modules[key] || {});
+    });
+    return next;
+  }
+  function saveRlsPreflightState(next){
+    writeJson(RLS_PREFLIGHT_KEY, next);
+    return next;
+  }
+  function setRlsPreflightStatus(text){
+    var value = text || "未检测";
+    var el = document.getElementById("rlsPreflightStatusV1");
+    if(el) el.textContent = value;
+    var adminEl = document.getElementById("rlsPreflightStatusAdminV1");
+    if(adminEl) adminEl.textContent = value;
+  }
+  function ensureRlsPreflightPanel(){
+    var root = document.getElementById("profileCenterRootV92");
+    var grid = root && root.querySelector(".profile-v92-grid");
+    if(!grid || document.getElementById("rlsPreflightPanelV1")) return;
+    var card = document.createElement("div");
+    card.id = "rlsPreflightPanelV1";
+    card.className = "profile-v92-card commercial-sync-v1-card";
+    card.innerHTML = '<div class="sync-console-v1-head"><div><h2>RLS 商用安全预检</h2><p>检查订单、库存、员工和业务快照读写是否统一绑定当前商户 ID；本阶段不启用 RLS。</p></div><span id="rlsPreflightStatusV1" class="commercial-sync-v1-status">未检测</span></div>'
+      + '<div id="rlsPreflightIdentityV1" class="commercial-sync-v1-grid" style="margin-top:12px"></div>'
+      + '<div class="sync-console-v1-table-wrap" style="margin-top:12px"><table class="sync-console-v1-table"><thead><tr><th>云端表</th><th>读取是否带 merchant_id</th><th>写入是否带 merchant_id</th><th>只读查询验证</th><th>云端记录数</th><th>状态</th><th>说明</th></tr></thead><tbody id="rlsPreflightBodyV1"></tbody></table></div>'
+      + '<div class="commercial-sync-v1-note">RLS 预检只执行带 merchant_id 的只读查询；不会开启 RLS、不会新增/删除/覆盖任何云端或本地数据。</div>';
+    var after = document.getElementById("syncConsolePanelV1");
+    if(after && after.parentNode === grid) grid.insertBefore(card, after.nextSibling);
+    else grid.appendChild(card);
+  }
+  function renderRlsPreflightPanel(){
+    ensureRlsPreflightPanel();
+    var panel = document.getElementById("rlsPreflightPanelV1");
+    if(panel) panel.style.display = canShowAdminSyncTools() ? "" : "none";
+    if(!canShowAdminSyncTools()) return;
+    var state = rlsPreflightState();
+    var identity = document.getElementById("rlsPreflightIdentityV1");
+    var body = document.getElementById("rlsPreflightBodyV1");
+    if(!identity || !body) return;
+    function scopedText(value){
+      if(value === true) return "是";
+      if(value === false) return "否";
+      return "未检测";
+    }
+    setRlsPreflightStatus("总体状态：" + (state.overallStatus || "未检测"));
+    identity.innerHTML = [
+      ["当前商户ID", state.merchantId || ""],
+      ["总体状态", healthBadge(state.overallStatus || "未检测")],
+      ["最近预检时间", state.updatedAt || "尚未预检"],
+      ["是否可以进入 RLS 阶段", state.canEnterRls ? "可以" : "暂不可以"],
+      ["说明", state.summary || "尚未进行 RLS 商用安全预检"]
+    ].map(function(row){
+      var value = String(row[1] || "-");
+      return '<div class="commercial-sync-v1-item"><span>'+e(row[0])+'</span><b>'+(value.indexOf("sync-console-v1-health") >= 0 ? value : e(value))+'</b></div>';
+    }).join("");
+    body.innerHTML = Object.keys(rlsPreflightConfigs()).map(function(key){
+      var row = state.modules[key] || {};
+      return '<tr><td>'+e(row.label || key)+'</td>'
+        + '<td>'+e(scopedText(row.readMerchantScoped))+'</td>'
+        + '<td>'+e(scopedText(row.writeMerchantScoped))+'</td>'
+        + '<td>'+e(row.queryMerchantScoped === true ? "通过" : (row.queryMerchantScoped === false ? "未通过" : "未检测"))+'</td>'
+        + '<td>'+e(row.count == null ? "-" : row.count)+'</td>'
+        + '<td>'+healthBadge(row.status || "未检测")+'</td>'
+        + '<td class="'+(row.error ? "sync-console-v1-error" : "sync-console-v1-ok")+'">'+e(row.error || row.result || "未检测")+'</td></tr>';
+    }).join("");
+  }
+  async function runRlsCommercialPrecheck(){
+    setRlsPreflightStatus("RLS 预检中...");
+    var state = rlsPreflightState();
+    var checkedAt = now();
+    state.updatedAt = checkedAt;
+    state.merchantId = getCurrentMerchantId();
+    var client = null;
+    if(canUseCloudSync({silent:true})) client = initSupabaseClient();
+    var configs = rlsPreflightConfigs();
+    var allOk = true;
+    var blocked = window.CANGJIE_LAST_CLOUD_SYNC_BLOCK_MESSAGE || "";
+    if(!client){
+      allOk = false;
+      blocked = blocked || window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
+    }
+    for(var key in configs){
+      var cfg = configs[key];
+      var module = {
+        label:cfg.label,
+        readMerchantScoped:cfg.readMerchantScoped === true,
+        writeMerchantScoped:cfg.writeMerchantScoped === true,
+        queryMerchantScoped:false,
+        status:"未检测",
+        result:"",
+        count:"-",
+        error:""
+      };
+      if(!client){
+        module.status = "异常";
+        module.error = blocked;
+        state.modules[key] = module;
+        continue;
+      }
+      try{
+        var query = cfg.table(client)
+          .select("id, merchant_id", {count:"exact"})
+          .eq("merchant_id", state.merchantId);
+        if(cfg.snapshot) query = query.eq("data_type", "full_snapshot");
+        var result = await query.limit(1);
+        if(result.error) throw result.error;
+        module.queryMerchantScoped = true;
+        module.count = typeof result.count === "number" ? result.count : ((result.data || []).length || 0);
+        module.status = (module.readMerchantScoped && module.writeMerchantScoped) ? "正常" : "异常";
+        module.result = "已使用 merchant_id=" + state.merchantId + " 完成只读验证";
+      }catch(err){
+        module.status = "异常";
+        module.error = err && err.message ? err.message : String(err);
+      }
+      if(module.status !== "正常") allOk = false;
+      state.modules[key] = module;
+    }
+    state.canEnterRls = allOk;
+    state.overallStatus = allOk ? "正常" : "异常";
+    state.summary = allOk
+      ? "所有正式云端读写均已绑定 merchant_id，可进入 RLS 设计阶段，但本次未开启 RLS。"
+      : "仍有模块未通过 merchant_id 预检，暂不进入 RLS 阶段。";
+    saveRlsPreflightState(state);
+    setRlsPreflightStatus(allOk ? "RLS 预检通过" : "RLS 预检未通过");
+    renderRlsPreflightPanel();
+    writeSyncLog("rls_preflight", allOk ? "已连接" : "同步失败", state.summary, {merchantId:state.merchantId, modules:state.modules});
+    return state;
+  }
   function setSyncConsoleGlobalStatus(text){
     var value = text || "未检查";
     var el = document.getElementById("syncConsoleStatusV1");
@@ -28955,7 +29195,7 @@ body.show-profile-v92 #inventoryView{
     idBox.innerHTML = [
       ["当前登录账号", (account.employee_name || account.name || account.role || "主账号") + (account.phone ? " " + account.phone : "")],
       ["当前设备ID", m.deviceId || ""],
-      ["当前商户ID", m.merchantId || ""],
+      ["当前商户ID", getCurrentMerchantId() || ""],
       ["总体同步状态", healthBadge(state.overallHealthStatus || "未检测")],
       ["最近健康检查", state.lastHealthCheckAt || "尚未检测"],
       ["健康摘要", state.lastHealthSummary || "尚未进行同步健康检查"]
@@ -29012,7 +29252,7 @@ body.show-profile-v92 #inventoryView{
     return localEmployeesForCloud().map(function(row){
       var key = employeeCloudKey(row);
       return {
-        merchant_id:m.merchantId || "mch_08230i",
+        merchant_id:getCurrentMerchantId(),
         employee_id:key.id || ("emp_" + Date.now()),
         employee_name:row.employee_name || row.employeeName || row.name || "",
         phone:key.phone,
@@ -29058,6 +29298,7 @@ body.show-profile-v92 #inventoryView{
     return key;
   }
   async function pushEmployeesToCloud(){
+    if(!canUseCloudSync()) return cloudSyncBlockedResult("employees_push", setEmployeeCloudStatus);
     var client = initSupabaseClient();
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
@@ -29089,6 +29330,7 @@ body.show-profile-v92 #inventoryView{
     }
   }
   async function readCloudEmployees(){
+    if(!canUseCloudSync()) return cloudSyncBlockedResult("employees_read", setEmployeeCloudStatus);
     var client = initSupabaseClient();
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
@@ -29097,7 +29339,7 @@ body.show-profile-v92 #inventoryView{
     }
     setEmployeeCloudStatus("读取云端员工中...");
     try{
-      var merchantId = meta().merchantId || "mch_08230i";
+      var merchantId = getCurrentMerchantId();
       var result = await publicEmployeesTable(client)
         .select("*")
         .eq("merchant_id", merchantId)
@@ -29120,6 +29362,7 @@ body.show-profile-v92 #inventoryView{
     }
   }
   async function mergeCloudEmployeesToLocal(){
+    if(!canUseCloudSync()) return Object.assign({merged:0, skipped:0, cloudTotal:0, backupKey:""}, cloudSyncBlockedResult("employees_merge", setEmployeeCloudStatus));
     setEmployeeCloudStatus("准备合并云端员工...");
     var readResult = await readCloudEmployees();
     if(readResult.error){
@@ -29213,7 +29456,7 @@ body.show-profile-v92 #inventoryView{
         var remainQty = Math.max(0, qty - soldQty);
         var remainWeight = Math.max(0, inWeight - soldWeight);
         rows.push({
-          merchant_id:m.merchantId || "mch_08230i",
+          merchant_id:getCurrentMerchantId(),
           product_id:String(item.goodsId || item.productId || item.id || (batch.id || "batch") + "_" + itemIndex),
           product_name:item.name || item.productName || "",
           batch_no:batch.no || batch.batchNo || batch.id || String(batchIndex + 1),
@@ -29258,6 +29501,7 @@ body.show-profile-v92 #inventoryView{
       + '</tbody></table></div>';
   }
   async function pushInventorySnapshotToCloud(){
+    if(!canUseCloudSync()) return cloudSyncBlockedResult("inventory_push", setCloudInventoryStatus);
     var client = initSupabaseClient();
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
@@ -29289,6 +29533,10 @@ body.show-profile-v92 #inventoryView{
     }
   }
   async function readCloudInventory(){
+    if(!canUseCloudSync()){
+      renderCloudInventoryList([]);
+      return cloudSyncBlockedResult("inventory_read", setCloudInventoryStatus);
+    }
     var client = initSupabaseClient();
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
@@ -29298,7 +29546,7 @@ body.show-profile-v92 #inventoryView{
     }
     setCloudInventoryStatus("读取云端库存中...");
     try{
-      var merchantId = meta().merchantId || "mch_08230i";
+      var merchantId = getCurrentMerchantId();
       var result = await publicInventoryTable(client)
         .select("*")
         .eq("merchant_id", merchantId)
@@ -29324,6 +29572,7 @@ body.show-profile-v92 #inventoryView{
     }
   }
   async function mergeCloudInventoryToLocal(){
+    if(!canUseCloudSync()) return Object.assign({merged:0, skipped:0, cloudTotal:0, backupKey:""}, cloudSyncBlockedResult("inventory_merge", setCloudInventoryStatus));
     setCloudInventoryStatus("准备合并云端库存...");
     var readResult = await readCloudInventory();
     if(readResult.error){
@@ -29452,6 +29701,10 @@ body.show-profile-v92 #inventoryView{
     }).join("") + '</div>';
   }
   async function readCloudOrders(){
+    if(!canUseCloudSync()){
+      renderCloudOrdersList([]);
+      return cloudSyncBlockedResult("orders_read", setCloudOrdersReadStatus);
+    }
     var client = initSupabaseClient();
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
@@ -29463,7 +29716,7 @@ body.show-profile-v92 #inventoryView{
     try{
       var result = await publicOrdersTable(client)
         .select("*")
-        .eq("merchant_id", "mch_08230i")
+        .eq("merchant_id", getCurrentMerchantId())
         .order("cloud_created_at", {ascending:false});
       console.log("云端订单读取结果:", JSON.stringify({data:result.data, error:result.error}));
       if(result.error){
@@ -29524,6 +29777,7 @@ body.show-profile-v92 #inventoryView{
     return key;
   }
   async function mergeCloudOrdersToLocal(){
+    if(!canUseCloudSync()) return Object.assign({merged:0, skipped:0, total:0}, cloudSyncBlockedResult("orders_merge", setCloudOrdersReadStatus));
     var client = initSupabaseClient();
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
@@ -29545,7 +29799,7 @@ body.show-profile-v92 #inventoryView{
       setCloudOrdersReadStatus("读取云端订单中...");
       var result = await publicOrdersTable(client)
         .select("*")
-        .eq("merchant_id", "mch_08230i")
+        .eq("merchant_id", getCurrentMerchantId())
         .order("cloud_created_at", {ascending:false});
       if(result.error){
         var message = result.error.message || String(result.error);
@@ -29606,7 +29860,7 @@ body.show-profile-v92 #inventoryView{
     var paid = Number(order.paidAmount || order.paid || order.realPaid || 0);
     var debt = Number(order.debtAmount || order.debt || Math.max(total - paid, 0) || 0);
     return {
-      merchant_id:m.merchantId,
+      merchant_id:getCurrentMerchantId(),
       order_no:order.billNo || order.orderNo || order.id || String(Date.now()),
       customer_name:order.customerName || order.buyerName || order.customer || "未知客户",
       employee_id:order.employee_id || order.employeeId || order.userId || account.employee_id || m.userId || account.id || "owner",
@@ -29653,10 +29907,11 @@ body.show-profile-v92 #inventoryView{
     if(!lastOrder) return {data:null, error:"没有订单"};
     console.log("准备上传订单:", lastOrder);
     var key = cloudOrderKey(lastOrder) || String(Date.now());
-    if(isLocalOnlyDeployment()){
-      setCloudOrderSyncResult("本地模式：订单只保存在本地", now());
-      writeSyncLog("cloud_order_push", "未连接", "当前为本地模式，订单未上传 Supabase。", {orderNo:key});
-      return {data:null, error:null, skipped:true, reason:"local_only"};
+    if(!canUseCloudSync({silent:true})){
+      var blockMessage = window.CANGJIE_LAST_CLOUD_SYNC_BLOCK_MESSAGE || "云同步不可用";
+      setCloudOrderSyncResult(blockMessage, now());
+      writeSyncLog("cloud_order_push", "未连接", blockMessage, {orderNo:key});
+      return {data:null, error:null, skipped:true, reason:"cloud_sync_blocked"};
     }
     var ledger = cloudOrderSyncLedger();
     if(ledger[key] && ledger[key].status === "success"){
@@ -29682,7 +29937,7 @@ body.show-profile-v92 #inventoryView{
         .insert([row])
         .select();
       console.log("订单写入结果:", JSON.stringify({data:result.data, error:result.error}));
-      var check = await publicOrdersTable(client).select("*");
+      var check = await publicOrdersTable(client).select("*").eq("merchant_id", getCurrentMerchantId());
       console.log("数据库实际数据:", JSON.stringify(check));
       if(result.error){
         var message = result.error.message || String(result.error);
@@ -29720,7 +29975,7 @@ body.show-profile-v92 #inventoryView{
     var m = meta();
     var data = persistentData();
     return {
-      merchantId:m.merchantId,
+      merchantId:getCurrentMerchantId(),
       userId:m.userId,
       deviceId:m.deviceId,
       role:m.role,
@@ -29743,7 +29998,7 @@ body.show-profile-v92 #inventoryView{
   function buildCloudPayload(){
     var m = meta();
     return {
-      merchantId:m.merchantId,
+      merchantId:getCurrentMerchantId(),
       deviceId:m.deviceId,
       userId:m.userId,
       role:m.role,
@@ -29797,6 +30052,7 @@ body.show-profile-v92 #inventoryView{
   }
   async function pushBusinessSnapshot(){
     console.log("开始上传业务快照");
+    if(!canUseCloudSync()) return cloudSyncBlockedResult("business_snapshot_push", setSnapshotText);
     var client = initSupabaseClient();
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
@@ -29844,6 +30100,7 @@ body.show-profile-v92 #inventoryView{
   }
   async function readBusinessSnapshot(){
     console.log("开始读取业务快照");
+    if(!canUseCloudSync()) return cloudSyncBlockedResult("business_snapshot_read", setSnapshotText);
     var client = initSupabaseClient();
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
@@ -29852,13 +30109,12 @@ body.show-profile-v92 #inventoryView{
       writeSyncLog("business_snapshot_read", "同步失败", "Supabase 未初始化，业务快照未读取。");
       return {data:null, error:initError};
     }
-    var m = meta();
     setSnapshotText("读取中...");
     try{
       var result = await client
         .from("cloud_snapshots")
         .select("*")
-        .eq("merchant_id", m.merchantId)
+        .eq("merchant_id", getCurrentMerchantId())
         .eq("data_type", "full_snapshot")
         .order("cloud_updated_at", {ascending:false})
         .limit(1);
@@ -29912,6 +30168,10 @@ body.show-profile-v92 #inventoryView{
   }
   async function readLatestBusinessSnapshot(){
     console.log("开始读取最新云端业务快照");
+    if(!canUseCloudSync()){
+      renderSnapshotPreview(null);
+      return cloudSyncBlockedResult("business_snapshot_preview", setSnapshotText);
+    }
     var client = initSupabaseClient();
     if(!client){
       var initError = window.CANGJIE_SUPABASE_CONFIG.lastError || "Supabase 未初始化";
@@ -29921,13 +30181,12 @@ body.show-profile-v92 #inventoryView{
       writeSyncLog("business_snapshot_preview", "同步失败", "Supabase 未初始化，最新业务快照未读取。");
       return {data:null, error:initError};
     }
-    var m = meta();
     setSnapshotText("读取中...");
     try{
       var result = await client
         .from("cloud_snapshots")
         .select("*")
-        .eq("merchant_id", m.merchantId)
+        .eq("merchant_id", getCurrentMerchantId())
         .eq("data_type", "full_snapshot")
         .order("cloud_updated_at", {ascending:false})
         .limit(1);
@@ -30016,6 +30275,7 @@ body.show-profile-v92 #inventoryView{
     function setRestoreText(text){
       if(status) status.textContent = text || "未恢复";
     }
+    if(!canUseCloudSync()) return Object.assign({backup:null}, cloudSyncBlockedResult("business_snapshot_restore", setRestoreText));
     var backup;
     try{
       backup = backupLocalStorageBeforeCloudRestore();
@@ -30038,13 +30298,12 @@ body.show-profile-v92 #inventoryView{
       writeSyncLog("business_snapshot_restore", "同步失败", "Supabase 未初始化，未执行恢复。", {backupKey:backup.key});
       return {data:null, error:initError, backup:backup};
     }
-    var m = meta();
     setRestoreText("恢复中...");
     try{
       var result = await client
         .from("cloud_snapshots")
         .select("*")
-        .eq("merchant_id", m.merchantId)
+        .eq("merchant_id", getCurrentMerchantId())
         .eq("data_type", "full_snapshot")
         .order("cloud_updated_at", {ascending:false})
         .limit(1);
@@ -30078,12 +30337,14 @@ body.show-profile-v92 #inventoryView{
     }
   }
   function pullCloudSnapshot(){
+    if(!canUseCloudSync()) return Promise.resolve(Object.assign({connected:false, cloudStatus:"未连接"}, cloudSyncBlockedResult("pull", null)));
     updateSyncStatus("未连接");
     writeSyncLog("pull", "未连接", "云同步尚未接入真实服务，本次仅返回空快照占位。");
     return Promise.resolve({connected:false, cloudStatus:"未连接", data:null});
   }
   function pushLocalChanges(){
     var payload = buildCloudPayload();
+    if(!canUseCloudSync()) return Promise.resolve(Object.assign({connected:false, cloudStatus:"未连接", payload:payload}, cloudSyncBlockedResult("push", null)));
     updateSyncStatus("未连接");
     writeSyncLog("push", "未连接", "云同步尚未接入真实服务，本地变更继续保存在 storage.js/localStorage。", {syncVersion:payload.syncVersion});
     return Promise.resolve({connected:false, cloudStatus:"未连接", payload:payload});
@@ -30096,7 +30357,7 @@ body.show-profile-v92 #inventoryView{
     var log = {
       id:"conflict_" + Date.now().toString(36),
       time:now(),
-      merchantId:m.merchantId,
+      merchantId:getCurrentMerchantId(),
       deviceId:m.deviceId,
       policy:"cloudUpdatedAt 较新者优先；保留本地副本",
       selected:useCloud ? "cloud" : "local",
@@ -30113,7 +30374,7 @@ body.show-profile-v92 #inventoryView{
     if(!order || typeof order !== "object") return order;
     var m = meta();
     var account = currentAccount();
-    order.merchantId = order.merchantId || m.merchantId;
+    order.merchantId = order.merchantId || getCurrentMerchantId();
     order.userId = order.userId || account.employee_id || account.employeeId || m.userId;
     order.employee_id = order.employee_id || order.employeeId || account.employee_id || account.employeeId || order.userId || "owner";
     order.employeeId = order.employeeId || order.employee_id;
@@ -30183,15 +30444,17 @@ body.show-profile-v92 #inventoryView{
         + '<div class="admin-sync-tools-v1-group"><h3>订单同步</h3><div class="commercial-sync-v1-actions"><button id="readCloudOrdersBtnV1" class="commercial-sync-v1-btn" type="button" onclick="readCloudOrders()">读取云端订单</button><button id="mergeCloudOrdersBtnV1" class="commercial-sync-v1-btn" type="button" onclick="mergeCloudOrdersToLocal()">合并云端订单到本地</button><button class="commercial-sync-v1-btn" type="button" onclick="checkOrderSyncConsole()">检查订单同步</button><span id="cloudOrdersStatusV1" class="commercial-sync-v1-status">未读取云端订单</span></div></div>'
         + '<div class="admin-sync-tools-v1-group"><h3>库存同步</h3><div class="commercial-sync-v1-actions"><button id="pushInventorySnapshotV1" class="commercial-sync-v1-btn" type="button" onclick="pushInventorySnapshotToCloud()">上传库存到云端</button><button id="readCloudInventoryV1" class="commercial-sync-v1-btn" type="button" onclick="readCloudInventory()">读取云端库存</button><button class="commercial-sync-v1-btn" type="button" onclick="mergeCloudInventoryToLocal()">合并云库存到本地</button><button class="commercial-sync-v1-btn" type="button" onclick="checkInventorySyncConsole()">检查库存同步</button><span id="cloudInventoryStatusV1" class="commercial-sync-v1-status">未同步云端库存</span></div></div>'
         + '<div class="admin-sync-tools-v1-group"><h3>员工同步</h3><div class="commercial-sync-v1-actions"><button class="commercial-sync-v1-btn" type="button" onclick="pushEmployeesToCloud()">上传员工权限</button><button class="commercial-sync-v1-btn" type="button" onclick="readCloudEmployees()">读取云端员工</button><button class="commercial-sync-v1-btn" type="button" onclick="mergeCloudEmployeesToLocal()">合并云端员工</button><button class="commercial-sync-v1-btn" type="button" onclick="checkEmployeeSyncConsole()">检查员工同步</button><span id="employeeCloudStatusAdminV1" class="commercial-sync-v1-status">未同步员工权限</span></div></div>'
-        + '<div class="admin-sync-tools-v1-group"><h3>同步检查</h3><div class="commercial-sync-v1-actions"><button class="commercial-sync-v1-btn" type="button" onclick="checkSnapshotSyncConsole()">检查云快照</button><button class="commercial-sync-v1-btn" type="button" onclick="checkAllSyncConsole()">一键检查全部</button><button class="commercial-sync-v1-btn" type="button" onclick="runSyncHealthCheck()">同步健康检查</button><button class="commercial-sync-v1-btn" type="button" onclick="clearSyncConsoleErrors()">清除错误提示</button><span id="syncConsoleStatusAdminV1" class="commercial-sync-v1-status">未检查</span></div></div>'
+        + '<div class="admin-sync-tools-v1-group"><h3>同步检查</h3><div class="commercial-sync-v1-actions"><button class="commercial-sync-v1-btn" type="button" onclick="checkSnapshotSyncConsole()">检查云快照</button><button class="commercial-sync-v1-btn" type="button" onclick="checkAllSyncConsole()">一键检查全部</button><button class="commercial-sync-v1-btn" type="button" onclick="runSyncHealthCheck()">同步健康检查</button><button class="commercial-sync-v1-btn" type="button" onclick="runRlsCommercialPrecheck()">RLS预检</button><button class="commercial-sync-v1-btn" data-local-action-v1="1" type="button" onclick="clearSyncConsoleErrors()">清除错误提示</button><span id="syncConsoleStatusAdminV1" class="commercial-sync-v1-status">未检查</span><span id="rlsPreflightStatusAdminV1" class="commercial-sync-v1-status">RLS未检测</span></div></div>'
         + '</div></details>';
     }
     var details = document.getElementById("adminSyncToolsV1");
     if(details) details.style.display = "";
+    updateCloudSyncButtonsV1();
   }
   function renderCommercialSyncPanel(){
     ensureCommercialSyncPanel();
     renderSyncConsolePanel();
+    renderRlsPreflightPanel();
     var box = document.getElementById("commercialSyncGridV1");
     if(!box) return;
     var m = meta();
@@ -30199,7 +30462,7 @@ body.show-profile-v92 #inventoryView{
     var fields = [
       ["当前部署模式", deploymentModeLabel(m.deploymentMode)],
       ["当前数据库来源", m.databaseSource || deploymentDatabaseSource()],
-      ["当前商户ID", m.merchantId],
+      ["当前商户ID", getCurrentMerchantId()],
       ["当前设备ID", m.deviceId],
       ["当前登录员工", (account.name || m.role || "管理员") + (account.phone ? " " + account.phone : "")],
       ["同步状态", "v" + (m.syncVersion || 1) + "｜" + (m.syncEnabled ? "已开启" : "未开启")],
@@ -30220,10 +30483,11 @@ body.show-profile-v92 #inventoryView{
     var autoInput = document.getElementById("autoSyncEnabledV1");
     if(autoInput){
       autoInput.checked = m.autoSyncEnabled === true;
-      autoInput.disabled = isLocalOnlyDeployment();
+      autoInput.disabled = !canUseCloudSync({silent:true});
     }
     setAutoSyncText(isLocalOnlyDeployment() ? "自动同步：关闭（本地模式）" : (m.autoSyncEnabled ? "自动同步：开启（仅上传快照）" : "自动同步：关闭"));
     renderAdminSyncTools();
+    updateCloudSyncButtonsV1();
   }
   function initCommercialSync(){
     var firstBoot = !window.__commercialSyncV1Booted;
@@ -30263,6 +30527,10 @@ body.show-profile-v92 #inventoryView{
   window.checkAllSyncConsole = checkAllSyncConsole;
   window.runSyncHealthCheck = runSyncHealthCheck;
   window.clearSyncConsoleErrors = clearSyncConsoleErrors;
+  window.runRlsCommercialPrecheck = runRlsCommercialPrecheck;
+  window.getCurrentMerchantId = getCurrentMerchantId;
+  window.canUseCloudSync = canUseCloudSync;
+  window.updateCloudSyncButtonsV1 = updateCloudSyncButtonsV1;
   window.renderDeploymentConfigV1 = renderDeploymentConfigV1;
   window.saveDeploymentConfigV1 = saveDeploymentConfigV1;
   window.togglePrivateDeploymentFieldsV1 = togglePrivateDeploymentFieldsV1;
