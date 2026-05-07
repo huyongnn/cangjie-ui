@@ -31568,6 +31568,79 @@ body.show-profile-v92 #inventoryView{
 </style>
 
 <script>
+/* ===== 统一左侧导航单击行为：先于旧 document 捕获处理，避免首次点击只选中 ===== */
+(function(){
+  if(window.__cangjieUnifiedNavClickV1) return;
+  window.__cangjieUnifiedNavClickV1 = true;
+  var lastAt = 0;
+  var lastPage = "";
+
+  function normalizeNavPage(page){
+    page = String(page || "").trim();
+    if(page === "inventory") return "inventoryStep1";
+    if(page === "owner" || page === "owners") return "ownersStep1";
+    if(page === "config" || page === "settings" || page === "connection") return "configStep1";
+    if(page === "profile" || page === "personalCenter") return "profileV92";
+    return page || "cashier";
+  }
+  function pageFromButton(btn){
+    if(!btn) return "";
+    return normalizeNavPage(btn.getAttribute("data-page") || (btn.getAttribute("data-config-direct") === "1" ? "configStep1" : ""));
+  }
+  function setImmediateActive(page){
+    var nav = document.getElementById("globalUnifiedNavV41");
+    if(!nav) return;
+    page = normalizeNavPage(page);
+    Array.from(nav.querySelectorAll(".v41-nav-btn")).forEach(function(btn){
+      btn.classList.toggle("active", pageFromButton(btn) === page);
+    });
+  }
+  function route(page){
+    page = normalizeNavPage(page);
+    setImmediateActive(page);
+    if(page === "buyers" && typeof window.openBuyerManagerV47 === "function"){
+      window.openBuyerManagerV47();
+      return;
+    }
+    if(page === "reports" && typeof window.openReportsStep1 === "function"){
+      window.openReportsStep1();
+      return;
+    }
+    if(page === "profileV92" && typeof window.showProfileCenterV92 === "function"){
+      window.showProfileCenterV92();
+      return;
+    }
+    if(typeof window.showAppPage === "function"){
+      window.showAppPage(page);
+    }
+  }
+  function handleNavEvent(ev){
+    var btn = ev.target && ev.target.closest ? ev.target.closest("#globalUnifiedNavV41 .v41-nav-btn") : null;
+    if(!btn) return;
+    var page = pageFromButton(btn);
+    if(!page) return;
+    var now = Date.now();
+    if(ev.type === "click" && lastPage === page && now - lastAt < 450){
+      ev.preventDefault();
+      ev.stopPropagation();
+      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+      return false;
+    }
+    lastAt = now;
+    lastPage = page;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+    route(page);
+    return false;
+  }
+  ["pointerdown","touchstart","mousedown","click"].forEach(function(type){
+    window.addEventListener(type, handleNavEvent, true);
+  });
+})();
+</script>
+
+<script>
 /* ===== 客户测试版入口页：本地模拟登录，不连接数据库 ===== */
 (function(){
   var LOGIN_KEY = "cangjieMerchantLoginV92";
