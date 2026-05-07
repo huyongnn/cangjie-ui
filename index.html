@@ -33318,5 +33318,337 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
 })();
 </script>
 
+<style id="cangjieCashierFrameV108Style">
+body.show-cashier #cashierRoot .cashier-layout{
+  grid-template-columns:64px 164px minmax(340px,1fr) minmax(430px,520px)!important;
+}
+body.show-cashier #cashierRoot .cashier-top-tools .bill-center-btn{
+  display:none!important;
+}
+body.show-cashier #cashierRoot .cashier-right{
+  min-width:430px!important;
+  background:#fbfcf8!important;
+}
+body.show-cashier #cashierRoot .order-head{
+  padding:14px 14px 10px!important;
+  margin-bottom:0!important;
+  border-bottom:1px solid #e2e8de!important;
+  background:#fbfcf8!important;
+}
+body.show-cashier #cashierRoot .cashier-order-top-v108{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:12px!important;
+}
+body.show-cashier #cashierRoot .cashier-order-main-v108{
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  flex-wrap:wrap!important;
+}
+body.show-cashier #cashierRoot .cashier-customer-box-v108{
+  flex:1 1 180px!important;
+  min-width:180px!important;
+}
+body.show-cashier #cashierRoot .cashier-customer-box-v108 span{
+  display:block!important;
+  font-size:12px!important;
+  color:#69766e!important;
+  font-weight:900!important;
+  margin-bottom:6px!important;
+}
+body.show-cashier #cashierRoot .cashier-customer-box-v108 select{
+  width:100%!important;
+  height:46px!important;
+  border:1px solid #d7ddd4!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  padding:0 14px!important;
+  font-size:17px!important;
+  font-weight:950!important;
+  color:#243028!important;
+}
+body.show-cashier #cashierRoot .cashier-order-tools-v108{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+}
+body.show-cashier #cashierRoot .cashier-order-tools-v108 button{
+  height:44px!important;
+  border-radius:13px!important;
+  padding:0 14px!important;
+  font-size:14px!important;
+  font-weight:950!important;
+}
+body.show-cashier #cashierRoot .cashier-order-tools-v108 .cashier-add-buyer-v108{
+  background:#eef2ec!important;
+  color:#2e3d35!important;
+  border:1px solid #d7ddd4!important;
+}
+body.show-cashier #cashierRoot .cashier-order-tools-v108 .cashier-bill-center-v108{
+  background:#2f8e40!important;
+  color:#fff!important;
+  border:1px solid #2f8e40!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:8px!important;
+}
+body.show-cashier #cashierRoot .cashier-bill-badge-v108{
+  min-width:22px!important;
+  height:22px!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.18)!important;
+  color:#fff!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:0 6px!important;
+  font-size:12px!important;
+  font-weight:950!important;
+}
+body.show-cashier #cashierRoot .order-tabs{
+  display:none!important;
+}
+body.show-cashier #cashierRoot .order-table-head{
+  grid-template-columns:minmax(0,1.55fr) 64px 70px 76px 84px 44px!important;
+  gap:8px!important;
+  padding:11px 14px!important;
+}
+body.show-cashier #cashierRoot .order-list{
+  padding:10px 14px!important;
+}
+body.show-cashier #cashierRoot .order-item{
+  grid-template-columns:minmax(0,1.55fr) 64px 70px 76px 84px 44px!important;
+  gap:8px!important;
+  align-items:center!important;
+  min-height:92px!important;
+}
+body.show-cashier #cashierRoot .order-item-name b{
+  font-size:15px!important;
+  font-weight:950!important;
+  margin-bottom:4px!important;
+}
+body.show-cashier #cashierRoot .order-item-name span{
+  font-size:12px!important;
+  line-height:1.35!important;
+}
+body.show-cashier #cashierRoot .order-item input{
+  height:38px!important;
+  font-size:14px!important;
+  font-weight:850!important;
+  text-align:center!important;
+}
+body.show-cashier #cashierRoot .order-item small{
+  display:block!important;
+  margin-top:4px!important;
+  text-align:center!important;
+  font-size:11px!important;
+  color:#6b786f!important;
+  font-weight:800!important;
+}
+body.show-cashier #cashierRoot .order-money{
+  padding-top:0!important;
+  font-size:15px!important;
+  text-align:right!important;
+}
+body.show-cashier #cashierRoot .order-del{
+  height:36px!important;
+}
+body.show-cashier #cashierRoot .order-empty{
+  padding:36px 20px!important;
+  font-size:15px!important;
+}
+body.show-cashier #cashierRoot .pay-box{
+  display:none!important;
+}
+body.show-cashier #cashierRoot .order-summary{
+  padding:12px 14px 14px!important;
+}
+body.show-cashier #cashierRoot .order-summary-top{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+  margin-bottom:10px!important;
+}
+body.show-cashier #cashierRoot .order-summary-top .cashier-metric-v108{
+  background:#fff!important;
+  border:1px solid #e1e7dd!important;
+  border-radius:14px!important;
+  padding:10px 12px!important;
+}
+body.show-cashier #cashierRoot .order-summary-top .cashier-metric-v108 span{
+  display:block!important;
+  font-size:12px!important;
+  color:#67756c!important;
+  font-weight:900!important;
+  margin-bottom:4px!important;
+}
+body.show-cashier #cashierRoot .order-summary-top .cashier-metric-v108 b{
+  font-size:18px!important;
+  color:#243028!important;
+  font-weight:950!important;
+}
+body.show-cashier #cashierRoot .total-breakdown{
+  display:none!important;
+}
+body.show-cashier #cashierRoot .order-total{
+  margin-top:12px!important;
+  padding-top:10px!important;
+  border-top:1px solid #e1e7dd!important;
+}
+body.show-cashier #cashierRoot .order-total b{
+  font-size:32px!important;
+}
+body.show-cashier #cashierRoot .order-actions{
+  margin-top:10px!important;
+}
+@media (min-width:1024px) and (max-width:1366px){
+  body.show-cashier #cashierRoot .cashier-layout{
+    grid-template-columns:62px 150px minmax(300px,1fr) minmax(390px,470px)!important;
+  }
+  body.show-cashier #cashierRoot .cashier-right{
+    min-width:390px!important;
+  }
+  body.show-cashier #cashierRoot .order-table-head,
+  body.show-cashier #cashierRoot .order-item{
+    grid-template-columns:minmax(0,1.4fr) 58px 66px 72px 78px 40px!important;
+    gap:6px!important;
+  }
+}
+@media (max-width:980px){
+  body.show-cashier #cashierRoot .cashier-layout{
+    grid-template-columns:1fr!important;
+  }
+  body.show-cashier #cashierRoot .cashier-right{
+    min-width:0!important;
+  }
+  body.show-cashier #cashierRoot .cashier-order-main-v108{
+    align-items:stretch!important;
+  }
+}
+</style>
+
+<script>
+/* ===== V108：收银台右侧订单栏对齐新版开单框架 ===== */
+(function(){
+  if(window.__cangjieCashierFrameV108) return;
+  window.__cangjieCashierFrameV108 = true;
+
+  function escV108(v){
+    if(typeof window.esc === "function") return window.esc(v);
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;");
+  }
+  function moneyV108(v){
+    return typeof window.money === "function" ? window.money(v || 0) : Number(v || 0).toFixed(2);
+  }
+  function pendingCountV108(){
+    try{
+      if(typeof window.pendingCodeBills === "function") return window.pendingCodeBills().length;
+    }catch(err){}
+    try{
+      return Array.isArray(window.savedCodeBills) ? window.savedCodeBills.filter(function(b){
+        var st = String((b && b.status) || "");
+        return st !== "已收银" && st !== "已赊欠" && st !== "已作废";
+      }).length : 0;
+    }catch(err){}
+    return 0;
+  }
+  function ensureCashierFrameV108(){
+    var head = document.querySelector("#cashierRoot .order-head");
+    if(head && !head.querySelector(".cashier-order-top-v108")){
+      head.innerHTML =
+        '<div class="cashier-order-top-v108">'
+        + '<div class="cashier-order-main-v108">'
+        + '<div class="cashier-customer-box-v108"><span>当前客户</span><select id="cashierCustomer" onchange="handleCustomerOrPayChange()"></select></div>'
+        + '<div class="cashier-order-tools-v108">'
+        + '<button type="button" class="cashier-add-buyer-v108" onclick="addCashierCustomer()">新增买家</button>'
+        + '<button type="button" class="cashier-bill-center-v108" onclick="openBillCenter()">码单中心 <span class="cashier-bill-badge-v108" id="cashierBillBadgeV108">0</span></button>'
+        + '</div></div></div>';
+    }
+
+    var tableHead = document.querySelector("#cashierRoot .order-table-head");
+    if(tableHead){
+      tableHead.innerHTML = "<span>商品</span><span>件数</span><span>斤数</span><span>单价</span><span>金额</span><span>操作</span>";
+    }
+
+    var summary = document.querySelector("#cashierRoot .order-summary");
+    if(summary){
+      var top = summary.querySelector(".order-summary-top");
+      if(top){
+        top.innerHTML =
+          '<div class="cashier-metric-v108"><span>总数量</span><b id="orderTotalQty">0</b></div>'
+          + '<div class="cashier-metric-v108"><span>总重量</span><b id="orderTotalWeight">0斤</b></div>';
+      }
+    }
+  }
+  function renderHeaderStateV108(){
+    var badge = document.getElementById("cashierBillBadgeV108");
+    if(badge) badge.textContent = String(pendingCountV108());
+  }
+
+  var oldRenderCashierCustomersV108 = typeof window.renderCashierCustomers === "function" ? window.renderCashierCustomers : null;
+  if(oldRenderCashierCustomersV108){
+    window.renderCashierCustomers = function(){
+      ensureCashierFrameV108();
+      var result = oldRenderCashierCustomersV108.apply(this, arguments);
+      renderHeaderStateV108();
+      return result;
+    };
+  }
+
+  window.renderCurrentCodeBill = function(){
+    ensureCashierFrameV108();
+    var list = document.getElementById("cashierOrderList");
+    if(!list) return;
+
+    list.innerHTML = (window.currentCodeBillItems || []).map(function(item){
+      var fixed = item.pack === "定装";
+      var weightValue = fixed ? Number(item.weight || (Number(item.qty || 0) * Number(item.spec || 0))) : item.weight;
+      return ''
+        + '<div class="order-item ' + (fixed ? 'fixed-row' : 'loose-row') + '">'
+        +   '<div class="order-item-name">'
+        +     '<b>' + escV108(item.name) + '</b>'
+        +     '<span>' + escV108(item.owner || "") + escV108(item.batchNo || "") + '｜'
+        +     (fixed ? ('定装 ' + escV108(item.spec || 0) + '斤/' + escV108(item.unit || "件")) : '非定装') + '</span>'
+        +   '</div>'
+        +   '<div><input type="number" min="0" step="1" value="' + escV108(item.qty) + '" onchange="updateCodeBillItem(\'' + escV108(item.id) + '\',\'qty\',this.value)"><small>' + escV108(item.unit || "件") + '</small></div>'
+        +   '<div><input type="number" min="0" step="0.01" value="' + escV108(weightValue) + '" ' + (fixed ? 'readonly' : 'onchange="updateCodeBillItem(\'' + escV108(item.id) + '\',\'weight\',this.value)"') + '><small>斤</small></div>'
+        +   '<div><input type="number" min="0" step="0.01" value="' + escV108(item.price) + '" onchange="updateCodeBillItem(\'' + escV108(item.id) + '\',\'price\',this.value)"><small>' + (fixed ? '元/件' : '元/斤') + '</small></div>'
+        +   '<div class="order-money">' + moneyV108(typeof window.lineAmount === "function" ? window.lineAmount(item) : 0) + '</div>'
+        +   '<button class="order-del" onclick="removeCodeBillItem(\'' + escV108(item.id) + '\')">删</button>'
+        + '</div>';
+    }).join("") || '<div class="order-empty">点击左侧商品加入订单</div>';
+
+    var totals = typeof window.codeBillTotals === "function" ? window.codeBillTotals() : {totalQty:0,totalWeight:0,totalAmount:0,originalAmount:0,discount:0};
+    var qtyEl = document.getElementById("orderTotalQty");
+    var weightEl = document.getElementById("orderTotalWeight");
+    var originalEl = document.getElementById("orderOriginalAmount");
+    var discountEl = document.getElementById("orderDiscountAmount");
+    var totalEl = document.getElementById("orderTotalAmount");
+    if(qtyEl) qtyEl.textContent = String(totals.totalQty || 0);
+    if(weightEl) weightEl.textContent = String(totals.totalWeight || 0) + "斤";
+    if(originalEl) originalEl.textContent = moneyV108(totals.originalAmount || 0);
+    if(discountEl) discountEl.textContent = moneyV108(totals.discount || 0);
+    if(totalEl) totalEl.textContent = moneyV108(totals.totalAmount || 0);
+    renderHeaderStateV108();
+  };
+
+  function bootV108(){
+    ensureCashierFrameV108();
+    renderHeaderStateV108();
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootV108);
+  else bootV108();
+  setTimeout(bootV108, 120);
+})();
+</script>
+
 </body>
 </html>
