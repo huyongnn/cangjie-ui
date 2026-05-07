@@ -51,7 +51,23 @@ button, .btn, .checkout-btn, .codebill-btn, .settle-confirm {
 
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<meta name="cangjie-build" content="20260507-1908" />
 <title>仓頡 - V47 买家账单还款版（基于昨晚V45）</title>
+<script>
+window.__CANGJIE_BUILD__ = "20260507-1908";
+try{
+  if(location.protocol.indexOf("http") === 0){
+    var u = new URL(location.href);
+    if(!u.searchParams.get("v")){
+      u.searchParams.set("v", window.__CANGJIE_BUILD__);
+      history.replaceState(null, "", u.toString());
+    }
+  }
+}catch(err){}
+</script>
 <style>
 /* ==== 仓頡 Apple 风格 UI 最终版 ==== */
 :root{
@@ -426,6 +442,22 @@ td{
 .type-btn.active{
   background:var(--green);
   color:#fff;
+}
+
+#goodsModal #packSegment .seg-btn,
+#goodsModal #gradeSegment .seg-btn{
+  background:#eef1ed!important;
+  color:#263028!important;
+  border:1px solid #d7ddd4!important;
+  box-shadow:none!important;
+}
+#goodsModal #packSegment .seg-btn.active,
+#goodsModal #gradeSegment .seg-btn.active{
+  background:var(--green)!important;
+  color:#fff!important;
+  border-color:var(--green)!important;
+  font-weight:950!important;
+  box-shadow:0 6px 16px rgba(47,142,64,.18)!important;
 }
 
 /* ===== V45 创建批次弹窗优化 ===== */
@@ -4424,6 +4456,8 @@ body.merchant-entry-locked-v1 #customerPanel{display:none!important;}
 /* ===== V1_FINAL_LOCKED：唯一初始化数据源锁定 ===== */
 (function(){
   var FINAL_VERSION = "V1_FINAL_LOCKED";
+  var APP_STATE_KEY = "CANGJIE_APP_STATE_V1";
+  var LEGACY_STATE_KEY = "tudou2_v57_persistent_data";
   window.system_version = FINAL_VERSION;
   var VERSION_KEY = "cangjie_system_version";
   var SEED_KEY = "cangjie_seed_source";
@@ -4454,9 +4488,53 @@ body.merchant-entry-locked-v1 #customerPanel{display:none!important;}
       return false;
     }
   }
+  function hasBusinessSnapshot(){
+    try{
+      var raw = localStorage.getItem(APP_STATE_KEY) || localStorage.getItem(LEGACY_STATE_KEY);
+      if(!raw) return false;
+      var data = JSON.parse(raw);
+      if(!data || typeof data !== "object") return false;
+      return [
+        "goodsMaster","batches","owners","customers","cashierCustomers","orders","codeBills",
+        "savedCodeBills","finalOrders","buyerV47Orders","buyerV47Repayments","buyerV47List","buyers","repayments"
+      ].some(function(key){
+        return Array.isArray(data[key]) ? data[key].length > 0 : !!data[key];
+      });
+    }catch(err){
+      return false;
+    }
+  }
+  function hasLocalBusinessKeys(){
+    try{
+      return [
+        APP_STATE_KEY,
+        "tudou2_v57_persistent_data",
+        "cangjieMerchantProfileV92",
+        "cangjieMerchantLoginV92",
+        "cangjieEmployeesV94",
+        "cangjieEmployeesV93",
+        "cangjieCurrentAccountV94",
+        "cangjieOwnerAccountV96",
+        "currentUser",
+        "tudou2_printer_config_step1"
+      ].some(function(key){
+        var raw = localStorage.getItem(key);
+        return !!(raw && raw !== "null" && raw !== "undefined" && raw !== "{}" && raw !== "[]");
+      });
+    }catch(err){
+      return false;
+    }
+  }
+  function markSeedReady(){
+    try{
+      localStorage.setItem(VERSION_KEY, FINAL_VERSION);
+      localStorage.setItem(SEED_KEY, "storage.js");
+      localStorage.setItem(REVISION_KEY, String((seed() && seed().seed_revision) || ""));
+    }catch(err){}
+  }
   function ensureLockedSeed(){
     var hasPrimaryData = false;
-    try{ hasPrimaryData = !!localStorage.getItem("tudou2_v57_persistent_data"); }catch(err){}
+    try{ hasPrimaryData = !!(localStorage.getItem(APP_STATE_KEY) || localStorage.getItem(LEGACY_STATE_KEY)); }catch(err){}
     var version = "";
     var source = "";
     var revision = "";
@@ -4467,8 +4545,13 @@ body.merchant-entry-locked-v1 #customerPanel{display:none!important;}
       revision = localStorage.getItem(REVISION_KEY) || "";
       expectedRevision = String((seed() && seed().seed_revision) || "");
     }catch(err){}
-    if(version !== FINAL_VERSION || source !== "storage.js" || revision !== expectedRevision || !hasPrimaryData){
+    var hasBusinessData = hasPrimaryData || hasBusinessSnapshot() || hasLocalBusinessKeys();
+    if(!hasBusinessData){
       writeSeed();
+      return;
+    }
+    if(version !== FINAL_VERSION || source !== "storage.js" || revision !== expectedRevision){
+      markSeedReady();
     }
   }
   window.cangjieResetToFinalLockedSeed = writeSeed;
@@ -4578,7 +4661,7 @@ body.merchant-entry-locked-v1 #customerPanel{display:none!important;}
       </div>
       <div class="tools">
         <input id="detailSearch" class="tool-search" placeholder="搜货品..." oninput="renderDetail()">
-        <button class="btn red" onclick="deleteBatch()">删除批次</button>
+        <button class="btn red" id="deleteBatchBtn" onclick="deleteBatch()">删除批次</button>
         <button class="btn orange" onclick="renameBatch()">修改批次</button>
         <button class="btn soft">批次操作</button>
       </div>
@@ -5206,6 +5289,7 @@ function renderDetail(){
     if(mobileDetail) mobileDetail.innerHTML = '<div class="hint">暂无批次。请先新增货主和批次。</div>';
     if(feeTotalEl) feeTotalEl.textContent = money(0);
     if(costTotalEl) costTotalEl.textContent = money(0);
+    syncDeleteBatchButtonState();
     return;
   }
   document.getElementById("activeOwner").textContent = batch.owner;
@@ -5381,12 +5465,14 @@ function renderDetail(){
 
   document.getElementById("feeTotal").textContent = money(batch.fee || 0);
   document.getElementById("costTotal").textContent = money(costTotal + Number(batch.fee || 0));
+  syncDeleteBatchButtonState();
 }
 function renderAll(){
   renderCat();
   renderBatches();
   renderGoods();
   renderDetail();
+  syncDeleteBatchButtonState();
   setTimeout(patchBatchDetailSaleButtonsStep1, 0);
 }
 function selectBatch(id){
@@ -5542,7 +5628,70 @@ function renameBatch(){
   renderAll();
   toast("批次已修改");
 }
+function stockBatchNormalizedNo(batch){
+  return String((batch && (batch.no || batch.batchNo)) || "").trim();
+}
+function stockBatchNormalizedOwner(batch){
+  return String((batch && (batch.owner || batch.ownerName)) || "").trim();
+}
+function stockBatchLineMatches(batch, line){
+  if(!batch || !line) return false;
+  if(line.batchId && String(batch.id || "") === String(line.batchId)) return true;
+  const batchNo = stockBatchNormalizedNo(batch);
+  const batchOwner = stockBatchNormalizedOwner(batch);
+  const lineNo = String((line.batchNo || line.no || "")).trim();
+  const lineOwner = String((line.owner || line.batchOwner || line.ownerName || "")).trim();
+  if(lineNo && batchNo && lineNo !== batchNo) return false;
+  if(lineOwner && batchOwner && lineOwner !== batchOwner) return false;
+  if(lineNo && batchNo) return true;
+  if(lineOwner && batchOwner) return true;
+  return false;
+}
+function stockBatchHasSoldRecords(batch){
+  return (batch?.items || []).some(item=>{
+    const calc = typeof stockCalcItem === "function" ? stockCalcItem(item) : null;
+    const soldQty = Number(calc?.sold || item?.sold || 0) || 0;
+    const soldWeight = Number(calc?.soldWeight || item?.soldWeight || 0) || 0;
+    return soldQty > 0 || soldWeight > 0;
+  });
+}
+function stockBatchHasOrderRecords(batch){
+  return (Array.isArray(finalOrders) ? finalOrders : []).some(order=>{
+    const lines = Array.isArray(order?.lines) ? order.lines : [];
+    return lines.some(line=>stockBatchLineMatches(batch, line));
+  });
+}
+function stockBatchHasCodeBillUsage(batch){
+  return (Array.isArray(savedCodeBills) ? savedCodeBills : []).some(bill=>{
+    const lines = Array.isArray(bill?.lines) ? bill.lines : [];
+    return lines.some(line=>stockBatchLineMatches(batch, line));
+  });
+}
+function stockBatchDeleteBlockReason(batch){
+  if(!batch) return "暂无批次";
+  if(stockBatchHasOrderRecords(batch)) return "该批次已产生订单，不能删除，只能修改";
+  if(stockBatchHasCodeBillUsage(batch)) return "该批次已有码单占用，不能删除，只能修改";
+  if(stockBatchHasSoldRecords(batch)) return "该批次已产生销售记录，不能删除，只能修改";
+  return "";
+}
+function syncDeleteBatchButtonState(){
+  const btn = document.getElementById("deleteBatchBtn");
+  const batch = typeof activeBatch === "function" ? activeBatch() : null;
+  if(!btn) return;
+  const reason = stockBatchDeleteBlockReason(batch);
+  btn.disabled = !!reason;
+  btn.title = reason || "删除当前批次";
+  btn.textContent = reason ? "不可删除" : "删除批次";
+}
 function deleteBatch(){
+  const batch = typeof activeBatch === "function" ? activeBatch() : null;
+  const blockReason = stockBatchDeleteBlockReason(batch);
+  if(blockReason){
+    alert(blockReason);
+    toast(blockReason);
+    syncDeleteBatchButtonState();
+    return;
+  }
   if(batches.length <= 1){
     alert("至少保留一个批次");
     return;
@@ -9686,14 +9835,18 @@ function renderStockModule(){
           return `
             <tr>
               <td>${index+1}</td>
-              <td>
-                <span class="stock-goods-name">${esc(r.item.name)}</span>
-                <span class="stock-tag">${r.item.pack === "定装" ? "定" : "非"}</span>
-                <div class="stock-sub">${esc(r.item.pack || "")}${r.item.pack === "定装" ? "｜" + esc(r.item.spec || 0) + "斤/" + esc(r.item.unit || "件") : ""}</div>
+              <td class="stock-col-product">
+                <div class="stock-cell-main">
+                  <div class="stock-cell-title-row">
+                    <span class="stock-goods-name">${esc(r.item.name)}</span>
+                    <span class="stock-tag">${r.item.pack === "定装" ? "定" : "非"}</span>
+                  </div>
+                  <div class="stock-cell-meta">${esc(r.item.pack || "")}${r.item.pack === "定装" ? "｜" + esc(r.item.spec || 0) + "斤/" + esc(r.item.unit || "件") : ""}</div>
+                </div>
               </td>
-              <td>
-                <div class="stock-num">${esc(r.batch.owner)}</div>
-                <div class="stock-sub">${esc(r.batch.no)}｜${esc(r.batch.tag || "")}</div>
+              <td class="stock-col-batch">
+                <div class="stock-batch-main">${esc(r.batch.owner)}</div>
+                <div class="stock-batch-meta">${esc(r.batch.no)}${r.batch.tag ? "｜" + esc(r.batch.tag) : ""}</div>
               </td>
               <td><div class="stock-num">${stockAmountText(c.qty,c.inWeight,c.unit)}</div></td>
               <td><div class="stock-num">${stockAmountText(c.sold,c.soldWeight,c.unit)}</div></td>
@@ -12656,7 +12809,24 @@ function goBackToBatchEditFromOverview(){
 <script>
 /* ===== V57：本地数据保存，下次打开继续存在 ===== */
 (function(){
-  var STORAGE_KEY = "tudou2_v57_persistent_data";
+  var STORAGE_KEY = "CANGJIE_APP_STATE_V1";
+  var LEGACY_STORAGE_KEY = "tudou2_v57_persistent_data";
+  var LOCAL_ONLY_STATUS = "当前为本机数据模式；多端同步需接入云端数据库后启用";
+  var SETTINGS_KEYS_V57 = [
+    "cangjieMerchantProfileV92",
+    "cangjieMerchantLoginV92",
+    "cangjieCurrentAccountV94",
+    "cangjieCurrentAccountV93",
+    "cangjieOwnerAccountV96",
+    "cangjieAdminAccountV93",
+    "cangjieEmployeesV94",
+    "cangjieEmployeesV93",
+    "currentUser",
+    "tudou2_printer_config_step1",
+    "cangjieCommercialSyncV1",
+    "cangjiePhoneLoginV96",
+    "cangjieMerchantEntryStateV1"
+  ];
 
   function safeClone(obj){
     try{
@@ -12665,9 +12835,78 @@ function goBackToBatchEditFromOverview(){
       return obj;
     }
   }
+  function defaultAppStateShapeV57(){
+    return {
+      stateVersion:1,
+      goodsMaster:[],
+      batches:[],
+      owners:[],
+      customers:[],
+      cashierCustomers:[],
+      orders:[],
+      codeBills:[],
+      savedCodeBills:[],
+      finalOrders:[],
+      buyerV47Orders:[],
+      buyerV47Repayments:[],
+      buyerV47List:[],
+      buyers:[],
+      repayments:[],
+      activeBatchId:"",
+      cashierSelectedBatch:"",
+      cashierSelectedCat:"",
+      localSettings:{},
+      storageMode:"local",
+      storageModeLabel:LOCAL_ONLY_STATUS,
+      savedAt:""
+    };
+  }
+  function readLocalSettingV57(key, fallback){
+    try{
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    }catch(err){
+      return fallback;
+    }
+  }
+  function writeLocalSettingV57(key, value){
+    try{
+      localStorage.setItem(key, JSON.stringify(value));
+    }catch(err){}
+  }
+  function hasMeaningfulValueV57(value){
+    if(Array.isArray(value)) return value.length > 0;
+    if(value && typeof value === "object") return Object.keys(value).length > 0;
+    return !(value == null || value === "");
+  }
+  function collectSettingsV57(){
+    var settings = {};
+    SETTINGS_KEYS_V57.forEach(function(key){
+      var value = readLocalSettingV57(key, null);
+      if(hasMeaningfulValueV57(value)) settings[key] = safeClone(value);
+    });
+    return settings;
+  }
+  function applySettingsV57(settings){
+    settings = settings && typeof settings === "object" ? settings : {};
+    SETTINGS_KEYS_V57.forEach(function(key){
+      if(Object.prototype.hasOwnProperty.call(settings, key)){
+        writeLocalSettingV57(key, settings[key]);
+      }
+    });
+    try{
+      var meta = readLocalSettingV57("cangjieCommercialSyncV1", {}) || {};
+      meta.storageMode = "local";
+      meta.storageModeLabel = LOCAL_ONLY_STATUS;
+      meta.offlineAvailable = true;
+      meta.multiDeviceReady = false;
+      meta.dataUpdatedAt = meta.dataUpdatedAt || new Date().toISOString();
+      writeLocalSettingV57("cangjieCommercialSyncV1", meta);
+    }catch(err){}
+  }
 
   function collectTudou2DataV57(){
-    var data = {};
+    var data = defaultAppStateShapeV57();
     try{ if(typeof goodsMaster !== "undefined") data.goodsMaster = safeClone(goodsMaster); }catch(e){}
     try{ if(typeof batches !== "undefined") data.batches = safeClone(batches); }catch(e){}
     try{ if(typeof owners !== "undefined") data.owners = safeClone(owners); }catch(e){}
@@ -12685,8 +12924,29 @@ function goBackToBatchEditFromOverview(){
     try{ if(typeof activeBatchId !== "undefined") data.activeBatchId = activeBatchId; }catch(e){}
     try{ if(typeof cashierSelectedBatch !== "undefined") data.cashierSelectedBatch = cashierSelectedBatch; }catch(e){}
     try{ if(typeof cashierSelectedCat !== "undefined") data.cashierSelectedCat = cashierSelectedCat; }catch(e){}
+    try{ data.localSettings = collectSettingsV57(); }catch(e){}
+    data.storageMode = "local";
+    data.storageModeLabel = LOCAL_ONLY_STATUS;
     data.savedAt = new Date().toLocaleString("zh-CN", {hour12:false});
     return data;
+  }
+  function normalizeAppStateV57(data){
+    var base = defaultAppStateShapeV57();
+    data = data && typeof data === "object" ? data : {};
+    Object.keys(base).forEach(function(key){
+      if(Array.isArray(base[key])){
+        base[key] = Array.isArray(data[key]) ? safeClone(data[key]) : base[key];
+      }else if(key === "localSettings"){
+        base[key] = data.localSettings && typeof data.localSettings === "object" ? safeClone(data.localSettings) : {};
+      }else if(Object.prototype.hasOwnProperty.call(data, key)){
+        base[key] = safeClone(data[key]);
+      }
+    });
+    base.stateVersion = 1;
+    base.storageMode = "local";
+    base.storageModeLabel = LOCAL_ONLY_STATUS;
+    base.savedAt = data.savedAt || base.savedAt;
+    return base;
   }
 
   function orderPersistSignatureV57(data){
@@ -12744,7 +13004,7 @@ function goBackToBatchEditFromOverview(){
   }
 
   function applyTudou2DataV57(data){
-    if(!data || typeof data !== "object") return;
+    data = normalizeAppStateV57(data);
 
     try{
       if(Array.isArray(data.goodsMaster) && typeof goodsMaster !== "undefined"){
@@ -12767,12 +13027,14 @@ function goBackToBatchEditFromOverview(){
     try{ if(typeof data.activeBatchId !== "undefined" && typeof activeBatchId !== "undefined") activeBatchId = data.activeBatchId; }catch(e){}
     try{ if(typeof data.cashierSelectedBatch !== "undefined" && typeof cashierSelectedBatch !== "undefined") cashierSelectedBatch = data.cashierSelectedBatch; }catch(e){}
     try{ if(data.cashierSelectedCat && typeof cashierSelectedCat !== "undefined") cashierSelectedCat = data.cashierSelectedCat; }catch(e){}
+    try{ applySettingsV57(data.localSettings || {}); }catch(e){}
   }
 
   function saveTudou2DataV57(){
     try{
-      var data = collectTudou2DataV57();
+      var data = normalizeAppStateV57(collectTudou2DataV57());
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(data));
       triggerCloudOrderSyncAfterPersistV57(data);
       return true;
     }catch(e){
@@ -12783,10 +13045,12 @@ function goBackToBatchEditFromOverview(){
 
   function loadTudou2DataV57(){
     try{
-      var raw = localStorage.getItem(STORAGE_KEY);
+      var raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
       if(!raw) return false;
-      var data = JSON.parse(raw);
+      var data = normalizeAppStateV57(JSON.parse(raw));
       applyTudou2DataV57(data);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(data));
       return true;
     }catch(e){
       console.error("仓頡读取保存数据失败：", e);
@@ -12807,6 +13071,10 @@ function goBackToBatchEditFromOverview(){
     try{ if(typeof renderOrders === "function") renderOrders(); }catch(e){}
     try{ if(typeof renderBuyerV47 === "function") renderBuyerV47(); }catch(e){}
     try{ if(typeof renderBuyerManagerV47 === "function") renderBuyerManagerV47(); }catch(e){}
+    try{ if(typeof renderProfileV92 === "function") renderProfileV92(); }catch(e){}
+    try{ if(typeof renderEmployeesV94 === "function") renderEmployeesV94(); }catch(e){}
+    try{ if(typeof renderConfigStep1 === "function") renderConfigStep1(); }catch(e){}
+    try{ if(typeof renderCommercialSyncPanel === "function") renderCommercialSyncPanel(); }catch(e){}
   }
 
   function wrapFunctionV57(name){
@@ -12827,8 +13095,10 @@ function goBackToBatchEditFromOverview(){
   function installAutoSaveV57(){
     [
       "createBatch","saveBatch","confirmInbound","deleteBatch","renameBatch",
-      "addGoods","saveGoods","deleteGoods","addProductToCodeBill","removeCodeBillItem",
-      "updateCodeBillItem","checkoutCurrentOrder","saveCodeBill","deleteBill",
+      "addGoods","saveGoods","deleteGoods","toggleGoodsToBatch","saveItemField","removeItem","confirmSingleItem",
+      "addOwnerFromBatchModal","saveBatchFromModal","addFee","addRemark",
+      "addProductToCodeBill","removeCodeBillItem","updateCodeBillItem","checkoutCurrentOrder",
+      "saveCodeBill","deleteBill","completeSettleOrder","confirmOrderFromCodeBill",
       "finishOrder","submitOrder","addCashierCustomer","addBuyer","addTempBuyer",
       "saveBuyerV47","addBuyerV47","repayBuyer","repayBuyerV47",
       "saveV53EditBatch","saveV54EditBatch","saveV52EditBatch","saveV51EditBatch"
@@ -12866,6 +13136,7 @@ function goBackToBatchEditFromOverview(){
   window.tudou2ClearSavedData = function(){
     if(!confirm("确定清空本机保存的数据吗？清空后会恢复到文件内默认数据。")) return;
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
     alert("已清空本机保存数据。请重新打开文件。");
   };
 
@@ -12907,6 +13178,7 @@ function goBackToBatchEditFromOverview(){
 
   function bootV57(){
     loadTudou2DataV57();
+    applySettingsV57(collectSettingsV57());
     rememberCurrentOrderPersistSignatureV57();
     installAutoSaveV57();
     refreshAllViewsV57();
@@ -12929,6 +13201,104 @@ function goBackToBatchEditFromOverview(){
   }else{
     bootV57();
   }
+
+  window.getDefaultAppState = function(){
+    return defaultAppStateShapeV57();
+  };
+  window.loadAppState = function(){
+    return loadTudou2DataV57();
+  };
+  window.saveAppState = function(){
+    return saveTudou2DataV57();
+  };
+  window.setAppState = function(nextState){
+    var normalized = normalizeAppStateV57(nextState);
+    applyTudou2DataV57(normalized);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(normalized));
+    refreshAllViewsV57();
+    return normalized;
+  };
+  window.updateAndSave = function(updater){
+    var current = normalizeAppStateV57(collectTudou2DataV57());
+    var draft = safeClone(current);
+    if(typeof updater === "function"){
+      var result = updater(draft);
+      if(result && typeof result === "object") draft = result;
+    }else if(updater && typeof updater === "object"){
+      Object.assign(draft, safeClone(updater));
+    }
+    return window.setAppState(draft);
+  };
+
+  window.CANGJIE_DATA_ACCESS_V102 = {
+    mode:"local",
+    modeLabel:LOCAL_ONLY_STATUS,
+    saveData:function(){
+      return window.saveAppState();
+    },
+    loadData:function(){
+      var ok = window.loadAppState();
+      if(ok) refreshAllViewsV57();
+      return ok;
+    },
+    readState:function(){
+      return normalizeAppStateV57(collectTudou2DataV57());
+    },
+    writeState:function(nextState){
+      return window.setAppState(nextState || {});
+    },
+    createBatch:function(batch){
+      var rows = Array.isArray(batches) ? batches : [];
+      var next = safeClone(batch || {});
+      if(!next.id) next.id = "b" + Date.now();
+      if(!Array.isArray(next.items)) next.items = [];
+      rows.unshift(next);
+      batches = rows;
+      activeBatchId = next.id;
+      saveTudou2DataV57();
+      refreshAllViewsV57();
+      return next;
+    },
+    updateBatch:function(batchId, patch){
+      var hit = null;
+      (Array.isArray(batches) ? batches : []).forEach(function(row){
+        if(String(row.id || "") !== String(batchId || "")) return;
+        Object.assign(row, safeClone(patch || {}));
+        hit = row;
+      });
+      saveTudou2DataV57();
+      refreshAllViewsV57();
+      return hit;
+    },
+    deleteBatch:function(batchId){
+      var target = (Array.isArray(batches) ? batches : []).find(function(row){ return String(row.id || "") === String(batchId || ""); }) || null;
+      if(!target) return {ok:false, reason:"batch_not_found"};
+      var reason = typeof stockBatchDeleteBlockReason === "function" ? stockBatchDeleteBlockReason(target) : "";
+      if(reason) return {ok:false, reason:reason};
+      batches = (Array.isArray(batches) ? batches : []).filter(function(row){ return String(row.id || "") !== String(batchId || ""); });
+      if(activeBatchId === batchId) activeBatchId = (batches[0] && batches[0].id) || "";
+      saveTudou2DataV57();
+      refreshAllViewsV57();
+      return {ok:true};
+    },
+    createOrder:function(order){
+      var next = safeClone(order || {});
+      if(!Array.isArray(finalOrders)) finalOrders = [];
+      finalOrders.unshift(next);
+      saveTudou2DataV57();
+      refreshAllViewsV57();
+      return next;
+    },
+    updateInventory:function(mutator){
+      if(typeof mutator === "function") mutator(batches, goodsMaster);
+      saveTudou2DataV57();
+      refreshAllViewsV57();
+      return {batches:batches, goodsMaster:goodsMaster};
+    }
+  };
+  window.saveData = window.CANGJIE_DATA_ACCESS_V102.saveData;
+  window.loadData = window.CANGJIE_DATA_ACCESS_V102.loadData;
 })();
 </script>
 
@@ -31112,11 +31482,11 @@ body.show-profile-v92 #inventoryView{
     var card = document.createElement("div");
     card.id = "commercialSyncPanelV1";
     card.className = "profile-v92-card commercial-sync-v1-card";
-    card.innerHTML = '<h2>数据同步</h2><p>商用多设备同步架构预留。当前不连接真实云端，系统继续使用 storage.js 作为本地离线缓存。</p>'
+    card.innerHTML = '<h2>数据同步</h2><p>当前为本机数据模式：数据先保存在本机 localStorage，刷新页面不会丢失；多端同步需接入云端数据库后再启用。</p>'
       + '<div id="commercialSyncGridV1" class="commercial-sync-v1-grid"></div>'
       + '<div class="commercial-sync-v1-actions"><label class="commercial-sync-v1-toggle"><input id="autoSyncEnabledV1" type="checkbox"> 自动同步</label><span id="commercialSyncAutoStatusV1" class="commercial-sync-v1-status">自动同步：关闭</span></div>'
       + '<div id="adminSyncToolsSlotV1"></div>'
-      + '<div class="commercial-sync-v1-note">未来云端集合：merchants / users / permissions / products / owners / customers / batches / inventory / orders / debts / printSettings / syncLogs。正式快照表预留为 cloud_snapshots；读取快照只显示结果，不会自动覆盖本地数据。</div>';
+      + '<div class="commercial-sync-v1-note">当前版本先保证单机持久化稳定；未来云端集合预留为 merchants / users / permissions / products / owners / customers / batches / inventory / orders / debts / printSettings / syncLogs，业务快照表预留为 cloud_snapshots。未接入云端前，不会宣称已多端同步。</div>';
     grid.appendChild(card);
   }
   function renderAdminSyncTools(){
@@ -31156,12 +31526,13 @@ body.show-profile-v92 #inventoryView{
     var m = meta();
     var account = currentAccount();
     var fields = [
+      ["当前数据模式", isLocalOnlyDeployment() ? "本机数据模式（localStorage）" : "云端部署模式"],
       ["当前部署模式", deploymentModeLabel(m.deploymentMode)],
       ["当前数据库来源", m.databaseSource || deploymentDatabaseSource()],
       ["当前商户ID", getCurrentMerchantId()],
       ["当前设备ID", m.deviceId],
       ["当前登录员工", (account.name || m.role || "管理员") + (account.phone ? " " + account.phone : "")],
-      ["同步状态", "v" + (m.syncVersion || 1) + "｜" + (m.syncEnabled ? "已开启" : "未开启")],
+      ["同步状态", isLocalOnlyDeployment() ? "本机持久化已开启｜未启用多端云同步" : ("v" + (m.syncVersion || 1) + "｜" + (m.syncEnabled ? "已开启" : "未开启"))],
       ["最后同步时间", m.lastSyncAt || "尚未同步"],
       ["云端连接状态", '<span class="commercial-sync-v1-pill">'+e(m.cloudStatus || "未连接")+'</span>'],
       ["离线可用状态", m.offlineAvailable === false ? "不可用" : "可离线开单"],
@@ -31200,6 +31571,7 @@ body.show-profile-v92 #inventoryView{
   }
 
   window.initCommercialSync = initCommercialSync;
+  window.renderCommercialSyncPanel = renderCommercialSyncPanel;
   window.getMerchantScopedData = getMerchantScopedData;
   window.buildCloudPayload = buildCloudPayload;
   window.buildBusinessSnapshot = buildBusinessSnapshot;
@@ -31647,6 +32019,441 @@ body.show-profile-v92 #inventoryView{
 }
 </style>
 
+<style id="cangjieBatchTableReadableV101Style">
+/* ===== V101：批次总览表格文字完整展示 + 删除按钮禁用态 ===== */
+body.show-inbound #inboundRoot .batch-info h1,
+body.show-inbound #inboundRoot .batch-info p,
+body.show-inbound #inboundRoot .prod b,
+body.show-inbound #inboundRoot .prod .sub{
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  word-break:break-word!important;
+}
+body.show-inbound #inboundRoot .batch-info h1{
+  line-height:1.25!important;
+}
+body.show-inbound #inboundRoot .table-wrap table{
+  min-width:1180px!important;
+  table-layout:auto!important;
+}
+body.show-inbound #inboundRoot .table-wrap td{
+  height:auto!important;
+  min-height:unset!important;
+  vertical-align:top!important;
+}
+body.show-inbound #inboundRoot .prod{
+  min-width:0!important;
+}
+body.show-inbound #inboundRoot .prod b{
+  font-size:16px!important;
+  line-height:1.35!important;
+}
+body.show-inbound #inboundRoot .prod .sub{
+  line-height:1.35!important;
+}
+body.show-stock #stockRoot .stock-table td.stock-col-product,
+body.show-stock #stockRoot .stock-table td.stock-col-batch{
+  white-space:normal!important;
+}
+body.show-stock #stockRoot .stock-cell-main,
+body.show-stock #stockRoot .stock-col-batch{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  gap:6px!important;
+  min-width:0!important;
+}
+body.show-stock #stockRoot .stock-cell-title-row{
+  display:flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  flex-wrap:nowrap!important;
+  width:auto!important;
+  min-width:0!important;
+}
+body.show-stock #stockRoot .stock-cell-meta,
+body.show-stock #stockRoot .stock-batch-main,
+body.show-stock #stockRoot .stock-batch-meta{
+  display:block!important;
+  width:100%!important;
+  white-space:normal!important;
+  word-break:break-word!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  line-height:1.4!important;
+}
+body.show-stock #stockRoot .stock-batch-main{
+  font-size:14px!important;
+  font-weight:900!important;
+  color:#24302b!important;
+}
+body.show-stock #stockRoot .stock-batch-meta,
+body.show-stock #stockRoot .stock-cell-meta{
+  color:#5d6b63!important;
+  font-size:12px!important;
+  font-weight:700!important;
+}
+body.show-stock #stockRoot .stock-table .stock-goods-name,
+body.show-stock #stockRoot .stock-table .stock-sub,
+body.show-stock #stockRoot .stock-table .stock-num{
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  word-break:break-word!important;
+}
+body.show-stock #stockRoot .stock-table .stock-goods-name{
+  max-width:none!important;
+  font-size:15px!important;
+  line-height:1.35!important;
+  margin:0!important;
+}
+body.show-stock #stockRoot .stock-table .stock-tag{
+  flex:0 0 auto!important;
+  align-self:flex-start!important;
+  margin-top:1px!important;
+}
+body.show-stock #stockRoot .stock-table td{
+  height:auto!important;
+  min-height:unset!important;
+  vertical-align:top!important;
+  padding-top:10px!important;
+  padding-bottom:10px!important;
+  overflow:visible!important;
+}
+body.show-stock #stockRoot .stock-table th,
+body.show-stock #stockRoot .stock-table td{
+  white-space:normal!important;
+}
+body.show-stock #stockRoot .stock-table{
+  min-width:940px!important;
+  table-layout:auto!important;
+}
+body.show-stock #stockRoot .stock-table th:nth-child(1),
+body.show-stock #stockRoot .stock-table td:nth-child(1){
+  width:62px!important;
+  min-width:62px!important;
+}
+body.show-stock #stockRoot .stock-table th:nth-child(2),
+body.show-stock #stockRoot .stock-table td:nth-child(2){
+  width:22%!important;
+  min-width:180px!important;
+}
+body.show-stock #stockRoot .stock-table th:nth-child(3),
+body.show-stock #stockRoot .stock-table td:nth-child(3){
+  width:16%!important;
+  min-width:138px!important;
+}
+body.show-stock #stockRoot .stock-table th:nth-child(4),
+body.show-stock #stockRoot .stock-table td:nth-child(4),
+body.show-stock #stockRoot .stock-table th:nth-child(5),
+body.show-stock #stockRoot .stock-table td:nth-child(5),
+body.show-stock #stockRoot .stock-table th:nth-child(6),
+body.show-stock #stockRoot .stock-table td:nth-child(6){
+  min-width:118px!important;
+}
+body.show-stock #stockRoot .stock-table th:nth-child(7),
+body.show-stock #stockRoot .stock-table td:nth-child(7){
+  min-width:92px!important;
+}
+body.show-stock #stockRoot .stock-table th:nth-child(8),
+body.show-stock #stockRoot .stock-table td:nth-child(8){
+  min-width:88px!important;
+}
+#deleteBatchBtn:disabled{
+  opacity:.55!important;
+  cursor:not-allowed!important;
+  filter:saturate(.7)!important;
+}
+@media (min-width:1024px) and (max-width:1366px){
+  body.show-stock #stockRoot .stock-table{
+    min-width:900px!important;
+  }
+  body.show-stock #stockRoot .stock-table th:nth-child(2),
+  body.show-stock #stockRoot .stock-table td:nth-child(2){
+    min-width:170px!important;
+  }
+  body.show-stock #stockRoot .stock-table th:nth-child(3),
+  body.show-stock #stockRoot .stock-table td:nth-child(3){
+    min-width:126px!important;
+  }
+}
+@media (max-width:980px){
+  body.show-stock #stockRoot .stock-table{
+    min-width:880px!important;
+  }
+  body.show-stock #stockRoot .stock-table td{
+    padding-top:9px!important;
+    padding-bottom:9px!important;
+  }
+  body.show-stock #stockRoot .stock-table .stock-goods-name{
+    font-size:14px!important;
+  }
+}
+</style>
+
+<style id="cangjieBatchGoodsFontV103Style">
+/* ===== V103：仅放大批次/库存列表货品文字，不改条框结构 ===== */
+body.show-stock #stockRoot .stock-table th{
+  font-size:14px!important;
+  line-height:1.2!important;
+  font-weight:950!important;
+}
+body.show-stock #stockRoot .stock-table td:nth-child(1){
+  font-size:14px!important;
+  font-weight:950!important;
+}
+body.show-stock #stockRoot .stock-table td.stock-col-product .stock-cell-title-row .stock-goods-name{
+  display:inline-block!important;
+  flex:0 1 auto!important;
+  font-size:16.5px!important;
+  line-height:1.18!important;
+  font-weight:950!important;
+  margin:0 4px 2px 0!important;
+  max-width:none!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+body.show-stock #stockRoot .stock-table td.stock-col-product .stock-cell-main .stock-cell-meta,
+body.show-stock #stockRoot .stock-table .stock-sub,
+body.show-stock #stockRoot .stock-batch-meta{
+  font-size:15px!important;
+  line-height:1.18!important;
+  font-weight:850!important;
+}
+body.show-stock #stockRoot .stock-batch-main{
+  font-size:15px!important;
+  line-height:1.18!important;
+  font-weight:950!important;
+}
+body.show-stock #stockRoot .stock-table td.stock-col-product .stock-cell-title-row .stock-tag{
+  flex:0 0 auto!important;
+  font-size:10px!important;
+  min-height:16px!important;
+  line-height:16px!important;
+  padding:0 5px!important;
+  transform:none!important;
+  margin-top:0!important;
+}
+body.show-stock #stockRoot .stock-table .stock-num,
+body.show-stock #stockRoot .stock-table td:nth-child(7) b{
+  font-size:14px!important;
+  line-height:1.14!important;
+  font-weight:950!important;
+}
+body.show-stock #stockRoot .inventory-step1-batch-op{
+  font-size:12px!important;
+  font-weight:950!important;
+}
+#inventoryView .inventory-table th{
+  font-size:14px!important;
+  line-height:1.2!important;
+  font-weight:950!important;
+}
+#inventoryView .inventory-table td{
+  font-size:14px!important;
+}
+#inventoryView .inventory-name{
+  font-size:17px!important;
+  line-height:1.2!important;
+  font-weight:950!important;
+}
+#inventoryView .inventory-sub{
+  font-size:13px!important;
+  line-height:1.22!important;
+  font-weight:850!important;
+}
+#inventoryView .inventory-badge{
+  font-size:11px!important;
+  min-width:18px!important;
+  height:18px!important;
+  line-height:18px!important;
+}
+#inventoryStep1Root .inventory-step1-table th{
+  font-size:14px!important;
+  line-height:1.2!important;
+  font-weight:950!important;
+}
+#inventoryStep1Root .inventory-step1-table td{
+  font-size:14px!important;
+  line-height:1.2!important;
+}
+#inventoryStep1Root .inventory-step1-table td:nth-child(2) b,
+#inventoryStep1Root .inventory-step1-table td:nth-child(3) b.inventory-step1-green{
+  font-size:16px!important;
+  line-height:1.2!important;
+  font-weight:950!important;
+}
+#inventoryStep1Root .inventory-step1-table td:nth-child(2) span,
+#inventoryStep1Root .inventory-step1-table td:nth-child(3) span,
+#inventoryStep1Root .inventory-step1-sub{
+  font-size:13px!important;
+  line-height:1.22!important;
+  font-weight:850!important;
+}
+#inventoryStep1Root .inventory-step1-table td:nth-child(4),
+#inventoryStep1Root .inventory-step1-table td:nth-child(5),
+#inventoryStep1Root .inventory-step1-table td:nth-child(6),
+#inventoryStep1Root .inventory-step1-table td:nth-child(7){
+  font-size:15px!important;
+  font-weight:950!important;
+}
+#inventoryStep1Root .inventory-step1-table em,
+#inventoryStep1Root .inventory-step1-batch-op,
+#inventoryStep1Root .inventory-step1-orangebtn,
+#inventoryStep1Root .inventory-step1-greenbtn{
+  font-size:12px!important;
+  font-weight:950!important;
+}
+@media (min-width:1024px) and (max-width:1366px){
+  body.show-stock #stockRoot .stock-table td.stock-col-product .stock-cell-title-row .stock-goods-name,
+  #inventoryView .inventory-name,
+  #inventoryStep1Root .inventory-step1-table td:nth-child(3) b.inventory-step1-green{
+    font-size:16px!important;
+  }
+  body.show-stock #stockRoot .stock-batch-main,
+  body.show-stock #stockRoot .stock-table .stock-num,
+  #inventoryStep1Root .inventory-step1-table td:nth-child(2) b{
+    font-size:15px!important;
+  }
+  body.show-stock #stockRoot .stock-table td.stock-col-product .stock-cell-main .stock-cell-meta{
+    font-size:14px!important;
+  }
+}
+</style>
+
+<style id="cangjieInboundCompactGoodsV105Style">
+/* ===== V105：创建/修改批次布局修复，恢复稳定横向三栏 ===== */
+body.show-inbound #inboundRoot .app,
+body.show-inbound.batch-create-mode #inboundRoot .app{
+  grid-template-columns:190px minmax(252px,300px) 52px minmax(640px,1fr)!important;
+  grid-template-areas:"left middle cat right"!important;
+  min-width:0!important;
+}
+body.show-inbound #inboundRoot .middle-panel,
+body.show-inbound.batch-create-mode #inboundRoot .middle-panel{
+  min-width:252px!important;
+  max-width:300px!important;
+  padding:12px!important;
+}
+body.show-inbound #inboundRoot .right-panel,
+body.show-inbound.batch-create-mode #inboundRoot .right-panel{
+  min-width:640px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  overflow:hidden!important;
+}
+body.show-inbound #inboundRoot .topbar,
+body.show-inbound.batch-create-mode #inboundRoot .topbar{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+  min-width:0!important;
+}
+body.show-inbound #inboundRoot .batch-info,
+body.show-inbound.batch-create-mode #inboundRoot .batch-info{
+  min-width:180px!important;
+  flex:1 1 220px!important;
+}
+body.show-inbound #inboundRoot .tools,
+body.show-inbound.batch-create-mode #inboundRoot .tools{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:wrap!important;
+  gap:8px!important;
+  min-width:360px!important;
+  flex:1 1 420px!important;
+}
+body.show-inbound #inboundRoot .tools .tool-search,
+body.show-inbound.batch-create-mode #inboundRoot .tools .tool-search{
+  width:180px!important;
+  min-width:180px!important;
+  height:42px!important;
+}
+body.show-inbound #inboundRoot .btn,
+body.show-inbound #inboundRoot .confirm-btn,
+body.show-inbound.batch-create-mode #inboundRoot .btn,
+body.show-inbound.batch-create-mode #inboundRoot .confirm-btn{
+  height:42px!important;
+  padding:0 12px!important;
+  white-space:nowrap!important;
+}
+body.show-inbound #inboundRoot .goods-grid,
+body.show-inbound.batch-create-mode #inboundRoot .goods-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:9px!important;
+  margin-top:10px!important;
+}
+body.show-inbound #inboundRoot .goods-card,
+body.show-inbound.batch-create-mode #inboundRoot .goods-card{
+  min-height:90px!important;
+  padding:11px 10px!important;
+}
+body.show-inbound #inboundRoot .goods-card .name,
+body.show-inbound.batch-create-mode #inboundRoot .goods-card .name{
+  font-size:16px!important;
+  margin-bottom:8px!important;
+  line-height:1.2!important;
+}
+body.show-inbound #inboundRoot .goods-card .type,
+body.show-inbound.batch-create-mode #inboundRoot .goods-card .type{
+  font-size:12px!important;
+  line-height:1.22!important;
+}
+body.show-inbound #inboundRoot .table-wrap,
+body.show-inbound.batch-create-mode #inboundRoot .table-wrap{
+  min-width:0!important;
+  flex:1 1 auto!important;
+  overflow:auto!important;
+}
+body.show-inbound #inboundRoot table,
+body.show-inbound.batch-create-mode #inboundRoot table{
+  min-width:1080px!important;
+  table-layout:auto!important;
+}
+body.show-inbound #inboundRoot table th,
+body.show-inbound #inboundRoot table td,
+body.show-inbound.batch-create-mode #inboundRoot table th,
+body.show-inbound.batch-create-mode #inboundRoot table td{
+  white-space:nowrap!important;
+}
+@media (min-width:1024px) and (max-width:1366px){
+  body.show-inbound #inboundRoot .app,
+  body.show-inbound.batch-create-mode #inboundRoot .app{
+    grid-template-columns:174px minmax(232px,276px) 46px minmax(580px,1fr)!important;
+  }
+  body.show-inbound #inboundRoot .middle-panel,
+  body.show-inbound.batch-create-mode #inboundRoot .middle-panel{
+    min-width:232px!important;
+    max-width:276px!important;
+  }
+  body.show-inbound #inboundRoot .right-panel,
+  body.show-inbound.batch-create-mode #inboundRoot .right-panel{
+    min-width:580px!important;
+  }
+  body.show-inbound #inboundRoot .tools,
+  body.show-inbound.batch-create-mode #inboundRoot .tools{
+    min-width:320px!important;
+  }
+  body.show-inbound #inboundRoot .tools .tool-search,
+  body.show-inbound.batch-create-mode #inboundRoot .tools .tool-search{
+    width:168px!important;
+    min-width:168px!important;
+  }
+  body.show-inbound #inboundRoot table,
+  body.show-inbound.batch-create-mode #inboundRoot table{
+    min-width:1020px!important;
+  }
+}
+</style>
+
 <script>
 /* ===== 统一左侧导航单击行为：先于旧 document 捕获处理，避免首次点击只选中 ===== */
 (function(){
@@ -31899,6 +32706,615 @@ body.show-profile-v92 #inventoryView{
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
   setTimeout(boot, 800);
+})();
+</script>
+
+<style id="cangjieCheckoutConfirmModalV107Style">
+body.show-cashier #cashierRoot .pay-box,
+body.show-cashier #cashierRoot .discount-box,
+body.show-cashier #cashierRoot .order-remark-box-step1{
+  display:none!important;
+}
+.checkout-confirm-mask-v107{
+  position:fixed;
+  inset:0;
+  background:rgba(16,24,19,.46);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:10040;
+  padding:20px;
+}
+.checkout-confirm-mask-v107.show{
+  display:flex;
+}
+.checkout-confirm-modal-v107{
+  width:min(760px,calc(100vw - 28px));
+  max-height:min(88vh,860px);
+  overflow:auto;
+  background:#fff;
+  border-radius:22px;
+  box-shadow:0 28px 68px rgba(18,28,22,.24);
+  color:#243028;
+}
+.checkout-confirm-head-v107{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:20px 22px 14px;
+  border-bottom:1px solid #e7ebe3;
+}
+.checkout-confirm-head-v107 h2{
+  margin:0;
+  font-size:24px;
+  font-weight:950;
+}
+.checkout-confirm-close-v107{
+  width:38px;
+  height:38px;
+  border:1px solid #d7ddd4;
+  border-radius:11px;
+  background:#f7f8f5;
+  color:#314139;
+  font-size:22px;
+  line-height:1;
+}
+.checkout-confirm-body-v107{
+  padding:18px 22px 22px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.checkout-confirm-section-v107{
+  background:#f8f9f6;
+  border:1px solid #e6ebe1;
+  border-radius:16px;
+  padding:14px 15px;
+}
+.checkout-confirm-section-v107 h3{
+  margin:0 0 10px;
+  font-size:14px;
+  font-weight:900;
+  color:#66746b;
+}
+.checkout-confirm-customer-v107{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.checkout-confirm-customer-v107 b{
+  font-size:20px;
+  font-weight:950;
+  color:#243028;
+}
+.checkout-confirm-summary-v107{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.checkout-confirm-card-v107{
+  background:#fff;
+  border:1px solid #e2e8de;
+  border-radius:14px;
+  padding:12px;
+}
+.checkout-confirm-card-v107 span{
+  display:block;
+  font-size:13px;
+  color:#67756c;
+  margin-bottom:6px;
+  font-weight:800;
+}
+.checkout-confirm-card-v107 b{
+  font-size:22px;
+  color:#1f2a22;
+  font-weight:950;
+}
+.checkout-money-input-v107{
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr) 72px;
+  align-items:center;
+  gap:10px;
+  min-height:54px;
+  padding:0 14px;
+  background:#fff;
+  border:1px solid #d8ded5;
+  border-radius:15px;
+}
+.checkout-money-input-v107 em{
+  font-style:normal;
+  font-size:20px;
+  font-weight:900;
+  color:#304038;
+}
+.checkout-money-input-v107 input{
+  width:100%;
+  border:0;
+  background:transparent;
+  outline:none;
+  font-size:19px;
+  font-weight:900;
+  color:#1f2a22;
+}
+.checkout-money-input-v107 strong{
+  text-align:right;
+  font-size:16px;
+  color:#65736a;
+}
+.checkout-chip-row-v107{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+.checkout-chip-v107{
+  min-height:38px;
+  padding:0 14px;
+  border-radius:999px;
+  border:1px solid #d6ddd3;
+  background:#fff;
+  color:#34423b;
+  font-size:14px;
+  font-weight:900;
+  box-shadow:none;
+}
+.checkout-chip-v107.active{
+  background:#2f8e40;
+  border-color:#2f8e40;
+  color:#fff;
+  box-shadow:0 10px 20px rgba(47,142,64,.18);
+}
+.checkout-due-v107{
+  margin-top:12px;
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.checkout-due-v107 span{
+  font-size:14px;
+  font-weight:900;
+  color:#66746b;
+}
+.checkout-due-v107 b{
+  font-size:30px;
+  font-weight:950;
+  color:#243028;
+}
+.checkout-textarea-v107{
+  width:100%;
+  min-height:92px;
+  resize:vertical;
+  border:1px solid #d7ddd4;
+  border-radius:15px;
+  padding:12px 14px;
+  box-sizing:border-box;
+  font-size:15px;
+  font-weight:700;
+  color:#243028;
+  background:#fff;
+  outline:none;
+}
+.checkout-confirm-actions-v107{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:4px;
+}
+.checkout-confirm-actions-v107 button{
+  height:50px;
+  border-radius:15px;
+  font-size:17px;
+  font-weight:950;
+}
+.checkout-confirm-cancel-v107{
+  background:#edf1eb;
+  color:#2a3830;
+  border:1px solid #d8ded5;
+}
+.checkout-confirm-submit-v107{
+  background:#2f8e40;
+  color:#fff;
+  border:1px solid #2f8e40;
+}
+.checkout-helper-v107{
+  margin-top:8px;
+  font-size:12px;
+  font-weight:800;
+  color:#8c5f18;
+}
+@media (max-width:900px){
+  .checkout-confirm-summary-v107{
+    grid-template-columns:1fr;
+  }
+}
+@media (max-width:640px){
+  .checkout-confirm-mask-v107{
+    padding:12px;
+  }
+  .checkout-confirm-head-v107{
+    padding:16px 16px 12px;
+  }
+  .checkout-confirm-body-v107{
+    padding:14px 16px 16px;
+  }
+  .checkout-confirm-actions-v107{
+    grid-template-columns:1fr;
+  }
+  .checkout-money-input-v107{
+    grid-template-columns:24px minmax(0,1fr) 64px;
+    padding:0 12px;
+  }
+}
+</style>
+
+<script>
+/* ===== V107：收银台下单确认弹窗，承接优惠/支付/备注 ===== */
+(function(){
+  if(window.__cangjieCheckoutConfirmModalV107) return;
+  window.__cangjieCheckoutConfirmModalV107 = true;
+
+  var paymentLabels = {
+    cash:"现金",
+    wechat:"微信",
+    alipay:"支付宝",
+    bank:"银行卡",
+    other:"其他"
+  };
+  var discountPresets = [
+    {id:"none", label:"不优惠", value:0},
+    {id:"5", label:"优惠5元", value:5},
+    {id:"10", label:"优惠10元", value:10},
+    {id:"20", label:"优惠20元", value:20},
+    {id:"custom", label:"自定义", value:null}
+  ];
+  var checkoutDraft = {
+    discount:0,
+    preset:"none",
+    payment:"cash",
+    paid:"",
+    paidTouched:false,
+    remark:"",
+    lastDue:0
+  };
+  var finalizeOrderV107 = typeof window.confirmOrderFromCodeBill === "function"
+    ? window.confirmOrderFromCodeBill
+    : null;
+  var buildCodeBillV107 = typeof window.buildCodeBill === "function"
+    ? window.buildCodeBill
+    : null;
+
+  function num(v){
+    var n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  function moneyText(v){
+    return typeof window.money === "function" ? window.money(v || 0) : Number(v || 0).toFixed(2);
+  }
+  function esc(v){
+    if(typeof window.esc === "function") return window.esc(v);
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;");
+  }
+  function currentOriginalAmount(){
+    return typeof window.getOrderOriginalAmount === "function"
+      ? num(window.getOrderOriginalAmount())
+      : (Array.isArray(window.currentCodeBillItems) ? window.currentCodeBillItems.reduce(function(sum, item){
+          return sum + (typeof window.lineAmount === "function" ? num(window.lineAmount(item)) : 0);
+        }, 0) : 0);
+  }
+  function currentTotals(){
+    var totalQty = Array.isArray(window.currentCodeBillItems) ? window.currentCodeBillItems.reduce(function(s, i){ return s + num(i && i.qty); }, 0) : 0;
+    var totalWeight = Array.isArray(window.currentCodeBillItems) ? window.currentCodeBillItems.reduce(function(s, i){ return s + num(i && i.weight); }, 0) : 0;
+    return {
+      goodsCount:Array.isArray(window.currentCodeBillItems) ? window.currentCodeBillItems.length : 0,
+      totalQty:totalQty,
+      totalWeight:totalWeight,
+      originalAmount:currentOriginalAmount()
+    };
+  }
+  function activeCustomerV107(){
+    try{
+      if(typeof window.activeCashierCustomer === "function") return window.activeCashierCustomer();
+    }catch(err){}
+    return {id:"c1", name:"临时客户"};
+  }
+  function currentUserV107(){
+    try{
+      if(typeof window.getCurrentUserV96 === "function") return window.getCurrentUserV96() || {};
+    }catch(err){}
+    try{
+      return JSON.parse(localStorage.getItem("currentUser") || localStorage.getItem("cangjieCurrentAccountV93") || "{}") || {};
+    }catch(err){}
+    return {};
+  }
+  function merchantProfileV107(){
+    try{
+      if(typeof window.merchantProfile === "function") return window.merchantProfile() || {};
+    }catch(err){}
+    try{
+      return JSON.parse(localStorage.getItem("cangjieMerchantProfileV92") || "{}") || {};
+    }catch(err){}
+    return {};
+  }
+  function derivePreset(discount){
+    if(discount === 0) return "none";
+    if(discount === 5) return "5";
+    if(discount === 10) return "10";
+    if(discount === 20) return "20";
+    return "custom";
+  }
+  function normalizeDraft(){
+    var totals = currentTotals();
+    var original = totals.originalAmount;
+    var discount = Math.max(num(checkoutDraft.discount), 0);
+    if(discount > original) discount = original;
+    checkoutDraft.discount = discount;
+    checkoutDraft.preset = derivePreset(discount);
+
+    var due = Math.max(original - discount, 0);
+    var paid = checkoutDraft.paid === "" ? due : num(checkoutDraft.paid);
+    var shouldFollowDue = !checkoutDraft.paidTouched || Math.abs(num(checkoutDraft.lastDue) - num(checkoutDraft.paid)) < 0.001;
+    if(shouldFollowDue){
+      paid = due;
+      checkoutDraft.paidTouched = false;
+    }
+    if(paid < 0) paid = 0;
+    if(paid > due) paid = due;
+    checkoutDraft.paid = paid;
+    checkoutDraft.lastDue = due;
+    return {
+      goodsCount:totals.goodsCount,
+      totalQty:totals.totalQty,
+      totalWeight:totals.totalWeight,
+      originalAmount:original,
+      discount:discount,
+      totalAmount:due,
+      paid:paid,
+      debt:Math.max(due - paid, 0),
+      payment:checkoutDraft.payment || "cash",
+      paymentLabel:paymentLabels[checkoutDraft.payment || "cash"] || "现金",
+      remark:String(checkoutDraft.remark || "").trim()
+    };
+  }
+  function syncLegacyFields(payload){
+    var discountInput = document.getElementById("cashierDiscountAmount");
+    if(discountInput) discountInput.value = payload.discount ? String(payload.discount) : "";
+    var discountNote = document.getElementById("cashierDiscountNote");
+    if(discountNote) discountNote.value = "";
+    var paidInput = document.getElementById("cashierPaidAmount");
+    if(paidInput) paidInput.value = String(payload.paid);
+    var payMode = document.getElementById("cashierPayMode");
+    if(payMode){
+      if(payload.debt <= 0){
+        payMode.value = "cash";
+      }else if(payload.paid <= 0){
+        payMode.value = "debt";
+      }else{
+        payMode.value = "mixed";
+      }
+    }
+    var remarkInput = document.getElementById("cashierOrderRemarkStep1");
+    if(remarkInput) remarkInput.value = payload.remark || "";
+  }
+  function ensureModalDom(){
+    if(document.getElementById("checkoutConfirmMaskV107")) return;
+    var wrap = document.createElement("div");
+    wrap.innerHTML =
+      '<div class="checkout-confirm-mask-v107" id="checkoutConfirmMaskV107">'
+      + '<div class="checkout-confirm-modal-v107" role="dialog" aria-modal="true" aria-labelledby="checkoutConfirmTitleV107">'
+      + '<div class="checkout-confirm-head-v107"><h2 id="checkoutConfirmTitleV107">下单确认</h2><button class="checkout-confirm-close-v107" type="button" onclick="closeCheckoutConfirmModalV107()">×</button></div>'
+      + '<div class="checkout-confirm-body-v107">'
+      + '<section class="checkout-confirm-section-v107"><h3>客户信息</h3><div class="checkout-confirm-customer-v107"><span>当前客户</span><b id="checkoutConfirmCustomerV107">临时客户</b></div></section>'
+      + '<section class="checkout-confirm-section-v107"><h3>商品明细汇总</h3><div class="checkout-confirm-summary-v107"><div class="checkout-confirm-card-v107"><span>商品数量</span><b id="checkoutConfirmGoodsCountV107">0种</b></div><div class="checkout-confirm-card-v107"><span>总重量</span><b id="checkoutConfirmWeightV107">0斤</b></div><div class="checkout-confirm-card-v107"><span>商品金额</span><b id="checkoutConfirmOriginalV107">¥0.00</b></div></div></section>'
+      + '<section class="checkout-confirm-section-v107"><h3>优惠金额</h3><div class="checkout-money-input-v107"><em>¥</em><input id="checkoutDiscountInputV107" type="number" min="0" step="0.01" inputmode="decimal" placeholder="请输入优惠金额"><strong id="checkoutDiscountValueV107">0.00</strong></div><div class="checkout-chip-row-v107" id="checkoutDiscountPresetsV107"></div><div class="checkout-due-v107"><span>优惠后应收</span><b id="checkoutDueAmountV107">¥0.00</b></div></section>'
+      + '<section class="checkout-confirm-section-v107"><h3>支付方式</h3><div class="checkout-chip-row-v107" id="checkoutPaymentMethodsV107"></div></section>'
+      + '<section class="checkout-confirm-section-v107"><h3>实收金额</h3><div class="checkout-money-input-v107"><em>¥</em><input id="checkoutPaidInputV107" type="number" min="0" step="0.01" inputmode="decimal" placeholder="请输入实收金额"><strong id="checkoutPaidValueV107">0.00</strong></div><div class="checkout-helper-v107" id="checkoutDebtHintV107"></div></section>'
+      + '<section class="checkout-confirm-section-v107"><h3>订单备注</h3><textarea id="checkoutRemarkInputV107" class="checkout-textarea-v107" placeholder="请输入订单备注，可选"></textarea></section>'
+      + '<div class="checkout-confirm-actions-v107"><button class="checkout-confirm-cancel-v107" type="button" onclick="closeCheckoutConfirmModalV107()">取消</button><button class="checkout-confirm-submit-v107" type="button" onclick="submitCheckoutConfirmModalV107()">确认下单</button></div>'
+      + '</div></div></div>';
+    document.body.appendChild(wrap.firstChild);
+
+    document.getElementById("checkoutConfirmMaskV107").addEventListener("click", function(ev){
+      if(ev.target === this) window.closeCheckoutConfirmModalV107();
+    });
+    document.getElementById("checkoutDiscountInputV107").addEventListener("input", function(){
+      checkoutDraft.discount = this.value;
+      checkoutDraft.preset = "custom";
+      renderModalV107();
+    });
+    document.getElementById("checkoutPaidInputV107").addEventListener("input", function(){
+      checkoutDraft.paid = this.value;
+      checkoutDraft.paidTouched = true;
+      renderModalV107();
+    });
+    document.getElementById("checkoutRemarkInputV107").addEventListener("input", function(){
+      checkoutDraft.remark = this.value || "";
+      syncLegacyFields(normalizeDraft());
+    });
+  }
+  function renderDiscountPresets(activePreset){
+    var box = document.getElementById("checkoutDiscountPresetsV107");
+    if(!box) return;
+    box.innerHTML = discountPresets.map(function(item){
+      return '<button type="button" class="checkout-chip-v107' + (activePreset === item.id ? ' active' : '') + '" onclick="' + (item.id === "custom"
+        ? "focusCheckoutDiscountCustomV107()"
+        : ("applyCheckoutDiscountPresetV107(" + item.value + ")")) + '">' + item.label + '</button>';
+    }).join("");
+  }
+  function renderPaymentMethods(activePayment){
+    var box = document.getElementById("checkoutPaymentMethodsV107");
+    if(!box) return;
+    box.innerHTML = Object.keys(paymentLabels).map(function(key){
+      return '<button type="button" class="checkout-chip-v107' + (activePayment === key ? ' active' : '') + '" onclick="chooseCheckoutPaymentMethodV107(\'' + key + '\')">' + paymentLabels[key] + '</button>';
+    }).join("");
+  }
+  function renderModalV107(){
+    var payload = normalizeDraft();
+    syncLegacyFields(payload);
+
+    var customer = activeCustomerV107() || {name:"临时客户"};
+    var customerName = customer.name || "临时客户";
+    document.getElementById("checkoutConfirmCustomerV107").textContent = customerName;
+    document.getElementById("checkoutConfirmGoodsCountV107").textContent = payload.goodsCount + "种 / " + payload.totalQty + "件";
+    document.getElementById("checkoutConfirmWeightV107").textContent = payload.totalWeight + "斤";
+    document.getElementById("checkoutConfirmOriginalV107").textContent = "¥" + moneyText(payload.originalAmount);
+    document.getElementById("checkoutDiscountInputV107").value = payload.discount ? String(payload.discount) : "";
+    document.getElementById("checkoutDiscountValueV107").textContent = payload.discount.toFixed(2);
+    document.getElementById("checkoutDueAmountV107").textContent = "¥" + moneyText(payload.totalAmount);
+    document.getElementById("checkoutPaidInputV107").value = payload.paid === 0 && payload.totalAmount !== 0 ? "" : String(payload.paid);
+    document.getElementById("checkoutPaidValueV107").textContent = payload.paid.toFixed(2);
+    document.getElementById("checkoutRemarkInputV107").value = checkoutDraft.remark || "";
+    document.getElementById("checkoutDebtHintV107").textContent = payload.debt > 0 ? ("当前仍有未收金额：¥" + moneyText(payload.debt)) : "当前实收金额将按确认内容保存到订单";
+    renderDiscountPresets(payload.preset);
+    renderPaymentMethods(payload.payment);
+  }
+  function loadDraftFromLegacy(){
+    var original = currentOriginalAmount();
+    var discount = Math.max(num(document.getElementById("cashierDiscountAmount") && document.getElementById("cashierDiscountAmount").value), 0);
+    if(discount > original) discount = original;
+    var paidRaw = document.getElementById("cashierPaidAmount") ? document.getElementById("cashierPaidAmount").value : "";
+    checkoutDraft.discount = discount;
+    checkoutDraft.preset = derivePreset(discount);
+    checkoutDraft.payment = checkoutDraft.payment || "cash";
+    checkoutDraft.paidTouched = !!String(paidRaw || "").trim();
+    checkoutDraft.paid = checkoutDraft.paidTouched ? num(paidRaw) : Math.max(original - discount, 0);
+    checkoutDraft.remark = (document.getElementById("cashierOrderRemarkStep1") && document.getElementById("cashierOrderRemarkStep1").value) || checkoutDraft.remark || "";
+    checkoutDraft.lastDue = Math.max(original - discount, 0);
+  }
+  function getCheckoutPayloadV107(){
+    var payload = normalizeDraft();
+    var user = currentUserV107();
+    var merchant = merchantProfileV107();
+    payload.customerName = (activeCustomerV107() || {}).name || "临时客户";
+    payload.customerId = (activeCustomerV107() || {}).id || "c1";
+    payload.paymentMethod = payload.payment;
+    payload.paymentMethodLabel = paymentLabels[payload.payment] || "现金";
+    payload.cashierName = user.employee_name || user.name || (user.role === "owner" ? "主账号" : "");
+    payload.cashierPhone = user.phone || "";
+    payload.cashierRole = user.role || "";
+    payload.employee_id = user.employee_id || user.employeeId || user.id || "";
+    payload.employee_name = payload.cashierName;
+    payload.employeeRole = payload.cashierRole;
+    payload.merchantName = merchant.name || merchant.title || "仓颉";
+    payload.merchantAddress = merchant.address || "";
+    payload.merchantPhone = merchant.phone || "";
+    return payload;
+  }
+
+  window.applyCheckoutDiscountPresetV107 = function(value){
+    checkoutDraft.discount = value;
+    checkoutDraft.preset = derivePreset(num(value));
+    checkoutDraft.paidTouched = false;
+    renderModalV107();
+  };
+  window.focusCheckoutDiscountCustomV107 = function(){
+    checkoutDraft.preset = "custom";
+    renderModalV107();
+    var input = document.getElementById("checkoutDiscountInputV107");
+    if(input){
+      input.focus();
+      input.select();
+    }
+  };
+  window.chooseCheckoutPaymentMethodV107 = function(method){
+    checkoutDraft.payment = method || "cash";
+    renderModalV107();
+  };
+  window.openCheckoutConfirmModalV107 = function(){
+    if(!Array.isArray(window.currentCodeBillItems) || !window.currentCodeBillItems.length){
+      alert("请先选择商品。");
+      return;
+    }
+    ensureModalDom();
+    loadDraftFromLegacy();
+    renderModalV107();
+    document.getElementById("checkoutConfirmMaskV107").classList.add("show");
+  };
+  window.closeCheckoutConfirmModalV107 = function(){
+    var mask = document.getElementById("checkoutConfirmMaskV107");
+    if(mask) mask.classList.remove("show");
+  };
+  window.submitCheckoutConfirmModalV107 = function(){
+    if(typeof finalizeOrderV107 !== "function"){
+      alert("当前下单流程不可用，请刷新页面后重试。");
+      return;
+    }
+    var payload = normalizeDraft();
+    if(typeof window.isTemporaryCashierCustomer === "function" && window.isTemporaryCashierCustomer() && payload.paid < payload.totalAmount){
+      payload.paid = payload.totalAmount;
+      payload.debt = 0;
+      checkoutDraft.paid = payload.totalAmount;
+      checkoutDraft.paidTouched = false;
+      checkoutDraft.payment = "cash";
+      if(typeof window.toast === "function") window.toast("临时客户必须当场结清，已自动修正为全额实收");
+    }
+    syncLegacyFields(payload);
+    window.closeCheckoutConfirmModalV107();
+    finalizeOrderV107();
+    checkoutDraft.discount = 0;
+    checkoutDraft.preset = "none";
+    checkoutDraft.payment = "cash";
+    checkoutDraft.paid = "";
+    checkoutDraft.paidTouched = false;
+    checkoutDraft.remark = "";
+  };
+
+  if(typeof buildCodeBillV107 === "function"){
+    window.buildCodeBill = function(){
+      var bill = buildCodeBillV107.apply(this, arguments);
+      var payload = getCheckoutPayloadV107();
+      bill.discount = payload.discount;
+      bill.totalAmount = payload.totalAmount;
+      bill.paid = payload.paid;
+      bill.paidAmount = payload.paid;
+      bill.actualPaid = payload.paid;
+      bill.debt = payload.debt;
+      bill.paymentMethod = payload.paymentMethod;
+      bill.paymentMethodLabel = payload.paymentMethodLabel;
+      bill.orderRemark = payload.remark || bill.orderRemark || bill.remark || "";
+      bill.remark = bill.orderRemark;
+      bill.customerName = payload.customerName || bill.customerName;
+      bill.customerId = payload.customerId || bill.customerId;
+      bill.cashierName = payload.cashierName || bill.cashierName || "";
+      bill.cashierPhone = payload.cashierPhone || bill.cashierPhone || "";
+      bill.cashierRole = payload.cashierRole || bill.cashierRole || "";
+      bill.employee_id = payload.employee_id || bill.employee_id || "";
+      bill.employee_name = payload.employee_name || bill.employee_name || bill.cashierName || "";
+      bill.employeeRole = payload.employeeRole || bill.employeeRole || bill.cashierRole || "";
+      bill.merchantName = payload.merchantName || bill.merchantName || "";
+      bill.merchantAddress = payload.merchantAddress || bill.merchantAddress || "";
+      bill.merchantPhone = payload.merchantPhone || bill.merchantPhone || "";
+      if(typeof bill.text === "string"){
+        var lines = bill.text.split("\n").filter(Boolean);
+        lines.push("支付方式：" + bill.paymentMethodLabel);
+        lines.push("实收金额：" + moneyText(bill.paid));
+        if(bill.debt > 0) lines.push("剩余欠款：" + moneyText(bill.debt));
+        if(bill.orderRemark) lines.push("订单备注：" + bill.orderRemark);
+        if(bill.cashierName) lines.push("收银员：" + bill.cashierName + (bill.cashierPhone ? " " + bill.cashierPhone : ""));
+        bill.text = lines.join("\n");
+      }
+      return bill;
+    };
+  }
+
+  if(typeof finalizeOrderV107 === "function"){
+    window.confirmOrderFromCodeBill = function(){
+      window.openCheckoutConfirmModalV107();
+    };
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", ensureModalDom);
+  }else{
+    ensureModalDom();
+  }
 })();
 </script>
 
