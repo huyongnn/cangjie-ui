@@ -33160,7 +33160,7 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
       + '<section class="checkout-confirm-section-v107"><h3>实收金额</h3><div class="checkout-money-input-v107"><em>¥</em><input id="checkoutPaidInputV107" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"><strong id="checkoutPaidValueV107">0.00</strong></div><div class="checkout-helper-v107" id="checkoutDebtHintV107"></div></section>'
       + '<section class="checkout-confirm-section-v107"><h3>支付方式</h3><div class="checkout-chip-row-v107" id="checkoutPaymentMethodsV107"></div></section>'
       + '</div><aside class="checkout-side-v107"><div class="checkout-keypad-v107" aria-label="数字键盘"><button type="button" data-keypad-v107="7">7</button><button type="button" data-keypad-v107="8">8</button><button type="button" data-keypad-v107="9">9</button><button type="button" data-keypad-v107="back">⌫</button><button type="button" data-keypad-v107="4">4</button><button type="button" data-keypad-v107="5">5</button><button type="button" data-keypad-v107="6">6</button><button type="button" data-keypad-v107="plus">+</button><button type="button" data-keypad-v107="1">1</button><button type="button" data-keypad-v107="2">2</button><button type="button" data-keypad-v107="3">3</button><button type="button" data-keypad-v107="minus">−</button><button type="button" class="wide" data-keypad-v107="0">0</button><button type="button" data-keypad-v107=".">.</button><button type="button" data-keypad-v107="00">00</button></div><section class="checkout-confirm-section-v107 checkout-remark-section-v107"><h3>订单备注</h3><textarea id="checkoutRemarkInputV107" class="checkout-textarea-v107" maxlength="100" placeholder="请输入备注信息，如少收、客户说明、特殊价格原因等..."></textarea></section></aside></div>'
-      + '<div class="checkout-confirm-actions-v107"><button class="checkout-confirm-cancel-v107" type="button" onclick="closeCheckoutConfirmModalV107()">取消</button><button class="checkout-confirm-submit-v107" type="button" onclick="submitCheckoutConfirmModalV107()">确认下单</button></div>'
+      + '<div class="checkout-confirm-actions-v107"><button class="checkout-confirm-cancel-v107" type="button" onclick="submitDebtCheckoutConfirmModalV107()">赊欠</button><button class="checkout-confirm-submit-v107" type="button" onclick="submitCheckoutConfirmModalV107()">收银</button></div>'
       + '</div></div></div>';
     document.body.appendChild(wrap.firstChild);
 
@@ -33329,12 +33329,34 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     var mask = document.getElementById("checkoutConfirmMaskV107");
     if(mask) mask.classList.remove("show");
   };
+  function resetCheckoutDraftAfterSubmitV107(){
+    checkoutDraft.discount = 0;
+    checkoutDraft.payment = "cash";
+    checkoutDraft.paid = "";
+    checkoutDraft.paidTouched = false;
+    checkoutDraft.remark = "";
+  }
+  function finalizeCheckoutWithPayloadV107(payload){
+    syncLegacyFields(payload);
+    window.closeCheckoutConfirmModalV107();
+    finalizeOrderV107();
+    resetCheckoutDraftAfterSubmitV107();
+  }
   window.submitCheckoutConfirmModalV107 = function(){
     if(typeof finalizeOrderV107 !== "function"){
       alert("当前下单流程不可用，请刷新页面后重试。");
       return;
     }
     var payload = normalizeDraft();
+    if(payload.payment === "debt"){
+      payload.payment = "cash";
+      payload.paymentLabel = paymentLabels.cash || "现金";
+      payload.paid = payload.totalAmount;
+      payload.debt = 0;
+      checkoutDraft.payment = "cash";
+      checkoutDraft.paid = payload.totalAmount;
+      checkoutDraft.paidTouched = false;
+    }
     if(typeof window.isTemporaryCashierCustomer === "function" && window.isTemporaryCashierCustomer() && payload.paid < payload.totalAmount){
       payload.paid = payload.totalAmount;
       payload.debt = 0;
@@ -33343,14 +33365,27 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
       checkoutDraft.payment = "cash";
       if(typeof window.toast === "function") window.toast("临时客户必须当场结清，已自动修正为全额实收");
     }
-    syncLegacyFields(payload);
-    window.closeCheckoutConfirmModalV107();
-    finalizeOrderV107();
-    checkoutDraft.discount = 0;
-    checkoutDraft.payment = "cash";
-    checkoutDraft.paid = "";
-    checkoutDraft.paidTouched = false;
-    checkoutDraft.remark = "";
+    finalizeCheckoutWithPayloadV107(payload);
+  };
+  window.submitDebtCheckoutConfirmModalV107 = function(){
+    if(typeof finalizeOrderV107 !== "function"){
+      alert("当前下单流程不可用，请刷新页面后重试。");
+      return;
+    }
+    if(typeof window.isTemporaryCashierCustomer === "function" && window.isTemporaryCashierCustomer()){
+      if(typeof window.toast === "function") window.toast("临时客户不可赊欠，请先切换正式客户");
+      else alert("临时客户不可赊欠，请先切换正式客户");
+      return;
+    }
+    var payload = normalizeDraft();
+    payload.payment = "debt";
+    payload.paymentLabel = paymentLabels.debt || "赊欠";
+    payload.paid = 0;
+    payload.debt = payload.totalAmount;
+    checkoutDraft.payment = "debt";
+    checkoutDraft.paid = 0;
+    checkoutDraft.paidTouched = true;
+    finalizeCheckoutWithPayloadV107(payload);
   };
 
   if(typeof buildCodeBillV107 === "function"){
