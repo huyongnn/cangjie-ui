@@ -32454,6 +32454,70 @@ body.show-inbound.batch-create-mode #inboundRoot table td{
 }
 </style>
 
+<style id="cangjieInboundCatRailV110Style">
+/* ===== V110：仅优化创建/修改批次页“全 / 子”切换栏视觉 ===== */
+body.show-inbound #inboundRoot .app,
+body.show-inbound.batch-create-mode #inboundRoot .app{
+  grid-template-columns:190px minmax(252px,300px) 44px minmax(640px,1fr)!important;
+}
+body.show-inbound #inboundRoot .cat-panel,
+body.show-inbound.batch-create-mode #inboundRoot .cat-panel{
+  width:44px!important;
+  min-width:44px!important;
+  max-width:44px!important;
+  padding:6px 3px!important;
+  gap:6px!important;
+  background:#f3f5f0!important;
+  border-right:1px solid rgba(205,212,201,.72)!important;
+  border-left:0!important;
+  box-shadow:none!important;
+}
+body.show-inbound #inboundRoot .cat-panel .cat,
+body.show-inbound.batch-create-mode #inboundRoot .cat-panel .cat{
+  width:34px!important;
+  min-width:34px!important;
+  max-width:34px!important;
+  height:40px!important;
+  flex:0 0 40px!important;
+  border-radius:11px!important;
+  background:#fbfcf9!important;
+  border:1px solid #d9dfd5!important;
+  color:#314139!important;
+  font-size:14px!important;
+  font-weight:950!important;
+  box-shadow:0 1px 2px rgba(27,42,32,.04)!important;
+}
+body.show-inbound #inboundRoot .cat-panel .cat.active,
+body.show-inbound.batch-create-mode #inboundRoot .cat-panel .cat.active{
+  background:#2f8e40!important;
+  border-color:#2f8e40!important;
+  color:#fff!important;
+  box-shadow:0 8px 16px rgba(47,142,64,.16)!important;
+}
+@media (min-width:1024px) and (max-width:1366px){
+  body.show-inbound #inboundRoot .app,
+  body.show-inbound.batch-create-mode #inboundRoot .app{
+    grid-template-columns:174px minmax(232px,276px) 40px minmax(580px,1fr)!important;
+  }
+  body.show-inbound #inboundRoot .cat-panel,
+  body.show-inbound.batch-create-mode #inboundRoot .cat-panel{
+    width:40px!important;
+    min-width:40px!important;
+    max-width:40px!important;
+    padding:6px 2px!important;
+  }
+  body.show-inbound #inboundRoot .cat-panel .cat,
+  body.show-inbound.batch-create-mode #inboundRoot .cat-panel .cat{
+    width:32px!important;
+    min-width:32px!important;
+    max-width:32px!important;
+    height:38px!important;
+    flex-basis:38px!important;
+    font-size:13px!important;
+  }
+}
+</style>
+
 <script>
 /* ===== 统一左侧导航单击行为：先于旧 document 捕获处理，避免首次点击只选中 ===== */
 (function(){
@@ -33966,6 +34030,237 @@ body.show-cashier #cashierRoot *,
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", ensureCashierReferenceV109);
   else ensureCashierReferenceV109();
   setTimeout(ensureCashierReferenceV109, 120);
+})();
+</script>
+
+<style id="cangjieGoodsModalCompactV109Style">
+/* ===== V109：仅压缩新增自营货品弹窗尺寸与内部排版 ===== */
+#goodsModal .modal{
+  width:min(82vw,1040px)!important;
+  max-width:82vw!important;
+  max-height:86vh!important;
+  display:flex!important;
+  flex-direction:column!important;
+  overflow:hidden!important;
+  margin:0 auto!important;
+}
+#goodsModal .modal-header{
+  position:sticky!important;
+  top:0!important;
+  z-index:2!important;
+  background:#fff!important;
+  padding:16px 18px 12px!important;
+}
+#goodsModal .modal-title{
+  font-size:20px!important;
+}
+#goodsModal .modal-actions{
+  gap:10px!important;
+}
+#goodsModal .modal-actions .ghost,
+#goodsModal .modal-actions .save{
+  min-width:88px!important;
+  height:40px!important;
+  padding:0 14px!important;
+  font-size:14px!important;
+}
+#goodsModal .modal-body{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow:auto!important;
+  padding:4px 18px 18px!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+#goodsModal .form-grid{
+  grid-template-columns:124px minmax(0,1fr)!important;
+  gap:8px 10px!important;
+  margin-top:12px!important;
+}
+#goodsModal .form-label{
+  font-size:16px!important;
+  line-height:1.35!important;
+}
+#goodsModal .input,
+#goodsModal .select{
+  height:44px!important;
+  padding:0 12px!important;
+  font-size:15px!important;
+}
+#goodsModal .row-flex{
+  gap:10px!important;
+}
+#goodsModal .plus-btn{
+  height:44px!important;
+  padding:0 14px!important;
+  font-size:15px!important;
+  border-width:1px!important;
+}
+#goodsModal .segment{
+  gap:10px!important;
+}
+#goodsModal .seg-btn{
+  min-width:118px!important;
+  height:46px!important;
+  font-size:16px!important;
+}
+#goodsModal .spec-wrap{
+  grid-template-columns:minmax(130px,1fr) 62px 76px 118px minmax(124px,1fr) 72px!important;
+}
+#goodsModal .spec-wrap .input,
+#goodsModal .spec-wrap .select,
+#goodsModal .spec-unit{
+  height:44px!important;
+  font-size:15px!important;
+}
+#goodsModal .hint{
+  font-size:11px!important;
+  line-height:1.45!important;
+}
+#goodsModal .side-setting{
+  margin-top:12px!important;
+}
+#goodsModal .setting-item{
+  padding:14px 2px!important;
+}
+#goodsModal .setting-left{
+  gap:10px!important;
+}
+#goodsModal .setting-icon{
+  width:30px!important;
+  height:30px!important;
+  font-size:16px!important;
+  border-radius:9px!important;
+}
+#goodsModal .setting-title{
+  font-size:16px!important;
+}
+#goodsModal .setting-right{
+  font-size:15px!important;
+  white-space:nowrap!important;
+}
+@media (min-width:1024px) and (max-width:1366px){
+  #goodsModal .modal{
+    width:min(82vw,920px)!important;
+  }
+  #goodsModal .form-grid{
+    grid-template-columns:116px minmax(0,1fr)!important;
+  }
+  #goodsModal .seg-btn{
+    min-width:108px!important;
+  }
+  #goodsModal .spec-wrap{
+    grid-template-columns:minmax(116px,1fr) 58px 72px 108px minmax(112px,1fr) 68px!important;
+  }
+}
+@media (max-width:900px){
+  #goodsModal .modal{
+    width:min(92vw,760px)!important;
+    max-width:92vw!important;
+  }
+  #goodsModal .form-grid{
+    grid-template-columns:110px minmax(0,1fr)!important;
+  }
+}
+</style>
+
+<script>
+/* ===== V111：仅修复收银页商品区右上角快捷筛选逻辑 ===== */
+(function(){
+  if(window.__cangjieCashierGoodsScopeV111) return;
+  window.__cangjieCashierGoodsScopeV111 = true;
+
+  var currentScopeV111 = "all";
+  var oldGetCashierProductsV111 = typeof window.getCashierProducts === "function" ? window.getCashierProducts : null;
+  var oldRenderCashierProductsV111 = typeof window.renderCashierProducts === "function" ? window.renderCashierProducts : null;
+  var oldRenderCashierAllV111 = typeof window.renderCashierAll === "function" ? window.renderCashierAll : null;
+
+  function firstCharV111(name){
+    if(typeof window.firstGoodsChar === "function") return window.firstGoodsChar(name);
+    return String(name || "").trim().slice(0, 1);
+  }
+  function baseProductsV111(skipLetterFilter){
+    return oldGetCashierProductsV111 ? oldGetCashierProductsV111.call(window, skipLetterFilter) : [];
+  }
+  function scopedProductsV111(skipLetterFilter){
+    var products = baseProductsV111(skipLetterFilter);
+    if(currentScopeV111 !== "all"){
+      products = products.filter(function(goods){
+        return firstCharV111(goods && goods.name) === currentScopeV111;
+      });
+    }
+    return products;
+  }
+  function scopeButtonsV111(){
+    var letters = [];
+    baseProductsV111(true).forEach(function(goods){
+      var ch = firstCharV111(goods && goods.name);
+      if(ch && !letters.includes(ch)) letters.push(ch);
+    });
+    return ["全"].concat(letters);
+  }
+
+  function syncToggleStateV111(){
+    var wrap = document.querySelector("#cashierRoot .cashier-product-toggle-v109");
+    if(!wrap) return;
+    var buttons = scopeButtonsV111();
+    wrap.innerHTML = buttons.map(function(label){
+      var scope = label === "全" ? "all" : label;
+      return '<button type="button" class="' + (scope === currentScopeV111 ? 'active' : '') + '" data-scope-v111="' + label + '">' + label + '</button>';
+    }).join("");
+  }
+
+  window.selectCashierGoodsScopeV111 = function(scope){
+    currentScopeV111 = !scope || scope === "all" || scope === "全" ? "all" : String(scope);
+    syncToggleStateV111();
+    if(typeof window.renderCashierProducts === "function") window.renderCashierProducts();
+  };
+
+  if(oldGetCashierProductsV111 && !oldGetCashierProductsV111.__goodsScopeV111Wrapped){
+    window.getCashierProducts = function(skipLetterFilter){
+      return scopedProductsV111(skipLetterFilter);
+    };
+    window.getCashierProducts.__goodsScopeV111Wrapped = true;
+  }
+
+  if(oldRenderCashierProductsV111 && !oldRenderCashierProductsV111.__goodsScopeV111Wrapped){
+    window.renderCashierProducts = function(){
+      var result = oldRenderCashierProductsV111.apply(this, arguments);
+      syncToggleStateV111();
+      var box = document.getElementById("cashierProducts");
+      if(box && currentScopeV111 !== "all" && !scopedProductsV111(false).length){
+        var hasAny = baseProductsV111(false).length > 0;
+        if(hasAny){
+          box.innerHTML = '<div class="order-empty">当前筛选暂无货品</div>';
+        }
+      }
+      return result;
+    };
+    window.renderCashierProducts.__goodsScopeV111Wrapped = true;
+  }
+
+  if(oldRenderCashierAllV111 && !oldRenderCashierAllV111.__goodsScopeV111Wrapped){
+    window.renderCashierAll = function(){
+      currentScopeV111 = "all";
+      var result = oldRenderCashierAllV111.apply(this, arguments);
+      syncToggleStateV111();
+      return result;
+    };
+    window.renderCashierAll.__goodsScopeV111Wrapped = true;
+  }
+
+  document.addEventListener("click", function(ev){
+    var btn = ev.target && ev.target.closest ? ev.target.closest("#cashierRoot .cashier-product-toggle-v109 button") : null;
+    if(!btn) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+    window.selectCashierGoodsScopeV111(btn.getAttribute("data-scope-v111") || String(btn.textContent || "").trim());
+    return false;
+  }, true);
+
+  currentScopeV111 = "all";
+  setTimeout(syncToggleStateV111, 0);
+  setTimeout(syncToggleStateV111, 240);
 })();
 </script>
 
