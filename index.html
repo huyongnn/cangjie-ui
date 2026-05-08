@@ -4672,16 +4672,11 @@ body.merchant-entry-locked-v1 #customerPanel{display:none!important;}
         <thead>
           <tr>
             <th style="width:58px">序号</th>
-            <th style="width:130px">货品</th>
-            <th style="width:190px">入库数量</th>
-            <th style="width:190px">入库重量</th>
-            <th style="width:190px">采购单价</th>
-            <th style="width:130px;text-align:right">采购金额</th>
-            <th style="width:180px">成本单价</th>
-            <th style="width:120px">采购成本</th>
-            <th style="width:80px">销量</th>
-            <th style="width:80px">库存</th>
-            <th style="width:180px">操作</th>
+            <th style="width:220px">货品</th>
+            <th style="width:150px">采购件数/数量</th>
+            <th style="width:180px">采购重量/斤数</th>
+            <th style="width:210px">采购单价</th>
+            <th style="width:150px;text-align:right">采购金额</th>
           </tr>
         </thead>
         <tbody id="detailBody"></tbody>
@@ -5285,7 +5280,7 @@ function renderDetail(){
     const mobileDetail = document.getElementById("mobileDetailList");
     const feeTotalEl = document.getElementById("feeTotal");
     const costTotalEl = document.getElementById("costTotal");
-    if(detailBody) detailBody.innerHTML = '<tr><td colspan="11" class="hint">暂无批次。请先新增货主和批次。</td></tr>';
+    if(detailBody) detailBody.innerHTML = '<tr><td colspan="6" class="hint">暂无批次。请先新增货主和批次。</td></tr>';
     if(mobileDetail) mobileDetail.innerHTML = '<div class="hint">暂无批次。请先新增货主和批次。</div>';
     if(feeTotalEl) feeTotalEl.textContent = money(0);
     if(costTotalEl) costTotalEl.textContent = money(0);
@@ -5341,18 +5336,6 @@ function renderDetail(){
           <span class="unit">${isFixedPack(item) ? "采购件价 元/件" : "采购斤价 元/斤"}</span>
         </td>
         <td class="money">${money(purchaseAmount)}</td>
-        <td class="cell-input">
-          <input type="number" min="0" step="0.01" value="${item.costPrice}" onchange="saveItemField('${item.id}','costPrice',this.value)">
-          <span class="unit">${isFixedPack(item) ? "成本件价 元/件" : "成本斤价 元/斤"}</span>
-        </td>
-        <td>${money(costAmount)}</td>
-        <td>${item.sold || 0}</td>
-        <td>${stock}</td>
-        <td>
-          <button class="action-btn ${saleActionClass}" onclick="toggleBatchDetailItemSaleStep1('${item.id}')">${saleActionText}</button>
-          <button class="action-btn green" onclick="confirmSingleItem('${item.id}')">确认</button>
-          <button class="action-btn" onclick="removeItem('${item.id}')">移除</button>
-        </td>
       </tr>
     `;
   }).join("");
@@ -5365,11 +5348,6 @@ function renderDetail(){
       <td>${totalWeight}</td>
       <td>--</td>
       <td class="money">${money(purchaseTotal)}</td>
-      <td>--</td>
-      <td>${money(costTotal)}</td>
-      <td></td>
-      <td></td>
-      <td></td>
     </tr>
   `;
 
@@ -32020,8 +31998,9 @@ body.show-inbound #inboundRoot .batch-info h1{
   line-height:1.25!important;
 }
 body.show-inbound #inboundRoot .table-wrap table{
-  min-width:1180px!important;
-  table-layout:auto!important;
+  width:100%!important;
+  min-width:0!important;
+  table-layout:fixed!important;
 }
 body.show-inbound #inboundRoot .table-wrap td{
   height:auto!important;
