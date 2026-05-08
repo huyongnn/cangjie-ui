@@ -15166,13 +15166,20 @@ body.show-inbound #inboundRoot button{
       listCustomers().push(c);
     }
     closeCashierAddBuyerStep1();
+    var session = typeof activeSession === "function" ? activeSession() : null;
+    if(session){
+      session.customerId = c.id;
+      session.name = c.name;
+      if(!Array.isArray(session.items)) session.items = Array.isArray(currentCodeBillItems) ? currentCodeBillItems : [];
+    }
     renderCashierCustomers();
-    window.addCashierBillSessionStep1(c.id, c.name);
     var sel = document.getElementById("cashierCustomer");
     if(sel) sel.value = c.id;
+    try{ if(typeof handleCustomerOrPayChange === "function") handleCustomerOrPayChange(); }
+    catch(err){ if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill(); }
     if(typeof renderBuyerV47 === "function") renderBuyerV47();
     if(typeof tudou2SaveNow === "function") setTimeout(tudou2SaveNow, 0);
-    if(typeof toast === "function") toast(existed ? "已切换到买家码单" : "买家已新增，并已开码单");
+    if(typeof toast === "function") toast(existed ? "已切换买家，当前商品已保留" : "买家已新增，当前商品已保留");
   };
 
   var oldRenderCashierCustomersStep1 = typeof window.renderCashierCustomers === "function" ? window.renderCashierCustomers : null;
