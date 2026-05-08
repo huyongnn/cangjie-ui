@@ -11555,6 +11555,268 @@ function printBuyerV47Bill(){
   </div>
 </div>
 
+
+
+
+<script id="cangjieCashierStateFixV116">
+(function(){
+  function hydrateCustomersFromStorageV116(){
+    var keys = ['CANGJIE_APP_STATE_V1', 'tudou2_v57_persistent_data'];
+    var target = Array.isArray(window.cashierCustomers) ? window.cashierCustomers : [];
+    if(!Array.isArray(window.cashierCustomers)) window.cashierCustomers = target;
+    var seen = {};
+    target.forEach(function(c){
+      if(!c) return;
+      var key = String(c.id || c.name || '');
+      if(key) seen[key] = true;
+    });
+    keys.forEach(function(keyName){
+      try{
+        var raw = localStorage.getItem(keyName);
+        if(!raw) return;
+        var data = JSON.parse(raw);
+        ['cashierCustomers','customers','buyerV47List','buyers'].forEach(function(field){
+          var rows = Array.isArray(data && data[field]) ? data[field] : [];
+          rows.forEach(function(item){
+            if(!item) return;
+            var id = String(item.id || item.customerId || '');
+            var name = String(item.name || item.customerName || '').trim();
+            if(!id && !name) return;
+            var dedupe = id || ('name:' + name);
+            if(seen[dedupe]) return;
+            seen[dedupe] = true;
+            target.push({
+              id: id || ('c' + Date.now() + Math.floor(Math.random()*1000)),
+              name: name || '买家',
+              debt: Number(item.debt || 0),
+              payments: Array.isArray(item.payments) ? item.payments : [],
+              parentId: item.parentId || '',
+              disabled: !!item.disabled
+            });
+          });
+        });
+      }catch(err){}
+    });
+    var temp = target.find(function(c){ return c && (c.id === 'c1' || String(c.name || '').startsWith('临时客户')); });
+    if(!temp){
+      target.unshift({ id:'c1', name:'临时客户', debt:0, payments:[], parentId:'', disabled:false });
+    }else{
+      temp.id = 'c1';
+      temp.name = '临时客户';
+    }
+  }
+  function tempCustomerV116(){
+    hydrateCustomersFromStorageV116();
+    var list = Array.isArray(window.cashierCustomers) ? window.cashierCustomers : [];
+    return list.find(function(c){ return c && (c.id === 'c1' || String(c.name || '').startsWith('临时客户')); }) || { id:'c1', name:'临时客户' };
+  }
+  function activeSessionV116(){
+    try{
+      var sessions = Array.isArray(window.cashierBillSessionsStep1) ? window.cashierBillSessionsStep1 : [];
+      var activeBtn = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
+      var id = activeBtn ? activeBtn.getAttribute('data-bill-session') : '';
+      return sessions.find(function(s){ return s && s.id === id; }) || sessions[0] || null;
+    }catch(err){
+      return null;
+    }
+  }
+  function listCustomersV116(){
+    hydrateCustomersFromStorageV116();
+    return Array.isArray(window.cashierCustomers) ? window.cashierCustomers : [];
+  }
+  function customerByIdV116(id){
+    return listCustomersV116().find(function(c){ return c && c.id === id; }) || null;
+  }
+  function selectedCustomerIdV116(){
+    var sel = document.getElementById('cashierCustomer');
+    var session = activeSessionV116();
+    return String(
+      (window.selectedCashierCustomerIdV116)
+      || (sel && sel.value)
+      || (session && session.customerId)
+      || (tempCustomerV116().id || 'c1')
+    );
+  }
+  function syncCustomerStateV116(id){
+    var nextId = String(id || selectedCustomerIdV116() || 'c1');
+    var buyer = customerByIdV116(nextId) || tempCustomerV116();
+    window.selectedCashierCustomerIdV116 = buyer.id || nextId || 'c1';
+    var session = activeSessionV116();
+    if(session){
+      session.customerId = window.selectedCashierCustomerIdV116;
+      if(buyer && buyer.name) session.name = buyer.name;
+    }
+    var sel = document.getElementById('cashierCustomer');
+    if(sel){
+      var hasOption = Array.from(sel.options || []).some(function(opt){ return opt.value === window.selectedCashierCustomerIdV116; });
+      if(hasOption) sel.value = window.selectedCashierCustomerIdV116;
+    }
+    try{ if(typeof window.renderCashierBuyerTreeV82 === 'function') window.renderCashierBuyerTreeV82(); }catch(err){}
+    try{
+      var mask = document.getElementById('checkoutConfirmMaskV107');
+      if(mask && mask.classList.contains('show') && typeof window.renderModalV107 === 'function') window.renderModalV107();
+    }catch(err){}
+    return buyer;
+  }
+  function currentCartV116(){
+    try{ if(Array.isArray(currentCodeBillItems) && currentCodeBillItems.length) return currentCodeBillItems; }catch(err){}
+    var session = activeSessionV116();
+    if(session && Array.isArray(session.items) && session.items.length) return session.items;
+    if(Array.isArray(window.currentCodeBillItems) && window.currentCodeBillItems.length) return window.currentCodeBillItems;
+    if(Array.isArray(window.checkoutCartSnapshotV115) && window.checkoutCartSnapshotV115.length) return window.checkoutCartSnapshotV115;
+    return [];
+  }
+  function cloneRowsV116(rows){
+    return (Array.isArray(rows) ? rows : []).map(function(item){ return Object.assign({}, item); });
+  }
+  function syncCartStateV116(rows){
+    var live = Array.isArray(rows) ? rows : currentCartV116();
+    try{ currentCodeBillItems = live; }catch(err){}
+    try{ window.currentCodeBillItems = live; }catch(err){}
+    var session = activeSessionV116();
+    if(session) session.items = live;
+    return live;
+  }
+  function restoreCartStateV116(){
+    var rows = currentCartV116();
+    if(!rows.length) return [];
+    var live = cloneRowsV116(rows);
+    return syncCartStateV116(live);
+  }
+
+  hydrateCustomersFromStorageV116();
+  syncCustomerStateV116();
+  syncCartStateV116(Array.isArray(window.currentCodeBillItems) ? window.currentCodeBillItems : []);
+
+  var oldRenderCustomersV116 = typeof window.renderCashierCustomers === 'function' ? window.renderCashierCustomers : null;
+  if(oldRenderCustomersV116 && !oldRenderCustomersV116.__stateFixV116Wrapped){
+    window.renderCashierCustomers = function(){
+      hydrateCustomersFromStorageV116();
+      var keepId = selectedCustomerIdV116();
+      var result = oldRenderCustomersV116.apply(this, arguments);
+      syncCustomerStateV116(keepId);
+      return result;
+    };
+    window.renderCashierCustomers.__stateFixV116Wrapped = true;
+  }
+
+  var oldHandleCustomerV116 = typeof window.handleCustomerOrPayChange === 'function' ? window.handleCustomerOrPayChange : null;
+  if(oldHandleCustomerV116 && !oldHandleCustomerV116.__stateFixV116Wrapped){
+    window.handleCustomerOrPayChange = function(){
+      var sel = document.getElementById('cashierCustomer');
+      if(sel && sel.value) window.selectedCashierCustomerIdV116 = sel.value;
+      var result = oldHandleCustomerV116.apply(this, arguments);
+      syncCustomerStateV116();
+      syncCartStateV116();
+      return result;
+    };
+    window.handleCustomerOrPayChange.__stateFixV116Wrapped = true;
+  }
+
+  var oldRenderAllV116 = typeof window.renderCashierAll === 'function' ? window.renderCashierAll : null;
+  if(oldRenderAllV116 && !oldRenderAllV116.__stateFixV116Wrapped){
+    window.renderCashierAll = function(){
+      var keepId = selectedCustomerIdV116();
+      var hadCart = currentCartV116().length > 0;
+      var result = oldRenderAllV116.apply(this, arguments);
+      syncCartStateV116();
+      if(hadCart && currentCartV116().length > 0) syncCustomerStateV116(keepId);
+      return result;
+    };
+    window.renderCashierAll.__stateFixV116Wrapped = true;
+  }
+
+  var oldRenderBillV116 = typeof window.renderCurrentCodeBill === 'function' ? window.renderCurrentCodeBill : null;
+  if(oldRenderBillV116 && !oldRenderBillV116.__stateFixV116Wrapped){
+    window.renderCurrentCodeBill = function(){
+      syncCartStateV116();
+      var result = oldRenderBillV116.apply(this, arguments);
+      syncCartStateV116();
+      return result;
+    };
+    window.renderCurrentCodeBill.__stateFixV116Wrapped = true;
+  }
+
+  ['addProductToCodeBill','removeCodeBillItem','updateCodeBillItem'].forEach(function(name){
+    var oldFn = window[name];
+    if(typeof oldFn !== 'function' || oldFn.__stateFixV116Wrapped) return;
+    window[name] = function(){
+      var result = oldFn.apply(this, arguments);
+      syncCartStateV116();
+      return result;
+    };
+    window[name].__stateFixV116Wrapped = true;
+  });
+
+  ['selectCashierBuyerTreeV82','pickCashierBuyerDirectV82'].forEach(function(name){
+    var oldFn = window[name];
+    if(typeof oldFn !== 'function' || oldFn.__stateFixV116Wrapped) return;
+    window[name] = function(){
+      var result = oldFn.apply(this, arguments);
+      var sel = document.getElementById('cashierCustomer');
+      syncCustomerStateV116(sel && sel.value);
+      if(typeof window.handleCustomerOrPayChange === 'function') window.handleCustomerOrPayChange();
+      return result;
+    };
+    window[name].__stateFixV116Wrapped = true;
+  });
+
+  var oldOpenCheckoutV116 = typeof window.openCheckoutConfirmModalV107 === 'function' ? window.openCheckoutConfirmModalV107 : null;
+  if(oldOpenCheckoutV116 && !oldOpenCheckoutV116.__stateFixV116Wrapped){
+    window.openCheckoutConfirmModalV107 = function(){
+      restoreCartStateV116();
+      syncCustomerStateV116();
+      return oldOpenCheckoutV116.apply(this, arguments);
+    };
+    window.openCheckoutConfirmModalV107.__stateFixV116Wrapped = true;
+  }
+
+  var oldBuildBillV116 = typeof window.buildCodeBill === 'function' ? window.buildCodeBill : null;
+  if(oldBuildBillV116 && !oldBuildBillV116.__stateFixV116Wrapped){
+    window.buildCodeBill = function(){
+      restoreCartStateV116();
+      syncCustomerStateV116();
+      var bill = oldBuildBillV116.apply(this, arguments);
+      var buyer = syncCustomerStateV116();
+      if(bill && buyer){
+        bill.customerId = buyer.id || bill.customerId || 'c1';
+        bill.customerName = buyer.name || bill.customerName || '临时客户';
+      }
+      return bill;
+    };
+    window.buildCodeBill.__stateFixV116Wrapped = true;
+  }
+
+  var oldCashSubmitV116 = typeof window.submitCheckoutConfirmModalV107 === 'function' ? window.submitCheckoutConfirmModalV107 : null;
+  if(oldCashSubmitV116 && !oldCashSubmitV116.__stateFixV116Wrapped){
+    window.submitCheckoutConfirmModalV107 = function(){
+      restoreCartStateV116();
+      syncCustomerStateV116();
+      if(!currentCartV116().length){
+        alert('请先选择商品。');
+        return;
+      }
+      return oldCashSubmitV116.apply(this, arguments);
+    };
+    window.submitCheckoutConfirmModalV107.__stateFixV116Wrapped = true;
+  }
+
+  var oldDebtSubmitV116 = typeof window.submitDebtCheckoutConfirmModalV107 === 'function' ? window.submitDebtCheckoutConfirmModalV107 : null;
+  if(oldDebtSubmitV116 && !oldDebtSubmitV116.__stateFixV116Wrapped){
+    window.submitDebtCheckoutConfirmModalV107 = function(){
+      restoreCartStateV116();
+      syncCustomerStateV116();
+      if(!currentCartV116().length){
+        alert('请先选择商品。');
+        return;
+      }
+      return oldDebtSubmitV116.apply(this, arguments);
+    };
+    window.submitDebtCheckoutConfirmModalV107.__stateFixV116Wrapped = true;
+  }
+})();
+</script>
+
 </body></html>`);
   w.document.close();
   w.print();
@@ -11846,7 +12108,9 @@ function safePrintBuyerV47Orders(){
     printHtml += "<h2>买家账单</h2><div class='box'>" + esc(billText) + "</div>";
     printHtml += "<h2>订单记录</h2><div class='box'>" + esc(orderText) + "</div>";
     printHtml += "<h2>还款记录</h2><div class='box'>" + esc(repayText) + "</div>";
-    printHtml += "</body></html>";
+    printHtml += "
+
+</body></html>";
 
     var w = window.open("", "_blank");
     if(!w){
@@ -34636,6 +34900,8 @@ body.show-cashier #cashierRoot *,
   document.addEventListener('click', function(){ setTimeout(bindBuyerTriggerV115, 0); }, true);
 })();
 </script>
+
+
 
 </body>
 </html>
