@@ -33336,10 +33336,77 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     checkoutDraft.paidTouched = false;
     checkoutDraft.remark = "";
   }
+  function directFinalizeCheckoutOrderV107(){
+    if(!currentCodeBillRowsV107().length){
+      alert("请先选择商品。");
+      return false;
+    }
+    var bill = typeof window.buildCodeBill === "function" ? window.buildCodeBill() : null;
+    if(!bill) return false;
+    var customerList = (typeof cashierCustomers !== "undefined" && Array.isArray(cashierCustomers)) ? cashierCustomers : [];
+    var customer = customerList.find(function(c){ return c && c.id === bill.customerId; });
+    var isTemp = typeof window.isTemporaryCashierCustomer === "function" ? window.isTemporaryCashierCustomer() : false;
+    if(customer && !isTemp){
+      customer.debt = Number(customer.debt || 0) + Number(bill.debt || 0);
+    }
+    currentCodeBillItems.forEach(function(line){
+      var need = Number(line.qty || 0);
+      (Array.isArray(batches) ? batches : []).forEach(function(batch){
+        (Array.isArray(batch.items) ? batch.items : []).forEach(function(item){
+          if(item.goodsId === line.goodsId && need > 0){
+            var available = Number(item.qty || 0) - Number(item.sold || 0);
+            var take = Math.min(Math.max(available, 0), need);
+            item.sold = Number(item.sold || 0) + take;
+            need -= take;
+          }
+        });
+      });
+    });
+    if(typeof window.pushCompletedOrder === "function") window.pushCompletedOrder(bill);
+    else{
+      if(!bill.orderNo){
+        bill.orderNo = typeof window.makeShortOrderNo === "function" ? window.makeShortOrderNo() : String(((window.finalOrders || []).length || 0) + 1).padStart(4, "0");
+      }
+      bill.status = Number(bill.debt || 0) > 0 ? "已赊欠" : "已收银";
+      window.finalOrders = Array.isArray(window.finalOrders) ? window.finalOrders : [];
+      window.finalOrders.unshift(bill);
+    }
+    if(typeof window.removePendingDuplicateOrders === "function") window.removePendingDuplicateOrders(bill);
+    if(typeof savedCodeBills !== "undefined" && Array.isArray(savedCodeBills)) savedCodeBills.unshift(bill);
+    if(typeof selectedBillCenterId !== "undefined") selectedBillCenterId = bill.billNo;
+    currentCodeBillItems = [];
+    var paidInput = document.getElementById("cashierPaidAmount");
+    if(paidInput) paidInput.value = "";
+    try{ if(typeof window.clearCashierDiscountFields === "function") window.clearCashierDiscountFields(); }catch(err){}
+    try{ var discountInput = document.getElementById("cashierDiscountAmount"); if(discountInput) discountInput.value = ""; }catch(err){}
+    try{ var discountNote = document.getElementById("cashierDiscountNote"); if(discountNote) discountNote.value = ""; }catch(err){}
+    try{ if(typeof window.closeCodeBillModal === "function") window.closeCodeBillModal(); }catch(err){}
+    try{ if(typeof window.renderCashierAll === "function") window.renderCashierAll(); }catch(err){}
+    try{ if(typeof window.renderGoods === "function") window.renderGoods(); }catch(err){}
+    try{ if(typeof window.renderDetail === "function") window.renderDetail(); }catch(err){}
+    try{ if(typeof window.renderOrdersCenter === "function") window.renderOrdersCenter(); }catch(err){}
+    try{ if(typeof window.renderBillCenter === "function") window.renderBillCenter(); }catch(err){}
+    try{ if(typeof window.renderCodeBillHistory === "function") window.renderCodeBillHistory(); }catch(err){}
+    try{ if(typeof window.renderStockModule === "function") window.renderStockModule(); }catch(err){}
+    try{ if(typeof window.tudou2SaveNow === "function") setTimeout(window.tudou2SaveNow, 0); }catch(err){}
+    if(typeof window.toast === "function") window.toast("订单 " + (bill.orderNo || bill.billNo || "") + " 已完成");
+    return true;
+  }
   function finalizeCheckoutWithPayloadV107(payload){
     syncLegacyFields(payload);
+    var beforeRows = currentCodeBillRowsV107().length;
+    var beforeOrders = (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders.length : 0;
     window.closeCheckoutConfirmModalV107();
-    finalizeOrderV107();
+    try{
+      if(typeof finalizeOrderV107 === "function") finalizeOrderV107();
+    }catch(err){
+      try{ console.error("checkout finalize failed", err); }catch(e){}
+    }
+    var afterRows = currentCodeBillRowsV107().length;
+    var afterOrders = (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders.length : 0;
+    if(afterOrders === beforeOrders && afterRows === beforeRows && beforeRows > 0){
+      directFinalizeCheckoutOrderV107();
+    }
     resetCheckoutDraftAfterSubmitV107();
   }
   window.submitCheckoutConfirmModalV107 = function(){
