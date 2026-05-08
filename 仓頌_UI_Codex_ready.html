@@ -33399,11 +33399,11 @@ body.show-cashier #cashierRoot{
 }
 body.show-cashier #cashierRoot .cashier-layout{
   display:grid!important;
-  grid-template-columns:minmax(170px,210px) minmax(380px,1fr) minmax(410px,500px)!important;
-  gap:14px!important;
+  grid-template-columns:minmax(120px,1fr) minmax(0,2.5fr) minmax(350px,2.5fr)!important;
+  gap:10px!important;
   height:100vh!important;
   min-height:0!important;
-  padding:18px!important;
+  padding:12px!important;
   overflow:hidden!important;
 }
 body.show-cashier #cashierRoot .cashier-left-nav{
@@ -33424,8 +33424,8 @@ body.show-cashier #cashierRoot .cashier-right{
 body.show-cashier #cashierRoot .cashier-batches{
   display:flex!important;
   flex-direction:column!important;
-  padding:18px!important;
-  gap:12px!important;
+  padding:12px!important;
+  gap:8px!important;
   overflow:auto!important;
 }
 body.show-cashier #cashierRoot .cashier-batch-head-v109,
@@ -33439,13 +33439,13 @@ body.show-cashier #cashierRoot .cashier-product-head-v109{
 body.show-cashier #cashierRoot .cashier-batch-head-v109 h2,
 body.show-cashier #cashierRoot .cashier-product-head-v109 h2{
   margin:0!important;
-  font-size:20px!important;
+  font-size:18px!important;
   font-weight:950!important;
   color:#111815!important;
 }
 body.show-cashier #cashierRoot .cashier-batch-add-v109{
-  width:34px!important;
-  height:34px!important;
+  width:30px!important;
+  height:30px!important;
   border-radius:10px!important;
   border:1px solid #d7ddd4!important;
   background:#fff!important;
@@ -33456,14 +33456,18 @@ body.show-cashier #cashierRoot .cashier-batch-add-v109{
 body.show-cashier #cashierRoot .cashier-batch-title,
 body.show-cashier #cashierRoot .cashier-batch-card{
   width:100%!important;
-  min-height:58px!important;
-  margin:0 0 10px!important;
-  padding:16px!important;
-  border-radius:16px!important;
+  min-height:46px!important;
+  margin:0 0 8px!important;
+  padding:10px!important;
+  border-radius:12px!important;
   writing-mode:horizontal-tb!important;
   text-orientation:mixed!important;
   white-space:normal!important;
+  overflow:hidden!important;
+  overflow-wrap:anywhere!important;
   text-align:left!important;
+  font-size:13px!important;
+  line-height:1.35!important;
 }
 body.show-cashier #cashierRoot .cashier-center{
   display:grid!important;
@@ -33475,8 +33479,8 @@ body.show-cashier #cashierRoot .cashier-top{
   display:flex!important;
   align-items:center!important;
   justify-content:space-between!important;
-  gap:16px!important;
-  padding:18px 20px!important;
+  gap:12px!important;
+  padding:14px 16px!important;
   border-bottom:1px solid #edf0ea!important;
 }
 body.show-cashier #cashierRoot .cashier-title-print-v91{
@@ -33487,7 +33491,7 @@ body.show-cashier #cashierRoot .cashier-title-print-v91{
 }
 body.show-cashier #cashierRoot .cashier-top h1{
   margin:0!important;
-  font-size:28px!important;
+  font-size:24px!important;
   font-weight:950!important;
   white-space:nowrap!important;
 }
@@ -33502,14 +33506,14 @@ body.show-cashier #cashierRoot #printLastReceiptV91.receipt-print-btn-v91{
   display:inline-flex!important;
   align-items:center!important;
   justify-content:center!important;
-  min-width:260px!important;
-  max-width:420px!important;
-  height:40px!important;
+  min-width:0!important;
+  max-width:320px!important;
+  height:36px!important;
   border-radius:14px!important;
   border:1px solid #dfe4dd!important;
   background:#fff!important;
   color:#27312b!important;
-  font-size:14px!important;
+  font-size:13px!important;
   font-weight:850!important;
   overflow:hidden!important;
   text-overflow:ellipsis!important;
@@ -33521,7 +33525,7 @@ body.show-cashier #cashierRoot .cashier-product-area{
   grid-template-columns:minmax(0,1fr)!important;
   min-height:0!important;
   height:100%!important;
-  padding:18px!important;
+  padding:12px!important;
   overflow:hidden!important;
 }
 body.show-cashier #cashierRoot .cashier-product-head-v109{
@@ -33535,8 +33539,8 @@ body.show-cashier #cashierRoot .cashier-product-toggle-v109{
   gap:4px!important;
 }
 body.show-cashier #cashierRoot .cashier-product-toggle-v109 button{
-  min-width:42px!important;
-  height:34px!important;
+  min-width:36px!important;
+  height:30px!important;
   border-radius:11px!important;
   border:0!important;
   background:transparent!important;
@@ -33550,19 +33554,19 @@ body.show-cashier #cashierRoot .cashier-product-toggle-v109 button.active{
 body.show-cashier #cashierRoot .cashier-products{
   grid-row:2!important;
   display:grid!important;
-  grid-template-columns:repeat(auto-fill,minmax(190px,1fr))!important;
-  gap:14px!important;
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important;
+  gap:10px!important;
   align-content:start!important;
   overflow:auto!important;
-  padding:0 4px 8px 0!important;
+  padding:0 2px 8px 0!important;
 }
 body.show-cashier #cashierRoot .cashier-product-card{
-  min-height:168px!important;
-  border-radius:16px!important;
+  min-height:118px!important;
+  border-radius:12px!important;
   border:1px solid #dce4da!important;
   background:#fff!important;
   color:#1f2a22!important;
-  padding:18px!important;
+  padding:12px!important;
   box-shadow:none!important;
   writing-mode:horizontal-tb!important;
   text-orientation:mixed!important;
@@ -33571,24 +33575,24 @@ body.show-cashier #cashierRoot .cashier-product-card.in-stock{
   border-color:#9ccdab!important;
 }
 body.show-cashier #cashierRoot .cashier-product-card::after{
-  top:16px!important;
-  right:16px!important;
+  top:10px!important;
+  right:10px!important;
   background:#e6f4ea!important;
   color:#2f8e40!important;
   border:1px solid #cfe9d5!important;
 }
 body.show-cashier #cashierRoot .cashier-product-name{
-  font-size:22px!important;
-  line-height:1.2!important;
-  margin-bottom:12px!important;
-  padding-right:60px!important;
+  font-size:18px!important;
+  line-height:1.15!important;
+  margin-bottom:8px!important;
+  padding-right:48px!important;
 }
 body.show-cashier #cashierRoot .cashier-card-batch-info,
 body.show-cashier #cashierRoot .cashier-product-meta{
   color:#536159!important;
-  font-size:14px!important;
-  line-height:1.45!important;
-  margin-top:8px!important;
+  font-size:12px!important;
+  line-height:1.3!important;
+  margin-top:5px!important;
 }
 body.show-cashier #cashierRoot .cashier-catbar{
   display:none!important;
@@ -33598,31 +33602,31 @@ body.show-cashier #cashierRoot .cashier-right{
   grid-template-rows:auto auto minmax(0,1fr) auto!important;
 }
 body.show-cashier #cashierRoot .order-head{
-  padding:20px!important;
+  padding:14px!important;
   border-bottom:1px solid #edf0ea!important;
 }
 body.show-cashier #cashierRoot .order-customer-row{
   display:grid!important;
   grid-template-columns:minmax(0,1fr) auto!important;
-  gap:12px!important;
+  gap:8px!important;
   align-items:center!important;
 }
 body.show-cashier #cashierRoot .order-customer-row select{
   width:100%!important;
-  height:52px!important;
-  border-radius:16px!important;
+  height:44px!important;
+  border-radius:12px!important;
   border:1px solid #9ccdab!important;
   color:#2f8e40!important;
-  font-size:18px!important;
+  font-size:16px!important;
   font-weight:950!important;
 }
 body.show-cashier #cashierRoot .order-customer-row button{
-  height:48px!important;
-  border-radius:14px!important;
+  height:42px!important;
+  border-radius:12px!important;
   border:1px solid #dfe5dc!important;
   background:#fff!important;
   color:#1f2a22!important;
-  font-size:15px!important;
+  font-size:14px!important;
   font-weight:900!important;
 }
 body.show-cashier #cashierRoot .order-customer-row button:nth-of-type(1)::after{
@@ -33689,7 +33693,7 @@ body.show-cashier #cashierRoot .order-list{
   padding:14px!important;
 }
 body.show-cashier #cashierRoot .order-empty{
-  min-height:230px!important;
+  min-height:180px!important;
   display:flex!important;
   align-items:center!important;
   justify-content:center!important;
@@ -33709,26 +33713,26 @@ body.show-cashier #cashierRoot .order-item{
   writing-mode:horizontal-tb!important;
 }
 body.show-cashier #cashierRoot .order-summary{
-  padding:18px!important;
+  padding:12px 14px!important;
   border-top:1px solid #edf0ea!important;
 }
 body.show-cashier #cashierRoot .order-summary-top{
   display:grid!important;
   grid-template-columns:1fr 1fr!important;
-  gap:12px!important;
-  margin-bottom:12px!important;
+  gap:8px!important;
+  margin-bottom:8px!important;
 }
 body.show-cashier #cashierRoot .pay-box{
   display:grid!important;
   grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
-  gap:12px!important;
-  margin-bottom:12px!important;
+  gap:8px!important;
+  margin-bottom:8px!important;
 }
 body.show-cashier #cashierRoot .pay-box select,
 body.show-cashier #cashierRoot .pay-box input{
-  height:50px!important;
-  border-radius:14px!important;
-  font-size:16px!important;
+  height:42px!important;
+  border-radius:12px!important;
+  font-size:14px!important;
 }
 body.show-cashier #cashierRoot .discount-box,
 body.show-cashier #cashierRoot .total-breakdown,
@@ -33736,15 +33740,15 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
   display:none!important;
 }
 body.show-cashier #cashierRoot .order-total{
-  margin:0 0 12px!important;
-  padding:14px 16px!important;
+  margin:0 0 8px!important;
+  padding:10px 14px!important;
   background:#202124!important;
   color:#fff!important;
   border-radius:16px!important;
 }
 body.show-cashier #cashierRoot .order-total b{
   color:#fff!important;
-  font-size:30px!important;
+  font-size:24px!important;
 }
 body.show-cashier #cashierRoot .order-actions{
   display:grid!important;
@@ -33753,16 +33757,16 @@ body.show-cashier #cashierRoot .order-actions{
 }
 body.show-cashier #cashierRoot .checkout-btn{
   order:1!important;
-  height:58px!important;
-  border-radius:16px!important;
+  height:52px!important;
+  border-radius:14px!important;
   background:#111!important;
   color:#fff!important;
-  font-size:22px!important;
+  font-size:20px!important;
 }
 body.show-cashier #cashierRoot .codebill-btn{
   order:2!important;
-  height:46px!important;
-  border-radius:14px!important;
+  height:42px!important;
+  border-radius:12px!important;
   background:#fff!important;
   color:#1f2a22!important;
   border:1px solid #dfe5dc!important;
@@ -33912,12 +33916,12 @@ body.show-cashier #cashierRoot *,
 }
 @media (min-width:981px) and (max-width:1180px){
   body.show-cashier #cashierRoot .cashier-layout{
-    grid-template-columns:minmax(150px,180px) minmax(330px,1fr) minmax(390px,430px)!important;
-    gap:10px!important;
-    padding:12px!important;
+    grid-template-columns:minmax(110px,1fr) minmax(0,2.5fr) minmax(340px,2.5fr)!important;
+    gap:8px!important;
+    padding:10px!important;
   }
   body.show-cashier #cashierRoot .cashier-products{
-    grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important;
+    grid-template-columns:repeat(auto-fill,minmax(140px,1fr))!important;
   }
 }
 @media (max-width:980px){
