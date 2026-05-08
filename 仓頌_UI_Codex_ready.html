@@ -32376,19 +32376,46 @@ body.show-inbound #inboundRoot .table-wrap,
 body.show-inbound.batch-create-mode #inboundRoot .table-wrap{
   min-width:0!important;
   flex:1 1 auto!important;
-  overflow:auto!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
 }
 body.show-inbound #inboundRoot table,
 body.show-inbound.batch-create-mode #inboundRoot table{
-  min-width:1080px!important;
-  table-layout:auto!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  table-layout:fixed!important;
 }
 body.show-inbound #inboundRoot table th,
 body.show-inbound #inboundRoot table td,
 body.show-inbound.batch-create-mode #inboundRoot table th,
 body.show-inbound.batch-create-mode #inboundRoot table td{
-  white-space:nowrap!important;
+  overflow:hidden!important;
 }
+body.show-inbound #inboundRoot table th:nth-child(1),
+body.show-inbound #inboundRoot table td:nth-child(1),
+body.show-inbound.batch-create-mode #inboundRoot table th:nth-child(1),
+body.show-inbound.batch-create-mode #inboundRoot table td:nth-child(1){width:42px!important}
+body.show-inbound #inboundRoot table th:nth-child(2),
+body.show-inbound #inboundRoot table td:nth-child(2),
+body.show-inbound.batch-create-mode #inboundRoot table th:nth-child(2),
+body.show-inbound.batch-create-mode #inboundRoot table td:nth-child(2){width:22%!important}
+body.show-inbound #inboundRoot table th:nth-child(3),
+body.show-inbound #inboundRoot table td:nth-child(3),
+body.show-inbound.batch-create-mode #inboundRoot table th:nth-child(3),
+body.show-inbound.batch-create-mode #inboundRoot table td:nth-child(3){width:16%!important}
+body.show-inbound #inboundRoot table th:nth-child(4),
+body.show-inbound #inboundRoot table td:nth-child(4),
+body.show-inbound.batch-create-mode #inboundRoot table th:nth-child(4),
+body.show-inbound.batch-create-mode #inboundRoot table td:nth-child(4){width:20%!important}
+body.show-inbound #inboundRoot table th:nth-child(5),
+body.show-inbound #inboundRoot table td:nth-child(5),
+body.show-inbound.batch-create-mode #inboundRoot table th:nth-child(5),
+body.show-inbound.batch-create-mode #inboundRoot table td:nth-child(5){width:22%!important}
+body.show-inbound #inboundRoot table th:nth-child(6),
+body.show-inbound #inboundRoot table td:nth-child(6),
+body.show-inbound.batch-create-mode #inboundRoot table th:nth-child(6),
+body.show-inbound.batch-create-mode #inboundRoot table td:nth-child(6){width:16%!important}
 @media (min-width:1024px) and (max-width:1366px){
   body.show-inbound #inboundRoot .app,
   body.show-inbound.batch-create-mode #inboundRoot .app{
@@ -32414,7 +32441,9 @@ body.show-inbound.batch-create-mode #inboundRoot table td{
   }
   body.show-inbound #inboundRoot table,
   body.show-inbound.batch-create-mode #inboundRoot table{
-    min-width:1020px!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
   }
 }
 </style>
