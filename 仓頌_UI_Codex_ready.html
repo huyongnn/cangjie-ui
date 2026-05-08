@@ -11637,6 +11637,7 @@ function printBuyerV47Bill(){
       || (tempCustomerV116().id || 'c1')
     );
   }
+  window.syncCustomerStateV116 = syncCustomerStateV116;
   function syncCustomerStateV116(id){
     var nextId = String(id || selectedCustomerIdV116() || 'c1');
     var buyer = customerByIdV116(nextId) || tempCustomerV116();
@@ -11685,6 +11686,7 @@ function printBuyerV47Bill(){
   }
 
   hydrateCustomersFromStorageV116();
+  try{ if(!window.selectedCashierCustomerIdV116) window.selectedCashierCustomerIdV116 = localStorage.getItem('CANGJIE_SELECTED_CUSTOMER_V116') || ''; }catch(err){}
   syncCustomerStateV116();
   syncCartStateV116(Array.isArray(window.currentCodeBillItems) ? window.currentCodeBillItems : []);
 
@@ -11692,7 +11694,8 @@ function printBuyerV47Bill(){
   if(oldRenderCustomersV116 && !oldRenderCustomersV116.__stateFixV116Wrapped){
     window.renderCashierCustomers = function(){
       hydrateCustomersFromStorageV116();
-      var keepId = selectedCustomerIdV116();
+      var selBefore = document.getElementById('cashierCustomer');
+      var keepId = window.selectedCashierCustomerIdV116 || (selBefore && selBefore.value) || selectedCustomerIdV116();
       var result = oldRenderCustomersV116.apply(this, arguments);
       syncCustomerStateV116(keepId);
       return result;
@@ -11705,6 +11708,7 @@ function printBuyerV47Bill(){
     window.handleCustomerOrPayChange = function(){
       var sel = document.getElementById('cashierCustomer');
       if(sel && sel.value) window.selectedCashierCustomerIdV116 = sel.value;
+      try{ localStorage.setItem('CANGJIE_SELECTED_CUSTOMER_V116', window.selectedCashierCustomerIdV116 || 'c1'); }catch(err){}
       var result = oldHandleCustomerV116.apply(this, arguments);
       syncCustomerStateV116();
       syncCartStateV116();
@@ -11716,11 +11720,11 @@ function printBuyerV47Bill(){
   var oldRenderAllV116 = typeof window.renderCashierAll === 'function' ? window.renderCashierAll : null;
   if(oldRenderAllV116 && !oldRenderAllV116.__stateFixV116Wrapped){
     window.renderCashierAll = function(){
-      var keepId = selectedCustomerIdV116();
-      var hadCart = currentCartV116().length > 0;
+      var selBefore = document.getElementById('cashierCustomer');
+      var keepId = window.selectedCashierCustomerIdV116 || (selBefore && selBefore.value) || selectedCustomerIdV116();
       var result = oldRenderAllV116.apply(this, arguments);
       syncCartStateV116();
-      if(hadCart && currentCartV116().length > 0) syncCustomerStateV116(keepId);
+      syncCustomerStateV116(keepId);
       return result;
     };
     window.renderCashierAll.__stateFixV116Wrapped = true;
@@ -11813,6 +11817,138 @@ function printBuyerV47Bill(){
       return oldDebtSubmitV116.apply(this, arguments);
     };
     window.submitDebtCheckoutConfirmModalV107.__stateFixV116Wrapped = true;
+  }
+})();
+</script>
+
+
+<script id="cangjieCashierStateGuardV117">
+(function(){
+  function listV117(){
+    return Array.isArray(window.cashierCustomers) ? window.cashierCustomers : [];
+  }
+  function tempV117(){
+    return listV117().find(function(c){ return c && (c.id === 'c1' || String(c.name || '').startsWith('临时客户')); }) || {id:'c1', name:'临时客户'};
+  }
+  function byIdV117(id){
+    return listV117().find(function(c){ return c && c.id === id; }) || null;
+  }
+  function selectedIdV117(){
+    var sel = document.getElementById('cashierCustomer');
+    return String(window.selectedCashierCustomerIdV116 || (sel && sel.value) || 'c1');
+  }
+  function applyIdV117(id){
+    var next = String(id || selectedIdV117() || 'c1');
+    var buyer = byIdV117(next) || tempV117();
+    window.selectedCashierCustomerIdV116 = buyer.id || 'c1';
+    try{ localStorage.setItem('CANGJIE_SELECTED_CUSTOMER_V116', window.selectedCashierCustomerIdV116); }catch(err){}
+    var sel = document.getElementById('cashierCustomer');
+    if(sel){
+      var hasOption = Array.from(sel.options || []).some(function(opt){ return opt.value === window.selectedCashierCustomerIdV116; });
+      if(hasOption) sel.value = window.selectedCashierCustomerIdV116;
+    }
+    try{
+      var sessions = Array.isArray(window.cashierBillSessionsStep1) ? window.cashierBillSessionsStep1 : [];
+      var activeBtn = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
+      var sid = activeBtn ? activeBtn.getAttribute('data-bill-session') : '';
+      var s = sessions.find(function(item){ return item && item.id === sid; }) || sessions[0];
+      if(s){
+        s.customerId = window.selectedCashierCustomerIdV116;
+        s.name = buyer.name || s.name || '临时客户';
+      }
+    }catch(err){}
+    return buyer;
+  }
+  window.activeCashierCustomer = function(){
+    return applyIdV117();
+  };
+  var oldHandleV117 = typeof window.handleCustomerOrPayChange === 'function' ? window.handleCustomerOrPayChange : null;
+  if(oldHandleV117 && !oldHandleV117.__stateGuardV117Wrapped){
+    window.handleCustomerOrPayChange = function(){
+      var sel = document.getElementById('cashierCustomer');
+      if(sel && sel.value) applyIdV117(sel.value);
+      var result = oldHandleV117.apply(this, arguments);
+      applyIdV117(sel && sel.value);
+      return result;
+    };
+    window.handleCustomerOrPayChange.__stateGuardV117Wrapped = true;
+  }
+  var oldRenderCustomersV117 = typeof window.renderCashierCustomers === 'function' ? window.renderCashierCustomers : null;
+  if(oldRenderCustomersV117 && !oldRenderCustomersV117.__stateGuardV117Wrapped){
+    window.renderCashierCustomers = function(){
+      var keepId = selectedIdV117();
+      var result = oldRenderCustomersV117.apply(this, arguments);
+      applyIdV117(keepId);
+      return result;
+    };
+    window.renderCashierCustomers.__stateGuardV117Wrapped = true;
+  }
+  var oldRenderAllV117 = typeof window.renderCashierAll === 'function' ? window.renderCashierAll : null;
+  if(oldRenderAllV117 && !oldRenderAllV117.__stateGuardV117Wrapped){
+    window.renderCashierAll = function(){
+      var keepId = selectedIdV117();
+      var result = oldRenderAllV117.apply(this, arguments);
+      applyIdV117(keepId);
+      return result;
+    };
+    window.renderCashierAll.__stateGuardV117Wrapped = true;
+  }
+  var oldSaveBuyerV117 = typeof window.saveCashierAddBuyerStep1 === 'function' ? window.saveCashierAddBuyerStep1 : null;
+  if(oldSaveBuyerV117 && !oldSaveBuyerV117.__stateGuardV117Wrapped){
+    window.saveCashierAddBuyerStep1 = function(){
+      var input = document.getElementById('cashierAddBuyerNameStep1');
+      var desiredName = String((input && input.value) || '').trim();
+      var result = oldSaveBuyerV117.apply(this, arguments);
+      if(desiredName){
+        var buyer = listV117().find(function(c){ return c && c.name === desiredName; });
+        if(buyer) applyIdV117(buyer.id);
+      }
+      return result;
+    };
+    window.saveCashierAddBuyerStep1.__stateGuardV117Wrapped = true;
+  }
+  try{ applyIdV117(localStorage.getItem('CANGJIE_SELECTED_CUSTOMER_V116') || selectedIdV117()); }catch(err){ applyIdV117(selectedIdV117()); }
+})();
+</script>
+
+
+<script id="cangjieCashierModalCustomerSyncV118">
+(function(){
+  function activeCustomerV118(){
+    try{ if(typeof window.activeCashierCustomer === 'function') return window.activeCashierCustomer() || {id:'c1', name:'临时客户'}; }catch(err){}
+    return {id:'c1', name:'临时客户'};
+  }
+  function syncModalCustomerV118(){
+    var customer = activeCustomerV118();
+    var nameEl = document.getElementById('checkoutConfirmCustomerV107');
+    var typeEl = document.getElementById('checkoutCustomerTypeV107');
+    if(nameEl) nameEl.textContent = customer.name || '临时客户';
+    if(typeEl) typeEl.textContent = customer.id === 'c1' || String(customer.name || '').startsWith('临时客户') ? '（临时客户）' : '（可赊欠客户）';
+  }
+  var oldOpenV118 = typeof window.openCheckoutConfirmModalV107 === 'function' ? window.openCheckoutConfirmModalV107 : null;
+  if(oldOpenV118 && !oldOpenV118.__modalCustomerSyncV118Wrapped){
+    window.openCheckoutConfirmModalV107 = function(){
+      var result = oldOpenV118.apply(this, arguments);
+      syncModalCustomerV118();
+      return result;
+    };
+    window.openCheckoutConfirmModalV107.__modalCustomerSyncV118Wrapped = true;
+  }
+  var oldCashV118 = typeof window.submitCheckoutConfirmModalV107 === 'function' ? window.submitCheckoutConfirmModalV107 : null;
+  if(oldCashV118 && !oldCashV118.__modalCustomerSyncV118Wrapped){
+    window.submitCheckoutConfirmModalV107 = function(){
+      syncModalCustomerV118();
+      return oldCashV118.apply(this, arguments);
+    };
+    window.submitCheckoutConfirmModalV107.__modalCustomerSyncV118Wrapped = true;
+  }
+  var oldDebtV118 = typeof window.submitDebtCheckoutConfirmModalV107 === 'function' ? window.submitDebtCheckoutConfirmModalV107 : null;
+  if(oldDebtV118 && !oldDebtV118.__modalCustomerSyncV118Wrapped){
+    window.submitDebtCheckoutConfirmModalV107 = function(){
+      syncModalCustomerV118();
+      return oldDebtV118.apply(this, arguments);
+    };
+    window.submitDebtCheckoutConfirmModalV107.__modalCustomerSyncV118Wrapped = true;
   }
 })();
 </script>
@@ -13365,12 +13501,15 @@ function goBackToBatchEditFromOverview(){
     setInterval(saveTudou2DataV57, 3000);
   }
 
-  window.tudou2SaveNow = function(){
+  window.tudou2SaveNow = function(options){
+    var opts = options === true ? {notify:true} : (options || {});
     var ok = saveTudou2DataV57();
     if(ok){
-      if(typeof toast === "function") toast("数据已保存，下次打开仍会保留");
-      else alert("数据已保存，下次打开仍会保留");
-    }else{
+      if(opts.notify){
+        if(typeof toast === "function") toast("数据已保存，下次打开仍会保留");
+        else alert("数据已保存，下次打开仍会保留");
+      }
+    }else if(opts.notify !== false){
       alert("保存失败，请检查浏览器是否允许本地存储。");
     }
   };
@@ -13401,7 +13540,7 @@ function goBackToBatchEditFromOverview(){
     var btn = document.createElement("button");
     btn.id = "tudou2SaveStatusV57";
     btn.textContent = "已开启本地保存";
-    btn.onclick = window.tudou2SaveNow;
+    btn.onclick = function(){ window.tudou2SaveNow({notify:true}); };
     btn.style.position = "fixed";
     btn.style.right = "18px";
     btn.style.bottom = "18px";
@@ -15417,8 +15556,11 @@ body.show-inbound #inboundRoot button{
     renderCashierCustomers();
     var sel = document.getElementById("cashierCustomer");
     if(sel) sel.value = c.id;
+    try{ window.selectedCashierCustomerIdV116 = c.id; }catch(err){}
+    try{ localStorage.setItem('CANGJIE_SELECTED_CUSTOMER_V116', c.id); }catch(err){}
     try{ if(typeof handleCustomerOrPayChange === "function") handleCustomerOrPayChange(); }
     catch(err){ if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill(); }
+    try{ if(typeof syncCustomerStateV116 === 'function') syncCustomerStateV116(c.id); }catch(err){}
     if(typeof renderBuyerV47 === "function") renderBuyerV47();
     if(typeof tudou2SaveNow === "function") setTimeout(tudou2SaveNow, 0);
     if(typeof toast === "function") toast(existed ? "已切换买家，当前商品已保留" : "买家已新增，当前商品已保留");
@@ -24320,6 +24462,10 @@ body.show-cashier .cashier-buyer-tree-section-v82{
     var sel = document.getElementById("cashierCustomer");
     if(!buyer || !sel) return;
     sel.value = buyer.id;
+    try{ window.selectedCashierCustomerIdV116 = buyer.id; }catch(err){}
+    try{ localStorage.setItem('CANGJIE_SELECTED_CUSTOMER_V116', buyer.id); }catch(err){}
+    try{ if(typeof window.syncCustomerStateV116 === "function") window.syncCustomerStateV116(buyer.id); }catch(err){}
+    try{ if(typeof handleCustomerOrPayChange === "function") handleCustomerOrPayChange(); }catch(err){}
     try{ if(typeof enforceTemporaryCustomerRule === "function") enforceTemporaryCustomerRule(); }catch(err){}
     try{ if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill(); }catch(err){}
     try{ if(typeof renderCashierProducts === "function") renderCashierProducts(); }catch(err){}
