@@ -22562,43 +22562,22 @@ body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-right{
   }
   body.show-cashier #cashierRoot .pay-box,
   body.show-cashier #cashierRoot .discount-box,
-  body.show-cashier #cashierRoot .total-breakdown{
-    gap:6px!important;
-    margin-bottom:6px!important;
-  }
-  body.show-cashier #cashierRoot .pay-box select,
-  body.show-cashier #cashierRoot .pay-box input,
-  body.show-cashier #cashierRoot .discount-box input,
-  body.show-cashier #cashierRoot #cashierOrderRemarkStep1{
-    height:36px!important;
-    min-height:36px!important;
-    border-radius:13px!important;
-    font-size:13px!important;
-  }
-  body.show-cashier #cashierRoot .total-breakdown{
+  body.show-cashier #cashierRoot .total-breakdown,
+  body.show-cashier #cashierRoot .order-total,
+  body.show-cashier #cashierRoot #tempCustomerStrictWarning{
     display:none!important;
   }
-  body.show-cashier #cashierRoot .order-total{
-    padding:8px 12px!important;
-    border-radius:15px!important;
-    margin-top:4px!important;
-  }
-  body.show-cashier #cashierRoot .order-total span{
-    font-size:12px!important;
-  }
-  body.show-cashier #cashierRoot .order-total b{
-    font-size:22px!important;
-  }
   body.show-cashier #cashierRoot .order-actions{
+    grid-template-columns:1fr 1fr!important;
     gap:6px!important;
-    padding-top:4px!important;
+    padding-top:2px!important;
   }
   body.show-cashier #cashierRoot .codebill-btn,
   body.show-cashier #cashierRoot .checkout-btn{
-    min-height:38px!important;
-    height:38px!important;
-    border-radius:14px!important;
-    font-size:15px!important;
+    min-height:36px!important;
+    height:36px!important;
+    border-radius:12px!important;
+    font-size:14px!important;
   }
   body.show-cashier #cashierRoot .discount-warning,
   body.show-cashier #cashierRoot #tempCustomerStrictWarning{
@@ -33765,60 +33744,43 @@ body.show-cashier #cashierRoot .order-item{
   writing-mode:horizontal-tb!important;
 }
 body.show-cashier #cashierRoot .order-summary{
-  padding:12px 14px!important;
+  padding:10px 14px!important;
   border-top:1px solid #edf0ea!important;
 }
 body.show-cashier #cashierRoot .order-summary-top{
   display:grid!important;
   grid-template-columns:1fr 1fr!important;
   gap:8px!important;
-  margin-bottom:8px!important;
+  margin-bottom:6px!important;
 }
-body.show-cashier #cashierRoot .pay-box{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
-  gap:8px!important;
-  margin-bottom:8px!important;
-}
-body.show-cashier #cashierRoot .pay-box select,
-body.show-cashier #cashierRoot .pay-box input{
-  height:42px!important;
-  border-radius:12px!important;
-  font-size:14px!important;
-}
+body.show-cashier #cashierRoot .pay-box,
 body.show-cashier #cashierRoot .discount-box,
 body.show-cashier #cashierRoot .total-breakdown,
+body.show-cashier #cashierRoot .order-total,
+body.show-cashier #cashierRoot #tempCustomerStrictWarning,
 body.show-cashier #cashierRoot .order-remark-box-step1{
   display:none!important;
 }
-body.show-cashier #cashierRoot .order-total{
-  margin:0 0 8px!important;
-  padding:10px 14px!important;
-  background:#202124!important;
-  color:#fff!important;
-  border-radius:16px!important;
-}
-body.show-cashier #cashierRoot .order-total b{
-  color:#fff!important;
-  font-size:24px!important;
-}
 body.show-cashier #cashierRoot .order-actions{
   display:grid!important;
-  grid-template-columns:1fr!important;
-  gap:10px!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:8px!important;
+  align-items:center!important;
+}
+body.show-cashier #cashierRoot .checkout-btn,
+body.show-cashier #cashierRoot .codebill-btn{
+  order:initial!important;
+  height:38px!important;
+  min-height:38px!important;
+  border-radius:12px!important;
+  font-size:14px!important;
+  padding:0 12px!important;
 }
 body.show-cashier #cashierRoot .checkout-btn{
-  order:1!important;
-  height:52px!important;
-  border-radius:14px!important;
-  background:#111!important;
+  background:#1f2321!important;
   color:#fff!important;
-  font-size:20px!important;
 }
 body.show-cashier #cashierRoot .codebill-btn{
-  order:2!important;
-  height:42px!important;
-  border-radius:12px!important;
   background:#fff!important;
   color:#1f2a22!important;
   border:1px solid #dfe5dc!important;
