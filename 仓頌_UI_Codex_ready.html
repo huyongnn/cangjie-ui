@@ -33198,6 +33198,24 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
       ev.preventDefault();
       chooseCheckoutPaymentMethodV107(method);
     });
+    var submitBtnV107 = document.querySelector(".checkout-confirm-submit-v107");
+    if(submitBtnV107 && !submitBtnV107.__boundV107){
+      submitBtnV107.addEventListener("click", function(ev){
+        ev.preventDefault();
+        ev.stopPropagation();
+        window.submitCheckoutConfirmModalV107();
+      });
+      submitBtnV107.__boundV107 = true;
+    }
+    var debtBtnV107 = document.querySelector(".checkout-confirm-cancel-v107");
+    if(debtBtnV107 && !debtBtnV107.__boundV107){
+      debtBtnV107.addEventListener("click", function(ev){
+        ev.preventDefault();
+        ev.stopPropagation();
+        window.submitDebtCheckoutConfirmModalV107();
+      });
+      debtBtnV107.__boundV107 = true;
+    }
   }
   function renderPaymentMethods(activePayment){
     var box = document.getElementById("checkoutPaymentMethodsV107");
@@ -33399,8 +33417,10 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     window.closeCheckoutConfirmModalV107();
     try{
       if(typeof finalizeOrderV107 === "function") finalizeOrderV107();
+      else directFinalizeCheckoutOrderV107();
     }catch(err){
       try{ console.error("checkout finalize failed", err); }catch(e){}
+      directFinalizeCheckoutOrderV107();
     }
     var afterRows = currentCodeBillRowsV107().length;
     var afterOrders = (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders.length : 0;
@@ -33410,10 +33430,6 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     resetCheckoutDraftAfterSubmitV107();
   }
   window.submitCheckoutConfirmModalV107 = function(){
-    if(typeof finalizeOrderV107 !== "function"){
-      alert("当前下单流程不可用，请刷新页面后重试。");
-      return;
-    }
     var payload = normalizeDraft();
     if(payload.payment === "debt"){
       payload.payment = "cash";
@@ -33435,10 +33451,6 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     finalizeCheckoutWithPayloadV107(payload);
   };
   window.submitDebtCheckoutConfirmModalV107 = function(){
-    if(typeof finalizeOrderV107 !== "function"){
-      alert("当前下单流程不可用，请刷新页面后重试。");
-      return;
-    }
     if(typeof window.isTemporaryCashierCustomer === "function" && window.isTemporaryCashierCustomer()){
       if(typeof window.toast === "function") window.toast("临时客户不可赊欠，请先切换正式客户");
       else alert("临时客户不可赊欠，请先切换正式客户");
