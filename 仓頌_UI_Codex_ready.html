@@ -34444,12 +34444,15 @@ body.show-cashier #cashierRoot *,
     flex-wrap:nowrap!important;
     align-items:center!important;
     gap:8px!important;
-    overflow:hidden!important;
+    overflow:visible!important;
     white-space:nowrap!important;
     padding:0!important;
+    position:relative!important;
+    z-index:120!important;
   }
   body.show-cashier #cashierRoot .order-customer-row button,
-  body.show-cashier #cashierRoot .order-customer-row select{
+  body.show-cashier #cashierRoot .order-customer-row select,
+  body.show-cashier #cashierRoot .order-customer-row .cashier-buyer-tree-v82{
     flex:0 0 auto!important;
     min-width:0!important;
     max-width:none!important;
@@ -34459,6 +34462,22 @@ body.show-cashier #cashierRoot *,
     order:1!important;
     min-width:96px!important;
     padding:0 12px!important;
+  }
+  body.show-cashier #cashierRoot .order-customer-row .cashier-buyer-tree-v82{
+    order:2!important;
+    width:132px!important;
+    min-width:132px!important;
+    max-width:132px!important;
+    z-index:140!important;
+    overflow:visible!important;
+  }
+  body.show-cashier #cashierRoot .order-customer-row .cashier-buyer-tree-trigger-v82{
+    width:100%!important;
+    pointer-events:auto!important;
+    touch-action:manipulation!important;
+  }
+  body.show-cashier .cashier-buyer-tree-panel-v82{
+    z-index:160!important;
   }
   body.show-cashier #cashierRoot .order-customer-row select{
     order:2!important;
@@ -34478,6 +34497,28 @@ body.show-cashier #cashierRoot *,
   }
 }
 </style>
+<script id="cangjieCashierCustomerPickerFixV114">
+(function(){
+  function bindBuyerTriggerV114(){
+    var wrap = document.getElementById("cashierBuyerTreeV82");
+    var trigger = document.getElementById("cashierBuyerTreeTriggerV82");
+    if(!wrap || !trigger || trigger.__pickerFixV114) return;
+    trigger.addEventListener("pointerdown", function(ev){
+      if(ev.pointerType === "mouse") return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+      if(typeof window.renderCashierBuyerTreeV82 === "function") window.renderCashierBuyerTreeV82();
+      wrap.classList.toggle("open");
+      return false;
+    }, true);
+    trigger.__pickerFixV114 = true;
+  }
+  setTimeout(bindBuyerTriggerV114, 0);
+  setTimeout(bindBuyerTriggerV114, 400);
+  document.addEventListener("click", function(){ setTimeout(bindBuyerTriggerV114, 0); }, true);
+})();
+</script>
 
 </body>
 </html>
