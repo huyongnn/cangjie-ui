@@ -34364,5 +34364,67 @@ body.show-cashier #cashierRoot *,
 })();
 </script>
 
+<style id="cangjieBillCenterIpadAlignV112">
+@media (min-width:981px){
+  body.show-cashier #billCenterModal.bill-center-mask{
+    left:62px!important;
+    right:0!important;
+    padding:14px!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+  }
+  body.show-cashier #billCenterModal .bill-center-modal{
+    width:calc(100vw - 62px - 28px)!important;
+    max-width:calc(100vw - 62px - 28px)!important;
+    height:74vh!important;
+    max-height:78vh!important;
+    margin:0!important;
+    overflow:hidden!important;
+    border-radius:20px!important;
+  }
+  body.show-cashier #billCenterModal .bill-center-header{
+    flex:0 0 auto!important;
+    padding:16px 18px!important;
+    align-items:center!important;
+  }
+  body.show-cashier #billCenterModal .bill-center-close{
+    flex:0 0 auto!important;
+  }
+  body.show-cashier #billCenterModal .bill-center-body{
+    flex:1 1 auto!important;
+    min-height:0!important;
+    height:100%!important;
+    overflow:hidden!important;
+    grid-template-columns:minmax(280px,300px) minmax(0,1fr)!important;
+    align-items:stretch!important;
+  }
+  body.show-cashier #billCenterModal .bill-list,
+  body.show-cashier #billCenterModal .bill-detail{
+    min-height:0!important;
+    height:100%!important;
+    overflow:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  body.show-cashier #billCenterModal .bill-list{
+    padding:14px!important;
+  }
+  body.show-cashier #billCenterModal .bill-detail{
+    padding:16px!important;
+  }
+  body.show-cashier #billCenterModal .bill-list .order-empty,
+  body.show-cashier #billCenterModal .bill-detail .bill-detail-empty{
+    min-height:0!important;
+    height:100%!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    text-align:center!important;
+  }
+  body.show-cashier #billCenterModal .bill-detail-table-wrap{
+    max-width:100%!important;
+  }
+}
+</style>
+
 </body>
 </html>
