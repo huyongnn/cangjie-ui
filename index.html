@@ -33053,11 +33053,15 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
       .replace(/</g,"&lt;")
       .replace(/>/g,"&gt;");
   }
+  function cloneCheckoutRowsV115(rows){
+    return (Array.isArray(rows) ? rows : []).map(function(item){ return Object.assign({}, item); });
+  }
   function currentCodeBillRowsV107(){
     try{
-      if(typeof currentCodeBillItems !== "undefined" && Array.isArray(currentCodeBillItems)) return currentCodeBillItems;
+      if(typeof currentCodeBillItems !== "undefined" && Array.isArray(currentCodeBillItems) && currentCodeBillItems.length) return currentCodeBillItems;
     }catch(err){}
-    return Array.isArray(window.currentCodeBillItems) ? window.currentCodeBillItems : [];
+    if(Array.isArray(window.currentCodeBillItems) && window.currentCodeBillItems.length) return window.currentCodeBillItems;
+    return Array.isArray(window.checkoutCartSnapshotV115) ? window.checkoutCartSnapshotV115 : [];
   }
   function currentOriginalAmount(){
     var rows = currentCodeBillRowsV107();
@@ -33341,11 +33345,23 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     renderModalV107();
     input.focus();
   }
+  function restoreCheckoutRowsV115(){
+    var currentRows = [];
+    try{ currentRows = (typeof currentCodeBillItems !== "undefined" && Array.isArray(currentCodeBillItems)) ? currentCodeBillItems : []; }catch(err){}
+    if(currentRows.length) return currentRows;
+    var snapshot = Array.isArray(window.checkoutCartSnapshotV115) ? window.checkoutCartSnapshotV115 : [];
+    if(!snapshot.length) return currentRows;
+    try{ currentCodeBillItems = cloneCheckoutRowsV115(snapshot); }catch(err){}
+    try{ window.currentCodeBillItems = currentCodeBillItems; }catch(err){}
+    return Array.isArray(currentCodeBillItems) ? currentCodeBillItems : snapshot;
+  }
   window.openCheckoutConfirmModalV107 = function(){
-    if(!currentCodeBillRowsV107().length){
+    var rows = currentCodeBillRowsV107();
+    if(!rows.length){
       alert("请先选择商品。");
       return;
     }
+    window.checkoutCartSnapshotV115 = cloneCheckoutRowsV115(rows);
     ensureModalDom();
     loadDraftFromLegacy();
     renderModalV107();
@@ -33363,7 +33379,8 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     checkoutDraft.remark = "";
   }
   function directFinalizeCheckoutOrderV107(){
-    if(!currentCodeBillRowsV107().length){
+    var liveRows = restoreCheckoutRowsV115();
+    if(!liveRows.length){
       alert("请先选择商品。");
       return false;
     }
@@ -33420,6 +33437,7 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
   }
   function finalizeCheckoutWithPayloadV107(payload){
     syncLegacyFields(payload);
+    restoreCheckoutRowsV115();
     var beforeRows = currentCodeBillRowsV107().length;
     var beforeOrders = (typeof finalOrders !== "undefined" && Array.isArray(finalOrders)) ? finalOrders.length : 0;
     window.closeCheckoutConfirmModalV107();
@@ -33435,6 +33453,7 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     if(afterOrders === beforeOrders && afterRows === beforeRows && beforeRows > 0){
       directFinalizeCheckoutOrderV107();
     }
+    try{ window.checkoutCartSnapshotV115 = []; }catch(err){}
     resetCheckoutDraftAfterSubmitV107();
   }
   window.submitCheckoutConfirmModalV107 = function(){
@@ -34517,6 +34536,104 @@ body.show-cashier #cashierRoot *,
   setTimeout(bindBuyerTriggerV114, 0);
   setTimeout(bindBuyerTriggerV114, 400);
   document.addEventListener("click", function(){ setTimeout(bindBuyerTriggerV114, 0); }, true);
+})();
+</script>
+
+<script id="cangjieCashierCustomerAndCheckoutFixV115">
+(function(){
+  function mergeCashierCustomersV115(){
+    var base = Array.isArray(window.cashierCustomers) ? window.cashierCustomers : [];
+    var extras = [];
+    [window.buyers, window.buyerV47List, window.customers].forEach(function(list){
+      if(Array.isArray(list)) extras = extras.concat(list);
+    });
+    var byKey = {};
+    var rows = [];
+    function pushOne(item){
+      if(!item) return;
+      var name = String(item.name || item.customerName || '').trim();
+      var id = String(item.id || item.customerId || '').trim();
+      if(!name && !id) return;
+      var key = id || ('name:' + name);
+      if(byKey[key]) return;
+      byKey[key] = true;
+      rows.push({
+        id: id || ('c' + Date.now() + Math.floor(Math.random()*1000)),
+        name: name || '买家',
+        debt: Number(item.debt || 0),
+        payments: Array.isArray(item.payments) ? item.payments : [],
+        parentId: item.parentId || '',
+        disabled: !!item.disabled
+      });
+    }
+    base.forEach(pushOne);
+    extras.forEach(pushOne);
+    var temp = rows.find(function(c){ return c.id === 'c1' || c.name === '临时客户' || String(c.name || '').startsWith('临时客户'); });
+    if(!temp){
+      rows.unshift({id:'c1', name:'临时客户', debt:0, payments:[], parentId:'', disabled:false});
+    }else{
+      temp.id = 'c1';
+      temp.name = '临时客户';
+      temp.disabled = false;
+      temp.parentId = '';
+    }
+    window.cashierCustomers = rows;
+    return rows;
+  }
+  function syncPickerCustomerLabelV115(){
+    try{
+      if(typeof window.renderCashierBuyerTreeV82 === 'function') window.renderCashierBuyerTreeV82();
+    }catch(err){}
+    try{
+      if(document.getElementById('checkoutConfirmMaskV107') && document.getElementById('checkoutConfirmMaskV107').classList.contains('show')){
+        if(typeof window.renderModalV107 === 'function') window.renderModalV107();
+      }
+    }catch(err){}
+  }
+  var oldRenderCustomersV115 = typeof window.renderCashierCustomers === 'function' ? window.renderCashierCustomers : null;
+  if(oldRenderCustomersV115 && !oldRenderCustomersV115.__customerFixV115Wrapped){
+    window.renderCashierCustomers = function(){
+      mergeCashierCustomersV115();
+      var result = oldRenderCustomersV115.apply(this, arguments);
+      syncPickerCustomerLabelV115();
+      return result;
+    };
+    window.renderCashierCustomers.__customerFixV115Wrapped = true;
+  }
+  var oldHandleCustomerV115 = typeof window.handleCustomerOrPayChange === 'function' ? window.handleCustomerOrPayChange : null;
+  if(oldHandleCustomerV115 && !oldHandleCustomerV115.__customerFixV115Wrapped){
+    window.handleCustomerOrPayChange = function(){
+      var result = oldHandleCustomerV115.apply(this, arguments);
+      syncPickerCustomerLabelV115();
+      return result;
+    };
+    window.handleCustomerOrPayChange.__customerFixV115Wrapped = true;
+  }
+  function bindBuyerTriggerV115(){
+    var wrap = document.getElementById('cashierBuyerTreeV82');
+    var trigger = document.getElementById('cashierBuyerTreeTriggerV82');
+    if(!wrap || !trigger || trigger.__pickerFixV115) return;
+    ['touchstart','pointerdown'].forEach(function(type){
+      trigger.addEventListener(type, function(ev){
+        if(type === 'pointerdown' && ev.pointerType === 'mouse') return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+        mergeCashierCustomersV115();
+        if(typeof window.renderCashierBuyerTreeV82 === 'function') window.renderCashierBuyerTreeV82();
+        wrap.classList.toggle('open');
+        return false;
+      }, true);
+    });
+    trigger.__pickerFixV115 = true;
+  }
+  mergeCashierCustomersV115();
+  setTimeout(function(){
+    try{ if(typeof window.renderCashierCustomers === 'function') window.renderCashierCustomers(); }catch(err){}
+    bindBuyerTriggerV115();
+  }, 0);
+  setTimeout(bindBuyerTriggerV115, 400);
+  document.addEventListener('click', function(){ setTimeout(bindBuyerTriggerV115, 0); }, true);
 })();
 </script>
 
