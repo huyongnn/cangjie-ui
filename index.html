@@ -33525,8 +33525,7 @@ body.show-cashier #cashierRoot .cashier-top h1{
 }
 body.show-cashier #cashierRoot .cashier-top p,
 body.show-cashier #cashierRoot .cashier-top-tools input,
-body.show-cashier #cashierRoot .cashier-top-tools select,
-body.show-cashier #cashierRoot .cashier-top-tools .bill-center-btn{
+body.show-cashier #cashierRoot .cashier-top-tools select{
   display:none!important;
 }
 body.show-cashier #cashierRoot #printLastReceiptV91.receipt-print-btn-v91{
@@ -33547,6 +33546,24 @@ body.show-cashier #cashierRoot #printLastReceiptV91.receipt-print-btn-v91{
   text-overflow:ellipsis!important;
   white-space:nowrap!important;
 }
+body.show-cashier #cashierRoot .cashier-top-tools{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  flex-wrap:nowrap!important;
+  overflow:visible!important;
+  padding:0!important;
+}
+body.show-cashier #cashierRoot .cashier-top-tools .bill-center-btn{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:auto!important;
+  min-width:92px!important;
+  padding:0 14px!important;
+  overflow:visible!important;
+}
+
 body.show-cashier #cashierRoot .cashier-product-area{
   display:grid!important;
   grid-template-rows:auto minmax(0,1fr)!important;
