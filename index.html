@@ -4751,7 +4751,7 @@ body.merchant-entry-locked-v1 #customerPanel{display:none!important;}
         <div class="order-customer-row">
           <select id="cashierCustomer" onchange="handleCustomerOrPayChange()"></select>
           <button onclick="addCashierCustomer()">新增买家</button>
-          <button onclick="alert('收款记录下一阶段接入')">收款</button>
+          <button onclick="openBillCenter()">码单中心</button>
         </div>
         <div class="order-tabs">
           <button class="order-tab active">临时客户1</button>
@@ -34422,6 +34422,51 @@ body.show-cashier #cashierRoot *,
   }
   body.show-cashier #billCenterModal .bill-detail-table-wrap{
     max-width:100%!important;
+  }
+}
+</style>
+
+<style id="cangjieCashierCustomerRowV113">
+@media (min-width:981px){
+  body.show-cashier #cashierRoot .cashier-top-tools .bill-center-btn{
+    display:none!important;
+  }
+  body.show-cashier #cashierRoot .order-customer-row{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    align-items:center!important;
+    gap:8px!important;
+    overflow:hidden!important;
+    white-space:nowrap!important;
+    padding:0!important;
+  }
+  body.show-cashier #cashierRoot .order-customer-row button,
+  body.show-cashier #cashierRoot .order-customer-row select{
+    flex:0 0 auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    white-space:nowrap!important;
+  }
+  body.show-cashier #cashierRoot .order-customer-row button:nth-of-type(1){
+    order:1!important;
+    min-width:96px!important;
+    padding:0 12px!important;
+  }
+  body.show-cashier #cashierRoot .order-customer-row select{
+    order:2!important;
+    width:132px!important;
+    min-width:132px!important;
+    max-width:132px!important;
+    padding:0 36px 0 12px!important;
+    overflow:hidden!important;
+  }
+  body.show-cashier #cashierRoot .order-customer-row button:nth-of-type(2){
+    order:3!important;
+    display:inline-flex!important;
+    min-width:98px!important;
+    padding:0 14px!important;
+    margin-left:auto!important;
+    overflow:visible!important;
   }
 }
 </style>
