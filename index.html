@@ -12104,10 +12104,16 @@ function printBuyerV47Bill(){
   function selectedCustomerIdV116(){
     var sel = document.getElementById('cashierCustomer');
     var session = activeSessionV116();
+    var selId = String((sel && sel.value) || '');
+    var sessionId = String((session && session.customerId) || '');
+    var rememberedId = String(window.selectedCashierCustomerIdV116 || '');
+    if(rememberedId && rememberedId !== 'c1' && (!selId || selId === 'c1') && (!sessionId || sessionId === 'c1')){
+      return rememberedId;
+    }
     return String(
-      (sel && sel.value)
-      || (session && session.customerId)
-      || (window.selectedCashierCustomerIdV116)
+      selId
+      || sessionId
+      || rememberedId
       || (tempCustomerV116().id || 'c1')
     );
   }
@@ -12409,7 +12415,13 @@ function printBuyerV47Bill(){
     var activeBtn = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
     var sid = activeBtn ? activeBtn.getAttribute('data-bill-session') : '';
     var session = sessions.find(function(item){ return item && item.id === sid; }) || sessions[0];
-    return String((sel && sel.value) || (session && session.customerId) || window.selectedCashierCustomerIdV116 || 'c1');
+    var selId = String((sel && sel.value) || '');
+    var sessionId = String((session && session.customerId) || '');
+    var rememberedId = String(window.selectedCashierCustomerIdV116 || '');
+    if(rememberedId && rememberedId !== 'c1' && (!selId || selId === 'c1') && (!sessionId || sessionId === 'c1')){
+      return rememberedId;
+    }
+    return String(selId || sessionId || rememberedId || 'c1');
   }
   function applyIdV117(id){
     var next = String(id || selectedIdV117() || 'c1');
