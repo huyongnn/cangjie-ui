@@ -6253,12 +6253,41 @@ function makeShortOrderNo(){
   return no;
 }
 
-function buildCodeBill(){
+function buildCodeBill(rowsForBill){
+  const sourceRows = Array.isArray(rowsForBill) ? rowsForBill : currentCodeBillItems;
+  const rows = sourceRows.map(item=>Object.assign({}, item));
   const customer = activeCashierCustomer();
-  const totals = codeBillTotals();
+  const totalQty = rows.reduce((s,i)=>s+Number(i.qty || 0),0);
+  const totalWeight = rows.reduce((s,i)=>s+Number(i.weight || 0),0);
+  const originalAmount = rows.reduce((sum,item)=>sum + lineAmount(item), 0);
+  const discount = typeof getOrderDiscountAmount === "function"
+    ? getOrderDiscountAmount()
+    : 0;
+  const totalAmount = Math.max(originalAmount - discount, 0);
+  const mode = document.getElementById("cashierPayMode")?.value || "cash";
+  let paid = 0;
+  let debt = 0;
+  if(mode === "cash"){
+    paid = totalAmount;
+    debt = 0;
+  }else if(mode === "debt"){
+    paid = 0;
+    debt = totalAmount;
+  }else{
+    paid = Math.min(Number(document.getElementById("cashierPaidAmount")?.value || 0), totalAmount);
+    debt = Math.max(totalAmount - paid, 0);
+  }
+  if(isTemporaryCashierCustomer()){
+    paid = totalAmount;
+    debt = 0;
+    const pay = document.getElementById("cashierPayMode");
+    if(pay) pay.value = "cash";
+  }
+  const discountNote = document.getElementById("cashierDiscountNote")?.value || "";
+  const totals = {totalQty,totalWeight,totalAmount,originalAmount,discount,discountNote,paid,debt};
   const time = new Date().toLocaleString("zh-CN",{hour12:false});
   const billNo = makeShortCodeBillNo();
-  const lines = currentCodeBillItems.map((i,idx)=>({
+  const lines = rows.map((i,idx)=>({
     index:idx+1,
     name:i.name,
     owner:i.owner,
@@ -6296,13 +6325,52 @@ function openCodeBillModal(){
   }
 
   const bill = buildCodeBill();
-  bill.status = "已开码单";
+  bill.status = "saved";
+  bill.displayStatus = "已开码单";
+  bill.__savedV116 = true;
+  bill.__savedV116 = true;
 
   savedCodeBills.unshift(bill);
   selectedBillCenterId = bill.billNo;
 
   // 开码单后，单子直接进入码单中心；当前收银台清空，准备下一单。
   currentCodeBillItems = [];
+  try{
+    window.currentCodeBillItems = [];
+    window.checkoutCartSnapshotV115 = [];
+    window.__cashierCartClearedV116 = true;
+    const sessions = Array.isArray(window.cashierBillSessionsStep1) ? window.cashierBillSessionsStep1 : [];
+    const activeBtn = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
+    const activeId = activeBtn ? activeBtn.getAttribute('data-bill-session') : '';
+    const matchedSession = sessions.find(function(s){ return s && s.id === activeId; }) || sessions[0] || null;
+    if(matchedSession){
+      matchedSession.items = [];
+      matchedSession.status = "clearedAfterSave";
+      matchedSession.__cartClearedV116 = true;
+      matchedSession.__cartSavedV116 = bill.billNo || true;
+      delete matchedSession.__completedV116;
+      delete matchedSession.__restoringFromBillV116;
+      delete matchedSession.__takenFromBillV116;
+    }
+  }catch(err){}
+  try{ window.currentCodeBillItems = []; }catch(err){}
+  try{ window.checkoutCartSnapshotV115 = []; }catch(err){}
+  try{ window.__cashierCartClearedV116 = true; }catch(err){}
+  try{
+    var sessionRowsCodeBill = Array.isArray(window.cashierBillSessionsStep1) ? window.cashierBillSessionsStep1 : [];
+    if(sessionRowsCodeBill.length){
+      var activeTabCodeBill = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
+      var activeSessionIdCodeBill = activeTabCodeBill ? activeTabCodeBill.getAttribute('data-bill-session') : '';
+      var matchedSessionCodeBill = sessionRowsCodeBill.find(function(session){
+        return session && session.id === activeSessionIdCodeBill;
+      }) || sessionRowsCodeBill[0];
+      if(matchedSessionCodeBill){
+        matchedSessionCodeBill.items = [];
+        matchedSessionCodeBill.__cartClearedV116 = true;
+        matchedSessionCodeBill.__cartSavedV116 = true;
+      }
+    }
+  }catch(err){}
   const paidInput = document.getElementById("cashierPaidAmount");
   if(paidInput) paidInput.value = "";
   clearCashierDiscountFields();
@@ -6666,6 +6734,8 @@ function completeSettleOrder(){
 function takeSavedBill(billNo){
   const bill = savedCodeBills.find(b=>b.billNo === billNo);
   if(!bill) return;
+  bill.__restoringFromBillV116 = true;
+  bill.__takenV116 = true;
 
   currentCodeBillItems = bill.lines.map(line=>{
     const goods = goodsMaster.find(g=>g.name === line.name);
@@ -6685,6 +6755,29 @@ function takeSavedBill(billNo){
       owner: line.owner || "-"
     };
   });
+  try{ window.currentCodeBillItems = currentCodeBillItems; }catch(err){}
+  try{ window.checkoutCartSnapshotV115 = []; }catch(err){}
+  try{ window.__cashierCartClearedV116 = false; }catch(err){}
+  try{
+    var sessionRowsTaken = Array.isArray(window.cashierBillSessionsStep1) ? window.cashierBillSessionsStep1 : [];
+    if(sessionRowsTaken.length){
+      var activeTabTaken = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
+      var activeSessionIdTaken = activeTabTaken ? activeTabTaken.getAttribute('data-bill-session') : '';
+      var matchedSessionTaken = sessionRowsTaken.find(function(session){
+        return session && session.id === activeSessionIdTaken;
+      }) || sessionRowsTaken[0];
+      if(matchedSessionTaken){
+        matchedSessionTaken.items = currentCodeBillItems;
+        matchedSessionTaken.customerId = bill.customerId;
+        matchedSessionTaken.name = bill.customerName;
+        delete matchedSessionTaken.__cartClearedV116;
+        delete matchedSessionTaken.__completedV116;
+        delete matchedSessionTaken.__cartSavedV116;
+        matchedSessionTaken.__restoringFromBillV116 = true;
+        matchedSessionTaken.__takenFromBillV116 = bill.billNo;
+      }
+    }
+  }catch(err){}
 
   // 从码单中心取出后，该码单从码单中心移除，回到当前收银台。
   savedCodeBills = savedCodeBills.filter(b=>b.billNo !== billNo);
@@ -6982,7 +7075,9 @@ function renderCashierProducts(){
 
 function addProductToCodeBill(goodsId){
   const g = goodsMaster.find(x=>x.id === goodsId);
-  if(!g) return;
+  if(!g){
+    return;
+  }
   const batchInfo = findFirstBatchForGoods(goodsId);
   const existing = currentCodeBillItems.find(i=>i.goodsId === goodsId);
   if(existing){
@@ -7196,12 +7291,41 @@ function makeShortOrderNo(){
   return no;
 }
 
-function buildCodeBill(){
+function buildCodeBill(rowsForBill){
+  const sourceRows = Array.isArray(rowsForBill) ? rowsForBill : currentCodeBillItems;
+  const rows = sourceRows.map(item=>Object.assign({}, item));
   const customer = activeCashierCustomer();
-  const totals = codeBillTotals();
+  const totalQty = rows.reduce((s,i)=>s+Number(i.qty || 0),0);
+  const totalWeight = rows.reduce((s,i)=>s+Number(i.weight || 0),0);
+  const originalAmount = rows.reduce((sum,item)=>sum + lineAmount(item), 0);
+  const discount = typeof getOrderDiscountAmount === "function"
+    ? getOrderDiscountAmount()
+    : 0;
+  const totalAmount = Math.max(originalAmount - discount, 0);
+  const mode = document.getElementById("cashierPayMode")?.value || "cash";
+  let paid = 0;
+  let debt = 0;
+  if(mode === "cash"){
+    paid = totalAmount;
+    debt = 0;
+  }else if(mode === "debt"){
+    paid = 0;
+    debt = totalAmount;
+  }else{
+    paid = Math.min(Number(document.getElementById("cashierPaidAmount")?.value || 0), totalAmount);
+    debt = Math.max(totalAmount - paid, 0);
+  }
+  if(isTemporaryCashierCustomer()){
+    paid = totalAmount;
+    debt = 0;
+    const pay = document.getElementById("cashierPayMode");
+    if(pay) pay.value = "cash";
+  }
+  const discountNote = document.getElementById("cashierDiscountNote")?.value || "";
+  const totals = {totalQty,totalWeight,totalAmount,originalAmount,discount,discountNote,paid,debt};
   const time = new Date().toLocaleString("zh-CN",{hour12:false});
   const billNo = makeShortCodeBillNo();
-  const lines = currentCodeBillItems.map((i,idx)=>({
+  const lines = rows.map((i,idx)=>({
     index:idx+1,
     name:i.name,
     owner:i.owner,
@@ -7239,13 +7363,51 @@ function openCodeBillModal(){
   }
 
   const bill = buildCodeBill();
-  bill.status = "已开码单";
+  bill.status = "saved";
+  bill.displayStatus = "已开码单";
+  bill.__savedV116 = true;
+  bill.__savedV116 = true;
 
   savedCodeBills.unshift(bill);
   selectedBillCenterId = bill.billNo;
 
   // 开码单后，单子直接进入码单中心；当前收银台清空，准备下一单。
   currentCodeBillItems = [];
+  try{
+    window.currentCodeBillItems = [];
+    window.checkoutCartSnapshotV115 = [];
+    window.__cashierCartClearedV116 = true;
+    window.__cashierCartClearedReasonV116 = "savedAfterCodeBill";
+    const sessions = Array.isArray(window.cashierBillSessionsStep1) ? window.cashierBillSessionsStep1 : [];
+    const activeBtn = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
+    const activeId = activeBtn ? activeBtn.getAttribute('data-bill-session') : '';
+    const matchedSession = sessions.find(function(s){ return s && s.id === activeId; }) || sessions[0] || null;
+    if(matchedSession){
+      matchedSession.items = [];
+      matchedSession.status = "clearedAfterSave";
+      matchedSession.__cartClearedV116 = true;
+      matchedSession.__cartSavedV116 = bill.billNo || true;
+      matchedSession.__cartClearedReasonV116 = "savedAfterCodeBill";
+      delete matchedSession.__completedV116;
+    }
+  }catch(err){}
+  try{
+    window.currentCodeBillItems = [];
+    window.checkoutCartSnapshotV115 = [];
+    window.__cashierCartClearedV116 = true;
+    const sessions = Array.isArray(window.cashierBillSessionsStep1) ? window.cashierBillSessionsStep1 : [];
+    const activeBtn = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
+    const activeId = activeBtn ? activeBtn.getAttribute('data-bill-session') : '';
+    const matchedSession = sessions.find(function(s){ return s && s.id === activeId; }) || sessions[0] || null;
+    if(matchedSession){
+      matchedSession.items = [];
+      matchedSession.__cartClearedV116 = true;
+      matchedSession.__cartSavedV116 = bill.billNo || true;
+      delete matchedSession.__completedV116;
+      delete matchedSession.__restoringFromBillV116;
+      delete matchedSession.__takenFromBillV116;
+    }
+  }catch(err){}
   const paidInput = document.getElementById("cashierPaidAmount");
   if(paidInput) paidInput.value = "";
   clearCashierDiscountFields();
@@ -7609,7 +7771,11 @@ function takeSavedBill(billNo){
   const bill = savedCodeBills.find(b=>b.billNo === billNo);
   if(!bill) return;
 
-  currentCodeBillItems = bill.lines.map(line=>{
+  bill.status = "taken";
+  bill.__restoringFromBillV116 = true;
+  bill.__takenV116 = true;
+
+  const restoredRows = bill.lines.map(line=>{
     const goods = goodsMaster.find(g=>g.name === line.name);
     const fixed = line.type === "定装";
     return {
@@ -7627,6 +7793,27 @@ function takeSavedBill(billNo){
       owner: line.owner || "-"
     };
   });
+  bill.__restoringFromBillV116 = true;
+  bill.__takenV116 = true;
+  try{
+    window.currentCodeBillItems = currentCodeBillItems;
+    window.checkoutCartSnapshotV115 = [];
+    window.__cashierCartClearedV116 = false;
+    const sessions = Array.isArray(window.cashierBillSessionsStep1) ? window.cashierBillSessionsStep1 : [];
+    const activeBtn = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
+    const activeId = activeBtn ? activeBtn.getAttribute('data-bill-session') : '';
+    const matchedSession = sessions.find(function(s){ return s && s.id === activeId; }) || sessions[0] || null;
+    if(matchedSession){
+      matchedSession.items = currentCodeBillItems;
+      matchedSession.customerId = bill.customerId || matchedSession.customerId || "c1";
+      matchedSession.name = bill.customerName || matchedSession.name || "临时客户";
+      delete matchedSession.__cartClearedV116;
+      delete matchedSession.__completedV116;
+      delete matchedSession.__cartSavedV116;
+      matchedSession.__restoringFromBillV116 = true;
+      matchedSession.__takenFromBillV116 = bill.billNo || true;
+    }
+  }catch(err){}
 
   // 从码单中心取出后，该码单从码单中心移除，回到当前收银台。
   savedCodeBills = savedCodeBills.filter(b=>b.billNo !== billNo);
@@ -7910,6 +8097,21 @@ function addProductToCodeBill(goodsId){
   const g = goodsMaster.find(x=>x.id === goodsId);
   if(!g) return;
   const batchInfo = findFirstBatchForGoods(goodsId);
+  const stepSession = typeof activeSession === "function" ? activeSession() : null;
+  const v116Session = typeof activeSessionV116 === "function" ? activeSessionV116() : null;
+  function activateCartSessionV1(session){
+    if(!session) return;
+    session.status = "editing";
+    delete session.__cartClearedV116;
+    delete session.__completedV116;
+    delete session.__cartSavedV116;
+    delete session.__restoringFromBillV116;
+    delete session.__takenFromBillV116;
+    delete session.sourceBillId;
+  }
+  activateCartSessionV1(stepSession);
+  if(v116Session && v116Session !== stepSession) activateCartSessionV1(v116Session);
+  try{ window.__cashierCartClearedV116 = false; }catch(err){}
   const existing = currentCodeBillItems.find(i=>i.goodsId === goodsId);
   if(existing){
     existing.qty += 1;
@@ -7933,6 +8135,13 @@ function addProductToCodeBill(goodsId){
       owner:batchInfo.owner
     });
   }
+  if(stepSession){
+    stepSession.items = currentCodeBillItems;
+  }
+  if(v116Session && v116Session !== stepSession){
+    v116Session.items = currentCodeBillItems;
+  }
+  try{ window.currentCodeBillItems = currentCodeBillItems; }catch(err){}
   renderCurrentCodeBill();
   renderCashierProducts();
 }
@@ -8122,12 +8331,41 @@ function makeShortOrderNo(){
   return no;
 }
 
-function buildCodeBill(){
+function buildCodeBill(rowsForBill){
+  const sourceRows = Array.isArray(rowsForBill) ? rowsForBill : currentCodeBillItems;
+  const rows = sourceRows.map(item=>Object.assign({}, item));
   const customer = activeCashierCustomer();
-  const totals = codeBillTotals();
+  const totalQty = rows.reduce((s,i)=>s+Number(i.qty || 0),0);
+  const totalWeight = rows.reduce((s,i)=>s+Number(i.weight || 0),0);
+  const originalAmount = rows.reduce((sum,item)=>sum + lineAmount(item), 0);
+  const discount = typeof getOrderDiscountAmount === "function"
+    ? getOrderDiscountAmount()
+    : 0;
+  const totalAmount = Math.max(originalAmount - discount, 0);
+  const mode = document.getElementById("cashierPayMode")?.value || "cash";
+  let paid = 0;
+  let debt = 0;
+  if(mode === "cash"){
+    paid = totalAmount;
+    debt = 0;
+  }else if(mode === "debt"){
+    paid = 0;
+    debt = totalAmount;
+  }else{
+    paid = Math.min(Number(document.getElementById("cashierPaidAmount")?.value || 0), totalAmount);
+    debt = Math.max(totalAmount - paid, 0);
+  }
+  if(isTemporaryCashierCustomer()){
+    paid = totalAmount;
+    debt = 0;
+    const pay = document.getElementById("cashierPayMode");
+    if(pay) pay.value = "cash";
+  }
+  const discountNote = document.getElementById("cashierDiscountNote")?.value || "";
+  const totals = {totalQty,totalWeight,totalAmount,originalAmount,discount,discountNote,paid,debt};
   const time = new Date().toLocaleString("zh-CN",{hour12:false});
   const billNo = makeShortCodeBillNo();
-  const lines = currentCodeBillItems.map((i,idx)=>({
+  const lines = rows.map((i,idx)=>({
     index:idx+1,
     name:i.name,
     owner:i.owner,
@@ -8155,17 +8393,74 @@ function buildCodeBill(){
     "实收：" + money(totals.paid),
     "欠款：" + money(totals.debt)
   ].join("\n");
-  return {billNo, customerName:customer.name, customerId:customer.id, time, lines, ...totals, text, status:"未下单"};
+  return {billNo, codeBillId:billNo, customerName:customer.name, customerId:customer.id, time, createdAt:time, lines, ...totals, text, status:"saved"};
 }
 
 function openCodeBillModal(){
-  if(!currentCodeBillItems.length){
+  function sessionClearedForCodeBillSave(session){
+    if(!session) return false;
+    const status = String(session.status || "");
+    return !!(
+      status === "clearedAfterSave"
+      || status === "clearedAfterSubmit"
+      || status === "completed"
+      || status === "cleared"
+      || session.__cartClearedV116
+      || session.__completedV116
+      || session.__cartSavedV116
+    );
+  }
+  function cloneRowsForCodeBill(rows){
+    return (Array.isArray(rows) ? rows : []).map(item=>Object.assign({}, item));
+  }
+  function pickLiveRowsForCodeBill(){
+    const directRows = cloneRowsForCodeBill(currentCodeBillItems);
+    if(directRows.length) return directRows;
+    try{
+      if(typeof currentCartV116 === "function"){
+        const currentRows = cloneRowsForCodeBill(currentCartV116());
+        if(currentRows.length) return currentRows;
+      }
+    }catch(err){}
+    if(!sessionClearedForCodeBillSave(activeStepSession) && Array.isArray(activeStepSession && activeStepSession.items) && activeStepSession.items.length){
+      return cloneRowsForCodeBill(activeStepSession.items);
+    }
+    if(!sessionClearedForCodeBillSave(activeV116Session) && Array.isArray(activeV116Session && activeV116Session.items) && activeV116Session.items.length){
+      return cloneRowsForCodeBill(activeV116Session.items);
+    }
+    if(Array.isArray(window.currentCodeBillItems) && window.currentCodeBillItems.length){
+      return cloneRowsForCodeBill(window.currentCodeBillItems);
+    }
+    if(Array.isArray(window.checkoutCartSnapshotV115) && window.checkoutCartSnapshotV115.length){
+      return cloneRowsForCodeBill(window.checkoutCartSnapshotV115);
+    }
+    return [];
+  }
+  const activeV116Session = typeof activeSessionV116 === "function" ? activeSessionV116() : null;
+  const activeStepSession = typeof activeSession === "function" ? activeSession() : null;
+  const liveRows = pickLiveRowsForCodeBill();
+
+  if(!liveRows.length){
     alert("请先选择商品，再开码单。");
     return;
   }
 
-  const bill = buildCodeBill();
-  bill.status = "已开码单";
+  currentCodeBillItems = cloneRowsForCodeBill(liveRows);
+  try{ window.currentCodeBillItems = cloneRowsForCodeBill(liveRows); }catch(err){}
+  try{ window.checkoutCartSnapshotV115 = cloneRowsForCodeBill(liveRows); }catch(err){}
+  if(activeStepSession && !sessionClearedForCodeBillSave(activeStepSession)){
+    activeStepSession.items = cloneRowsForCodeBill(liveRows);
+  }
+  if(activeV116Session && !sessionClearedForCodeBillSave(activeV116Session)){
+    activeV116Session.items = cloneRowsForCodeBill(liveRows);
+  }
+
+  const bill = buildCodeBill(liveRows);
+  if(!Array.isArray(bill.lines) || !bill.lines.length){
+    alert("当前购物车为空，暂不能保存码单。");
+    return;
+  }
+  bill.status = "saved";
 
   savedCodeBills.unshift(bill);
   selectedBillCenterId = bill.billNo;
@@ -8535,7 +8830,11 @@ function takeSavedBill(billNo){
   const bill = savedCodeBills.find(b=>b.billNo === billNo);
   if(!bill) return;
 
-  currentCodeBillItems = bill.lines.map(line=>{
+  bill.status = "taken";
+  bill.__restoringFromBillV116 = true;
+  bill.__takenV116 = true;
+
+  const restoredRows = bill.lines.map(line=>{
     const goods = goodsMaster.find(g=>g.name === line.name);
     const fixed = line.type === "定装";
     return {
@@ -8574,8 +8873,52 @@ function takeSavedBill(billNo){
   closeBillCenter();
   closeCodeBillModal();
   showAppPage("cashier");
+
+  currentCodeBillItems = restoredRows;
+  window.currentCodeBillItems = restoredRows;
+  try{ window.checkoutCartSnapshotV115 = []; }catch(err){}
+  try{ window.__cashierCartClearedV116 = false; }catch(err){}
+
+  const activeStepSession = typeof activeSession === "function" ? activeSession() : null;
+  const activeV116Session = typeof activeSessionV116 === "function" ? activeSessionV116() : null;
+  var sessionCandidates = [];
+  [activeStepSession, activeV116Session].forEach(function(session){
+    if(session && sessionCandidates.indexOf(session) === -1) sessionCandidates.push(session);
+  });
+  try{
+    var domActive = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
+    var domId = domActive ? domActive.getAttribute('data-bill-session') : '';
+    var sessions = Array.isArray(window.cashierBillSessionsStep1) ? window.cashierBillSessionsStep1 : [];
+    var domSession = sessions.find(function(s){ return s && s.id === domId; }) || sessions[0] || null;
+    if(domSession && sessionCandidates.indexOf(domSession) === -1) sessionCandidates.push(domSession);
+  }catch(err){}
+  sessionCandidates.forEach(session=>{
+    if(!session) return;
+    session.status = "restoringFromBill";
+    session.items = restoredRows;
+    session.customerId = bill.customerId || session.customerId;
+    session.name = bill.customerName || session.name;
+    session.__restoreSourceBillV116 = bill.billNo || true;
+    session.__restoringFromBillV116 = true;
+    session.__takenFromBillV116 = bill.billNo || true;
+    try{
+      delete session.__cartSavedV116;
+      delete session.__cartClearedV116;
+      delete session.__completedV116;
+    }catch(err){}
+  });
+
+  try{ window.selectedCashierCustomerIdV116 = bill.customerId || window.selectedCashierCustomerIdV116; }catch(err){}
   enforceTemporaryCustomerRule();
   renderCashierAll();
+  sessionCandidates.forEach(session=>{
+    if(!session) return;
+    session.status = "taken";
+    session.items = restoredRows;
+    session.__restoreSourceBillV116 = bill.billNo || true;
+    session.__takenFromBillV116 = bill.billNo || true;
+    try{ delete session.__restoringFromBillV116; }catch(err){}
+  });
   toast(isTemporaryCashierCustomer() ? "已取出码单 " + bill.billNo + "，临时客户只能收银" : "已取出码单 " + bill.billNo + "，请在收银台选择收银或赊欠后下单");
 }
 
@@ -9257,6 +9600,24 @@ function confirmOrderFromCodeBill(){
   pushCompletedOrder(bill);
 
   currentCodeBillItems = [];
+  try{ window.currentCodeBillItems = currentCodeBillItems; }catch(err){}
+  try{ window.checkoutCartSnapshotV115 = []; }catch(err){}
+  try{ window.__cashierCartClearedV116 = true; }catch(err){}
+  try{
+    var sessionRows = Array.isArray(window.cashierBillSessionsStep1) ? window.cashierBillSessionsStep1 : [];
+    if(sessionRows.length){
+      var activeTab = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
+      var activeSessionId = activeTab ? activeTab.getAttribute('data-bill-session') : '';
+      sessionRows.forEach(function(session){
+        if(!session) return;
+        if(!activeSessionId || session.id === activeSessionId || Array.isArray(session.items)){
+          session.items = [];
+          session.__cartClearedV116 = true;
+          session.__completedV116 = true;
+        }
+      });
+    }
+  }catch(err){}
   const paidInput = document.getElementById("cashierPaidAmount");
   if(paidInput) paidInput.value = "";
   if(typeof clearCashierDiscountFields === "function") clearCashierDiscountFields();
@@ -11460,7 +11821,11 @@ function printBuyerV47Bill(){
   if(!buyer) return;
   const w = window.open("", "_blank");
   const content = makeBuyerV47BillText(buyer.id).replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-  w.document.write(`<html><head><title>买家账单</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;padding:24px;white-space:pre-wrap;line-height:1.7}</style></head><body>${content}
+  w.document.write(`<html><head><title>买家账单</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;padding:24px;white-space:pre-wrap;line-height:1.7}</style></head><body>${content}</body></html>`);
+  w.document.close();
+  w.print();
+}
+</script>
 <div id="productBatchPickerMask" class="product-batch-picker-mask">
   <div class="product-batch-picker">
     <div class="product-batch-picker-head">
@@ -11620,6 +11985,9 @@ function printBuyerV47Bill(){
       return null;
     }
   }
+  function sessionClearedV116(session){
+    return !!(session && (session.__cartClearedV116 || session.__completedV116 || session.__cartSavedV116));
+  }
   function listCustomersV116(){
     hydrateCustomersFromStorageV116();
     return Array.isArray(window.cashierCustomers) ? window.cashierCustomers : [];
@@ -11661,21 +12029,116 @@ function printBuyerV47Bill(){
   }
   function currentCartV116(){
     try{ if(Array.isArray(currentCodeBillItems) && currentCodeBillItems.length) return currentCodeBillItems; }catch(err){}
+    var cartCleared = false;
+    try{ cartCleared = !!window.__cashierCartClearedV116; }catch(err){}
     var session = activeSessionV116();
-    if(session && Array.isArray(session.items) && session.items.length) return session.items;
-    if(Array.isArray(window.currentCodeBillItems) && window.currentCodeBillItems.length) return window.currentCodeBillItems;
-    if(Array.isArray(window.checkoutCartSnapshotV115) && window.checkoutCartSnapshotV115.length) return window.checkoutCartSnapshotV115;
+    var stepSession = null;
+    try{ stepSession = typeof activeSession === 'function' ? activeSession() : null; }catch(err){}
+    var sessionStatus = String((session && session.status) || '');
+    var stepStatus = String((stepSession && stepSession.status) || '');
+    var restoring = !!(
+      (session && (session.__restoringFromBillV116 || session.__takenFromBillV116 || sessionStatus === 'restoringFromBill' || sessionStatus === 'taken'))
+      || (stepSession && (stepSession.__restoringFromBillV116 || stepSession.__takenFromBillV116 || stepStatus === 'restoringFromBill' || stepStatus === 'taken'))
+    );
+    var hardCleared = !!(
+      cartCleared
+      || (session && (sessionStatus === 'clearedAfterSave' || sessionStatus === 'clearedAfterSubmit' || sessionStatus === 'completed' || sessionStatus === 'cleared'))
+      || (stepSession && (stepStatus === 'clearedAfterSave' || stepStatus === 'clearedAfterSubmit' || stepStatus === 'completed' || stepStatus === 'cleared'))
+      || sessionClearedV116(session)
+      || sessionClearedV116(stepSession)
+    );
+    var selectedSavedBill = false;
+    try{
+      selectedSavedBill = !!(
+        selectedBillCenterId
+        && Array.isArray(savedCodeBills)
+        && savedCodeBills.some(function(b){ return b && b.billNo === selectedBillCenterId; })
+      );
+    }catch(err){}
+    var baseCartEmpty = true;
+    try{ baseCartEmpty = !Array.isArray(currentCodeBillItems) || !currentCodeBillItems.length; }catch(err){}
+    var stepSessionEmpty = !stepSession || !Array.isArray(stepSession.items) || !stepSession.items.length;
+    var inferredSavedClear = !!(!restoring && baseCartEmpty && selectedSavedBill && stepSessionEmpty);
+    var blockRestore = hardCleared || inferredSavedClear;
+    if(hardCleared && !restoring) return [];
+    if(inferredSavedClear) return [];
+    if(!blockRestore && session && Array.isArray(session.items) && session.items.length) return session.items;
+    if(!blockRestore && Array.isArray(window.currentCodeBillItems) && window.currentCodeBillItems.length) return window.currentCodeBillItems;
+    if(!blockRestore && Array.isArray(window.checkoutCartSnapshotV115) && window.checkoutCartSnapshotV115.length) return window.checkoutCartSnapshotV115;
     return [];
   }
   function cloneRowsV116(rows){
     return (Array.isArray(rows) ? rows : []).map(function(item){ return Object.assign({}, item); });
   }
   function syncCartStateV116(rows){
+    var session = activeSessionV116();
+    var stepSession = null;
+    try{ stepSession = typeof activeSession === 'function' ? activeSession() : null; }catch(err){}
+    var sessionStatus = String((session && session.status) || '');
+    var stepStatus = String((stepSession && stepSession.status) || '');
+    var restoring = !!(
+      (session && (session.__restoringFromBillV116 || session.__takenFromBillV116 || sessionStatus === 'restoringFromBill' || sessionStatus === 'taken'))
+      || (stepSession && (stepSession.__restoringFromBillV116 || stepSession.__takenFromBillV116 || stepStatus === 'restoringFromBill' || stepStatus === 'taken'))
+    );
+    var hardCleared = !!(
+      (session && (sessionStatus === 'clearedAfterSave' || sessionStatus === 'clearedAfterSubmit' || sessionStatus === 'completed' || sessionStatus === 'cleared'))
+      || (stepSession && (stepStatus === 'clearedAfterSave' || stepStatus === 'clearedAfterSubmit' || stepStatus === 'completed' || stepStatus === 'cleared'))
+      || sessionClearedV116(session)
+      || sessionClearedV116(stepSession)
+    );
+    var selectedSavedBill = false;
+    try{
+      selectedSavedBill = !!(
+        selectedBillCenterId
+        && Array.isArray(savedCodeBills)
+        && savedCodeBills.some(function(b){ return b && b.billNo === selectedBillCenterId; })
+      );
+    }catch(err){}
     var live = Array.isArray(rows) ? rows : currentCartV116();
+    if(!Array.isArray(live)) live = [];
+    var stepSessionEmpty = !stepSession || !Array.isArray(stepSession.items) || !stepSession.items.length;
+    var inferredSavedClear = !!(!restoring && !live.length && selectedSavedBill && stepSessionEmpty);
+    if(live.length){
+      hardCleared = false;
+      inferredSavedClear = false;
+    }
+    if((hardCleared || inferredSavedClear) && !restoring){
+      live = [];
+    }
+    try{
+      if(live.length) window.__cashierCartClearedV116 = false;
+      else{
+        window.__cashierCartClearedV116 = true;
+        if(!Array.isArray(rows)) live = [];
+      }
+    }catch(err){}
     try{ currentCodeBillItems = live; }catch(err){}
     try{ window.currentCodeBillItems = live; }catch(err){}
-    var session = activeSessionV116();
-    if(session) session.items = live;
+    try{ if(!live.length) window.checkoutCartSnapshotV115 = []; }catch(err){}
+    if(session){
+      session.items = live;
+      if(live.length){
+        try{
+          delete session.__cartClearedV116;
+          delete session.__completedV116;
+          delete session.__cartSavedV116;
+        }catch(err){}
+      }else{
+        session.__cartClearedV116 = true;
+      }
+    }
+    if(stepSession && stepSession !== session){
+      stepSession.items = live;
+      if(live.length){
+        try{
+          delete stepSession.__cartClearedV116;
+          delete stepSession.__completedV116;
+          delete stepSession.__cartSavedV116;
+        }catch(err){}
+      }else{
+        stepSession.__cartClearedV116 = true;
+      }
+    }
     return live;
   }
   function restoreCartStateV116(){
@@ -11697,7 +12160,7 @@ function printBuyerV47Bill(){
       var selBefore = document.getElementById('cashierCustomer');
       var keepId = window.selectedCashierCustomerIdV116 || (selBefore && selBefore.value) || selectedCustomerIdV116();
       var result = oldRenderCustomersV116.apply(this, arguments);
-      syncCustomerStateV116(keepId);
+      syncCustomerDisplayAfterRenderV120(keepId);
       return result;
     };
     window.renderCashierCustomers.__stateFixV116Wrapped = true;
@@ -11878,7 +12341,7 @@ function printBuyerV47Bill(){
     window.renderCashierCustomers = function(){
       var keepId = selectedIdV117();
       var result = oldRenderCustomersV117.apply(this, arguments);
-      applyIdV117(keepId);
+      syncCustomerDisplayAfterRenderV120(keepId);
       return result;
     };
     window.renderCashierCustomers.__stateGuardV117Wrapped = true;
@@ -11953,11 +12416,7 @@ function printBuyerV47Bill(){
 })();
 </script>
 
-</body></html>`);
-  w.document.close();
-  w.print();
-}
-
+<script>
 function openBuyerV47Payment(orderNo){
   ensureBuyerV47TempCustomer();
   const buyer = (cashierCustomers || []).find(c=>c.id === selectedBuyerV47Id);
@@ -12444,7 +12903,7 @@ function chooseProductBatchForCashier(goodsId, batchId){
       var batchNo = g.batchNo || "未标记批次";
       var batchType = g.batchType || "批次";
       return '' +
-        '<div class="cashier-product-card ' + stockClass + ' ' + (active ? 'active' : '') + '" onclick="addProductToCodeBill(\'' + g.id + '\', \'' + (g.batchId || '') + '\')">' +
+        '<div class="cashier-product-card ' + stockClass + ' ' + (active ? 'active' : '') + '" data-goods-id="' + esc(g.id) + '" data-batch-id="' + esc(g.batchId || '') + '" role="button" tabindex="0">' +
           '<div class="cashier-product-name">' + esc(g.name) + '</div>' +
           '<div class="cashier-card-batch-info">' + esc(batchOwner) + '｜' + esc(batchNo) + '｜' + esc(batchType) + '</div>' +
           '<div class="cashier-product-meta ' + (fixed ? 'fixed' : 'loose') + '">' +
@@ -12453,6 +12912,22 @@ function chooseProductBatchForCashier(goodsId, batchId){
           '<div class="cashier-product-meta">' + stockText + '</div>' +
         '</div>';
     }).join("") || '<div class="order-empty">当前没有可售货品。<br>请先在入库模块把货品加入批次。</div>';
+    Array.prototype.forEach.call(box.querySelectorAll(".cashier-product-card[data-goods-id]"), function(card){
+      if(card.__cashierClickBoundV1) return;
+      card.__cashierClickBoundV1 = true;
+      card.style.cursor = "pointer";
+      card.addEventListener("click", function(){
+        var goodsId = card.getAttribute("data-goods-id") || "";
+        var batchId = card.getAttribute("data-batch-id") || "";
+        if(!goodsId || typeof window.addProductToCodeBill !== "function") return;
+        window.addProductToCodeBill(goodsId, batchId);
+      });
+      card.addEventListener("keydown", function(evt){
+        if(evt.key !== "Enter" && evt.key !== " ") return;
+        evt.preventDefault();
+        card.click();
+      });
+    });
   };
 
   window.selectCashierAllBatches = function(){
@@ -13213,26 +13688,118 @@ function goBackToBatchEditFromOverview(){
       return obj;
     }
   }
+  function buildMinimalRuntimeSeedV57(){
+    var goodsZiJiangId = "seed_goods_zijiang_v1";
+    var goodsCaiXinId = "seed_goods_caixin_v1";
+    var batchId = "seed_batch_001_ziying_v1";
+    var buyerId = "seed_customer_test_buyer_a_v1";
+    var goodsMaster = [
+      {
+        id:goodsZiJiangId,
+        name:"子姜",
+        type:"非",
+        category:"根茎类",
+        pack:"定装",
+        grade:"不分级",
+        spec:10,
+        unit:"件",
+        price:80,
+        fixedPrice:80,
+        oversell:"允许库存超卖",
+        basket:"不押筐"
+      },
+      {
+        id:goodsCaiXinId,
+        name:"菜心",
+        type:"非",
+        category:"叶菜类",
+        pack:"非定装",
+        grade:"不分级",
+        spec:"",
+        unit:"斤",
+        price:6,
+        oversell:"允许库存超卖",
+        basket:"不押筐"
+      }
+    ];
+    var batch = {
+      id:batchId,
+      owner:"自营",
+      no:"001",
+      tag:"自营",
+      type:"自营",
+      fee:0,
+      remark:"最小回测运行态 V1",
+      items:[
+        {
+          id:"seed_batch_item_zijiang_v1",
+          goodsId:goodsZiJiangId,
+          name:"子姜",
+          pack:"定装",
+          spec:10,
+          unit:"件",
+          qty:10,
+          weight:100,
+          price:80,
+          fixedPrice:80,
+          sold:0,
+          soldWeight:0
+        },
+        {
+          id:"seed_batch_item_caixin_v1",
+          goodsId:goodsCaiXinId,
+          name:"菜心",
+          pack:"非定装",
+          spec:"",
+          unit:"斤",
+          qty:20,
+          weight:20,
+          price:6,
+          sold:0,
+          soldWeight:0
+        }
+      ],
+      confirmed:true,
+      inboundConfirmedAt:"2026-05-08 12:00:00"
+    };
+    var customers = [
+      {id:"c1", name:"临时客户", debt:0, payments:[], parentId:"", disabled:false},
+      {id:buyerId, name:"测试买家A", debt:0, payments:[], parentId:"", disabled:false}
+    ];
+    return {
+      goodsMaster:goodsMaster,
+      batches:[batch],
+      owners:["自营"],
+      customers:customers,
+      cashierCustomers:customers,
+      buyerV47List:customers,
+      buyers:customers,
+      activeBatchId:batchId,
+      cashierSelectedBatch:"",
+      cashierSelectedCat:"全部"
+    };
+  }
   function defaultAppStateShapeV57(){
+    var seed = buildMinimalRuntimeSeedV57();
     return {
       stateVersion:1,
-      goodsMaster:[],
-      batches:[],
-      owners:[],
-      customers:[],
-      cashierCustomers:[],
+      goodsMaster:safeClone(seed.goodsMaster || []),
+      batches:safeClone(seed.batches || []),
+      owners:safeClone(seed.owners || []),
+      customers:safeClone(seed.customers || []),
+      cashierCustomers:safeClone(seed.cashierCustomers || []),
       orders:[],
       codeBills:[],
       savedCodeBills:[],
       finalOrders:[],
       buyerV47Orders:[],
       buyerV47Repayments:[],
-      buyerV47List:[],
-      buyers:[],
+      buyerV47List:safeClone(seed.buyerV47List || []),
+      buyers:safeClone(seed.buyers || []),
       repayments:[],
-      activeBatchId:"",
-      cashierSelectedBatch:"",
-      cashierSelectedCat:"",
+      activeBatchId:seed.activeBatchId || "",
+      cashierSelectedBatch:seed.cashierSelectedBatch || "",
+      cashierSelectedCat:seed.cashierSelectedCat || "全部",
       localSettings:{},
       storageMode:"local",
       storageModeLabel:LOCAL_ONLY_STATUS,
@@ -13421,11 +13988,24 @@ function goBackToBatchEditFromOverview(){
     }
   }
 
+  function hasMinimalRuntimeDataV57(data){
+    data = data && typeof data === "object" ? data : {};
+    return Array.isArray(data.goodsMaster) && data.goodsMaster.length >= 2 &&
+      Array.isArray(data.batches) && data.batches.length >= 1 &&
+      Array.isArray(data.cashierCustomers) && data.cashierCustomers.length >= 2;
+  }
   function loadTudou2DataV57(){
     try{
       var raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
-      if(!raw) return false;
-      var data = normalizeAppStateV57(JSON.parse(raw));
+      var data = null;
+      if(raw){
+        data = normalizeAppStateV57(JSON.parse(raw));
+      }else{
+        data = defaultAppStateShapeV57();
+      }
+      if(!hasMinimalRuntimeDataV57(data)){
+        data = defaultAppStateShapeV57();
+      }
       applyTudou2DataV57(data);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(data));
@@ -33828,6 +34408,24 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     if(typeof savedCodeBills !== "undefined" && Array.isArray(savedCodeBills)) savedCodeBills.unshift(bill);
     if(typeof selectedBillCenterId !== "undefined") selectedBillCenterId = bill.billNo;
     currentCodeBillItems = [];
+    try{ window.currentCodeBillItems = currentCodeBillItems; }catch(err){}
+    try{ window.checkoutCartSnapshotV115 = []; }catch(err){}
+    try{ window.__cashierCartClearedV116 = true; }catch(err){}
+    try{
+      var sessionRowsV107 = Array.isArray(window.cashierBillSessionsStep1) ? window.cashierBillSessionsStep1 : [];
+      if(sessionRowsV107.length){
+        var activeTabV107 = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
+        var activeSessionIdV107 = activeTabV107 ? activeTabV107.getAttribute('data-bill-session') : '';
+        sessionRowsV107.forEach(function(session){
+          if(!session) return;
+          if(!activeSessionIdV107 || session.id === activeSessionIdV107 || Array.isArray(session.items)){
+            session.items = [];
+            session.__cartClearedV116 = true;
+            session.__completedV116 = true;
+          }
+        });
+      }
+    }catch(err){}
     var paidInput = document.getElementById("cashierPaidAmount");
     if(paidInput) paidInput.value = "";
     try{ if(typeof window.clearCashierDiscountFields === "function") window.clearCashierDiscountFields(); }catch(err){}
@@ -34990,7 +35588,15 @@ body.show-cashier #cashierRoot *,
     window.cashierCustomers = rows;
     return rows;
   }
-  function syncPickerCustomerLabelV115(){
+  function syncCustomerDisplayAfterRenderV120(id){
+    try{
+      var sel = document.getElementById('cashierCustomer');
+      var keepId = String(id || '');
+      if(sel && keepId){
+        var hasOption = Array.from(sel.options || []).some(function(opt){ return opt.value === keepId; });
+        if(hasOption) sel.value = keepId;
+      }
+    }catch(err){}
     try{
       if(typeof window.renderCashierBuyerTreeV82 === 'function') window.renderCashierBuyerTreeV82();
     }catch(err){}
@@ -34999,6 +35605,9 @@ body.show-cashier #cashierRoot *,
         if(typeof window.renderModalV107 === 'function') window.renderModalV107();
       }
     }catch(err){}
+  }
+  function syncPickerCustomerLabelV115(){
+    syncCustomerDisplayAfterRenderV120();
   }
   var oldRenderCustomersV115 = typeof window.renderCashierCustomers === 'function' ? window.renderCashierCustomers : null;
   if(oldRenderCustomersV115 && !oldRenderCustomersV115.__customerFixV115Wrapped){
