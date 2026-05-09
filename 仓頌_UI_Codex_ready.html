@@ -1488,7 +1488,7 @@ body.show-inbound #cashierRoot{display:none!important}
   gap:10px;
   margin-top:10px;
 }
-.codebill-btn,.checkout-btn{
+.codebill-btn,.checkout-btn,.order-clear-btn,.order-bill-center-btn{
   height:46px;
   border:0;
   border-radius:12px;
@@ -1499,8 +1499,14 @@ body.show-inbound #cashierRoot{display:none!important}
 }
 .codebill-btn{background:#d86b1f}
 .checkout-btn{background:#2f8e40}
+.order-bill-center-btn{background:#4a6f9d}
+.order-clear-btn{
+  background:#6f7a71;
+}
 .codebill-btn:hover{background:#bd5c18}
 .checkout-btn:hover{background:#257334}
+.order-bill-center-btn:hover{background:#3d5d85}
+.order-clear-btn:hover{background:#586259}
 
 .codebill-modal-mask{
   position:fixed;
@@ -4731,7 +4737,6 @@ body.merchant-entry-locked-v1 #customerPanel{display:none!important;}
             <option value="定装">只看定装</option>
             <option value="非定装">只看非定装</option>
           </select>
-          <button class="bill-center-btn" onclick="openBillCenter()">码单中心</button>
         </div>
       </header>
 
@@ -4746,7 +4751,6 @@ body.merchant-entry-locked-v1 #customerPanel{display:none!important;}
         <div class="order-customer-row">
           <select id="cashierCustomer" onchange="handleCustomerOrPayChange()"></select>
           <button onclick="addCashierCustomer()">新增买家</button>
-          <button onclick="openBillCenter()">码单中心</button>
         </div>
         <div class="order-tabs">
           <button class="order-tab active">临时客户1</button>
@@ -4800,7 +4804,9 @@ body.merchant-entry-locked-v1 #customerPanel{display:none!important;}
         </div>
 
         <div class="order-actions">
+          <button class="order-bill-center-btn" onclick="openBillCenter()">码单中心</button>
           <button class="codebill-btn" onclick="openCodeBillModal()">开码单</button>
+          <button class="order-clear-btn" onclick="clearCurrentCheckoutDesk()">清空下单台</button>
           <button class="checkout-btn" onclick="confirmOrderFromCodeBill()">下单</button>
         </div>
       </div>
@@ -5832,6 +5838,10 @@ function showAppPage(page){
 }
 
 function activeCashierCustomer(){
+  const chosen = window.currentBuyer || window.selectedBuyer || null;
+  if(chosen && chosen.id){
+    return cashierCustomers.find(c=>c.id === chosen.id) || chosen;
+  }
   const id = document.getElementById("cashierCustomer")?.value;
   return cashierCustomers.find(c=>c.id === id) || cashierCustomers[0];
 }
@@ -6083,6 +6093,36 @@ function lineAmount(item){
   return Number(item.weight || 0) * Number(item.price || 0);
 }
 
+const cashierPaymentLabelsV121 = {
+  cash:"现金",
+  wechat:"微信",
+  alipay:"支付宝",
+  bank:"银行卡",
+  debt:"赊欠"
+};
+
+function normalizeCashierPaymentMethodV121(method){
+  const key = String(method || "").trim().toLowerCase();
+  return cashierPaymentLabelsV121[key] ? key : "cash";
+}
+
+function setCurrentPaymentMethodV121(method){
+  const next = normalizeCashierPaymentMethodV121(method);
+  window.currentPaymentMethod = next;
+  const pay = document.getElementById("cashierPayMode");
+  if(pay){
+    pay.value = next === "debt" ? "debt" : "cash";
+  }
+  return next;
+}
+
+function currentPaymentMethodV121(){
+  return normalizeCashierPaymentMethodV121(window.currentPaymentMethod || "cash");
+}
+
+window.setCurrentPaymentMethodV121 = setCurrentPaymentMethodV121;
+window.currentPaymentMethod = currentPaymentMethodV121();
+
 function updateCodeBillItem(itemId, field, value){
   const item = currentCodeBillItems.find(i=>i.id === itemId);
   if(!item) return;
@@ -6118,6 +6158,36 @@ function clearCashierDiscountFields(){
   if(discountNote) discountNote.value = "";
 }
 
+function clearCurrentCheckoutDesk(){
+  const stepSession = typeof activeSession === "function" ? activeSession() : null;
+  const v116Session = typeof activeSessionV116 === "function" ? activeSessionV116() : null;
+  function clearSession(session){
+    if(!session) return;
+    session.items = [];
+    session.status = "cleared";
+    session.__cartClearedV116 = true;
+    delete session.__completedV116;
+    delete session.__cartSavedV116;
+    delete session.__restoringFromBillV116;
+    delete session.__takenFromBillV116;
+    delete session.sourceBillId;
+  }
+  currentCodeBillItems = [];
+  try{ window.currentCodeBillItems = []; }catch(err){}
+  try{ window.checkoutCartSnapshotV115 = []; }catch(err){}
+  try{ window.__cashierCartClearedV116 = true; }catch(err){}
+  clearSession(stepSession);
+  if(v116Session && v116Session !== stepSession) clearSession(v116Session);
+  const paidInput = document.getElementById("cashierPaidAmount");
+  if(paidInput) paidInput.value = "";
+  clearCashierDiscountFields();
+  setCurrentPaymentMethodV121("cash");
+  if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill();
+  if(typeof renderCashierProducts === "function") renderCashierProducts();
+  if(typeof renderCashierCustomerTabsStep1 === "function") renderCashierCustomerTabsStep1();
+  if(typeof toast === "function") toast("当前下单台已清空");
+}
+
 function isTemporaryCashierCustomer(){
   const c = activeCashierCustomer();
   return !c || c.id === "c1" || c.name === "临时客户" || String(c.name || "").startsWith("临时客户");
@@ -6125,6 +6195,10 @@ function isTemporaryCashierCustomer(){
 
 function handleCustomerOrPayChange(){
   enforceTemporaryCustomerRule();
+  const pay = document.getElementById("cashierPayMode");
+  if(pay){
+    setCurrentPaymentMethodV121(pay.value === "debt" ? "debt" : currentPaymentMethodV121());
+  }
   renderCurrentCodeBill();
 }
 
@@ -6241,6 +6315,15 @@ function renderCurrentCodeBill(){
   document.getElementById("orderTotalAmount").textContent = money(t.totalAmount);
 }
 
+function orderPaymentLabelV121(order){
+  const method = normalizeCashierPaymentMethodV121(order && (order.paymentMethod || order.paymentMethodLabel || order.payment || order.payMethod));
+  if(order && order.paymentMethodLabel) return order.paymentMethodLabel;
+  if(order && order.paymentLabel) return order.paymentLabel;
+  if(method === "debt") return "赊欠";
+  if(Number(order && (order.debtAmount || order.debt || 0)) > 0 && !order?.paymentMethod) return "赊欠";
+  return cashierPaymentLabelsV121[method] || "现金";
+}
+
 function makeShortCodeBillNo(){
   const no = String(shortCodeBillCounter).padStart(4, "0");
   shortCodeBillCounter += 1;
@@ -6284,6 +6367,7 @@ function buildCodeBill(rowsForBill){
     if(pay) pay.value = "cash";
   }
   const discountNote = document.getElementById("cashierDiscountNote")?.value || "";
+  const paymentMethod = currentPaymentMethodV121();
   const totals = {totalQty,totalWeight,totalAmount,originalAmount,discount,discountNote,paid,debt};
   const time = new Date().toLocaleString("zh-CN",{hour12:false});
   const billNo = makeShortCodeBillNo();
@@ -7322,6 +7406,7 @@ function buildCodeBill(rowsForBill){
     if(pay) pay.value = "cash";
   }
   const discountNote = document.getElementById("cashierDiscountNote")?.value || "";
+  const paymentMethod = currentPaymentMethodV121();
   const totals = {totalQty,totalWeight,totalAmount,originalAmount,discount,discountNote,paid,debt};
   const time = new Date().toLocaleString("zh-CN",{hour12:false});
   const billNo = makeShortCodeBillNo();
@@ -8362,6 +8447,7 @@ function buildCodeBill(rowsForBill){
     if(pay) pay.value = "cash";
   }
   const discountNote = document.getElementById("cashierDiscountNote")?.value || "";
+  const paymentMethod = currentPaymentMethodV121();
   const totals = {totalQty,totalWeight,totalAmount,originalAmount,discount,discountNote,paid,debt};
   const time = new Date().toLocaleString("zh-CN",{hour12:false});
   const billNo = makeShortCodeBillNo();
@@ -8393,7 +8479,20 @@ function buildCodeBill(rowsForBill){
     "实收：" + money(totals.paid),
     "欠款：" + money(totals.debt)
   ].join("\n");
-  return {billNo, codeBillId:billNo, customerName:customer.name, customerId:customer.id, time, createdAt:time, lines, ...totals, text, status:"saved"};
+  return {
+    billNo,
+    codeBillId:billNo,
+    customerName:customer.name,
+    customerId:customer.id,
+    time,
+    createdAt:time,
+    lines,
+    paymentMethod,
+    paymentMethodLabel:cashierPaymentLabelsV121[paymentMethod] || "现金",
+    ...totals,
+    text,
+    status:"saved"
+  };
 }
 
 function openCodeBillModal(){
@@ -9468,13 +9567,14 @@ function renderOrdersCenter(){
   }
 
   list.innerHTML = records.map(r=>{
+    const paymentLabel = orderPaymentLabelV121(r);
     const cls = r.displayStatus === "已作废" ? "status-void" : (r.displayStatus === "已赊欠" ? "status-debt" : "status-cash");
     return `
       <div class="order-card ${r.centerId===selectedOrderCenterId?'active':''}" onclick="selectOrderRecord('${r.centerId}')">
         <b>${esc("订单 " + (r.orderNo || r.billNo))}</b>
         <span>客户：${esc(r.customerName || "")}</span>
         <span>时间：${esc(r.time || "")}</span>
-        <span>${(r.lines||[]).length}种｜${r.totalWeight || 0}斤｜${money(r.totalAmount || 0)}</span>
+        <span>${(r.lines||[]).length}种｜${r.totalWeight || 0}斤｜${money(r.totalAmount || 0)}｜${esc(paymentLabel)}</span>
         <em class="order-status ${cls}">${esc(r.displayStatus)}</em>
       </div>
     `;
@@ -9494,6 +9594,7 @@ function renderOrderDetail(order){
 
   const title = document.getElementById("ordersDetailTitle");
   const sub = document.getElementById("ordersDetailSub");
+  const paymentLabel = orderPaymentLabelV121(order);
   if(title) title.textContent = "订单 " + (order.orderNo || order.billNo);
   if(sub) sub.textContent = `${order.customerName || ""}｜${order.time || ""}｜${order.displayStatus || ""}`;
 
@@ -9504,6 +9605,7 @@ function renderOrderDetail(order){
       <div class="order-info-card"><span>单号</span><b>${esc(order.orderNo || order.billNo || "")}</b></div>
       <div class="order-info-card"><span>客户</span><b>${esc(order.customerName || "")}</b></div>
       <div class="order-info-card"><span>状态</span><b>${esc(order.displayStatus || "")}</b></div>
+      <div class="order-info-card"><span>支付方式</span><b>${esc(paymentLabel)}</b></div>
       <div class="order-info-card"><span>总重量</span><b>${order.totalWeight || 0}斤</b></div>
       <div class="order-info-card"><span>金额</span><b>${money(order.totalAmount || 0)}</b></div>
     </div>
@@ -11723,6 +11825,10 @@ function useBuyerV47ForCashier(){
   if(typeof renderCashierCustomers === "function") renderCashierCustomers();
   const sel = document.getElementById("cashierCustomer");
   if(sel) sel.value = buyer.id;
+  try{ window.selectedCashierCustomerIdV116 = buyer.id; }catch(err){}
+  try{ if(typeof window.syncCustomerStateV116 === "function") window.syncCustomerStateV116(buyer.id); }catch(err){}
+  try{ window.currentBuyer = buyer; window.selectedBuyer = buyer; }catch(err){}
+  try{ if(typeof handleCustomerOrPayChange === "function") handleCustomerOrPayChange(); }catch(err){}
   closeBuyerManagerV47();
   if(typeof showAppPage === "function") showAppPage("cashier");
   toast("已设为当前收银买家：" + buyer.name);
@@ -11999,9 +12105,9 @@ function printBuyerV47Bill(){
     var sel = document.getElementById('cashierCustomer');
     var session = activeSessionV116();
     return String(
-      (window.selectedCashierCustomerIdV116)
-      || (sel && sel.value)
+      (sel && sel.value)
       || (session && session.customerId)
+      || (window.selectedCashierCustomerIdV116)
       || (tempCustomerV116().id || 'c1')
     );
   }
@@ -12010,6 +12116,7 @@ function printBuyerV47Bill(){
     var nextId = String(id || selectedCustomerIdV116() || 'c1');
     var buyer = customerByIdV116(nextId) || tempCustomerV116();
     window.selectedCashierCustomerIdV116 = buyer.id || nextId || 'c1';
+    try{ window.currentBuyer = buyer; window.selectedBuyer = buyer; }catch(err){}
     var session = activeSessionV116();
     if(session){
       session.customerId = window.selectedCashierCustomerIdV116;
@@ -12298,12 +12405,17 @@ function printBuyerV47Bill(){
   }
   function selectedIdV117(){
     var sel = document.getElementById('cashierCustomer');
-    return String(window.selectedCashierCustomerIdV116 || (sel && sel.value) || 'c1');
+    var sessions = Array.isArray(window.cashierBillSessionsStep1) ? window.cashierBillSessionsStep1 : [];
+    var activeBtn = document.querySelector('#cashierRoot .order-tab.active[data-bill-session]');
+    var sid = activeBtn ? activeBtn.getAttribute('data-bill-session') : '';
+    var session = sessions.find(function(item){ return item && item.id === sid; }) || sessions[0];
+    return String((sel && sel.value) || (session && session.customerId) || window.selectedCashierCustomerIdV116 || 'c1');
   }
   function applyIdV117(id){
     var next = String(id || selectedIdV117() || 'c1');
     var buyer = byIdV117(next) || tempV117();
     window.selectedCashierCustomerIdV116 = buyer.id || 'c1';
+    try{ window.currentBuyer = buyer; window.selectedBuyer = buyer; }catch(err){}
     try{ localStorage.setItem('CANGJIE_SELECTED_CUSTOMER_V116', window.selectedCashierCustomerIdV116); }catch(err){}
     var sel = document.getElementById('cashierCustomer');
     if(sel){
@@ -12323,6 +12435,10 @@ function printBuyerV47Bill(){
     return buyer;
   }
   window.activeCashierCustomer = function(){
+    var chosen = window.currentBuyer || window.selectedBuyer || null;
+    if(chosen && chosen.id){
+      return applyIdV117(chosen.id);
+    }
     return applyIdV117();
   };
   var oldHandleV117 = typeof window.handleCustomerOrPayChange === 'function' ? window.handleCustomerOrPayChange : null;
@@ -16127,22 +16243,69 @@ body.show-inbound #inboundRoot button{
       listCustomers().push(c);
     }
     closeCashierAddBuyerStep1();
+    try{ selectedBuyerV47Id = c.id; }catch(err){}
+    try{ window.selectedCashierCustomerIdV116 = c.id; }catch(err){}
+    try{ localStorage.setItem('CANGJIE_SELECTED_CUSTOMER_V116', c.id); }catch(err){}
     var session = typeof activeSession === "function" ? activeSession() : null;
     if(session){
       session.customerId = c.id;
       session.name = c.name;
       if(!Array.isArray(session.items)) session.items = Array.isArray(currentCodeBillItems) ? currentCodeBillItems : [];
     }
+    try{
+      var liveSession = typeof activeSessionV116 === "function" ? activeSessionV116() : null;
+      if(liveSession){
+        liveSession.customerId = c.id;
+        liveSession.name = c.name;
+      }
+    }catch(err){}
     renderCashierCustomers();
     var sel = document.getElementById("cashierCustomer");
-    if(sel) sel.value = c.id;
-    try{ window.selectedCashierCustomerIdV116 = c.id; }catch(err){}
-    try{ localStorage.setItem('CANGJIE_SELECTED_CUSTOMER_V116', c.id); }catch(err){}
+    if(sel){
+      try{
+        Array.from(sel.options || []).forEach(function(opt){ opt.selected = opt.value === c.id; });
+      }catch(err){}
+      try{
+        var targetIndex = Array.from(sel.options || []).findIndex(function(opt){ return opt.value === c.id; });
+        if(targetIndex >= 0) sel.selectedIndex = targetIndex;
+      }catch(err){}
+      sel.value = c.id;
+      try{ sel.dispatchEvent(new Event("input", {bubbles:true})); }catch(err){}
+      try{ sel.dispatchEvent(new Event("change", {bubbles:true})); }catch(err){}
+    }
+    try{
+      if(typeof window.pickCashierBuyerDirectV82 === "function"){
+        window.pickCashierBuyerDirectV82(c.id);
+      }else if(typeof window.selectCashierBuyerTreeV82 === "function"){
+        window.selectCashierBuyerTreeV82(c.id);
+      }
+    }catch(err){}
     try{ if(typeof handleCustomerOrPayChange === "function") handleCustomerOrPayChange(); }
     catch(err){ if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill(); }
     try{ if(typeof syncCustomerStateV116 === 'function') syncCustomerStateV116(c.id); }catch(err){}
+    try{ window.currentBuyer = c; window.selectedBuyer = c; }catch(err){}
     if(typeof renderBuyerV47 === "function") renderBuyerV47();
     if(typeof tudou2SaveNow === "function") setTimeout(tudou2SaveNow, 0);
+    setTimeout(function(){
+      try{ selectedBuyerV47Id = c.id; }catch(err){}
+      try{ window.selectedCashierCustomerIdV116 = c.id; }catch(err){}
+      try{ localStorage.setItem('CANGJIE_SELECTED_CUSTOMER_V116', c.id); }catch(err){}
+      try{
+        var liveSel = document.getElementById("cashierCustomer");
+        if(liveSel){
+          Array.from(liveSel.options || []).forEach(function(opt){ opt.selected = opt.value === c.id; });
+          var liveIndex = Array.from(liveSel.options || []).findIndex(function(opt){ return opt.value === c.id; });
+          if(liveIndex >= 0) liveSel.selectedIndex = liveIndex;
+          liveSel.value = c.id;
+          try{ liveSel.dispatchEvent(new Event("input", {bubbles:true})); }catch(err){}
+          try{ liveSel.dispatchEvent(new Event("change", {bubbles:true})); }catch(err){}
+        }
+      }catch(err){}
+      try{ if(typeof window.syncCustomerStateV116 === "function") window.syncCustomerStateV116(c.id); }catch(err){}
+      try{ if(typeof handleCustomerOrPayChange === "function") handleCustomerOrPayChange(); }catch(err){}
+      try{ window.currentBuyer = c; window.selectedBuyer = c; }catch(err){}
+      try{ if(typeof window.renderCashierBuyerTreeV82 === "function") window.renderCashierBuyerTreeV82(); }catch(err){}
+    }, 0);
     if(typeof toast === "function") toast(existed ? "已切换买家，当前商品已保留" : "买家已新增，当前商品已保留");
   };
 
@@ -17424,11 +17587,36 @@ body.show-inbound #inboundRoot button{
         var c = {id:"c" + Date.now(), name:clean, debt:0, payments:[], parentId:"", disabled:false};
         buyers().push(c);
         if(typeof closeCashierAddBuyerStep1 === "function") closeCashierAddBuyerStep1();
+        try{ selectedBuyerV47Id = c.id; }catch(err){}
+        try{ window.selectedCashierCustomerIdV116 = c.id; }catch(err){}
+        try{ localStorage.setItem('CANGJIE_SELECTED_CUSTOMER_V116', c.id); }catch(err){}
+        try{ window.currentBuyer = c; window.selectedBuyer = c; }catch(err){}
         if(typeof renderCashierCustomers === "function") renderCashierCustomers();
         if(typeof addCashierBillSessionStep1 === "function") addCashierBillSessionStep1(c.id, c.name);
         var sel = document.getElementById("cashierCustomer");
-        if(sel) sel.value = c.id;
+        if(sel){
+          try{
+            Array.from(sel.options || []).forEach(function(opt){ opt.selected = opt.value === c.id; });
+            var targetIndex = Array.from(sel.options || []).findIndex(function(opt){ return opt.value === c.id; });
+            if(targetIndex >= 0) sel.selectedIndex = targetIndex;
+          }catch(err){}
+          sel.value = c.id;
+          try{ sel.dispatchEvent(new Event("input", {bubbles:true})); }catch(err){}
+          try{ sel.dispatchEvent(new Event("change", {bubbles:true})); }catch(err){}
+        }
+        try{ if(typeof syncCustomerStateV116 === "function") syncCustomerStateV116(c.id); }catch(err){}
+        try{
+          if(typeof window.pickCashierBuyerDirectV82 === "function") window.pickCashierBuyerDirectV82(c.id);
+          else if(typeof window.selectCashierBuyerTreeV82 === "function") window.selectCashierBuyerTreeV82(c.id);
+        }catch(err){}
+        try{ if(typeof handleCustomerOrPayChange === "function") handleCustomerOrPayChange(); }catch(err){}
         refreshAll();
+        setTimeout(function(){
+          try{ window.selectedCashierCustomerIdV116 = c.id; }catch(err){}
+          try{ if(typeof syncCustomerStateV116 === "function") syncCustomerStateV116(c.id); }catch(err){}
+          try{ window.currentBuyer = c; window.selectedBuyer = c; }catch(err){}
+          try{ if(typeof window.renderCashierBuyerTreeV82 === "function") window.renderCashierBuyerTreeV82(); }catch(err){}
+        }, 0);
         if(typeof toast === "function") toast("买家已新增，并已开码单");
         return;
       }
@@ -18142,13 +18330,18 @@ body.show-inbound #inboundRoot button{
       var salesTotal = summaryRows.reduce(function(s,r){ return s + nReportStep1(r.salesAmount); }, 0);
       var paidTotal = summaryRows.reduce(function(s,r){ return s + nReportStep1(r.paidAmount); }, 0);
       var debtTotal = summaryRows.reduce(function(s,r){ return s + nReportStep1(r.debtAmount); }, 0);
+      var cashTotal = summaryRows.reduce(function(s,r){ return s + nReportStep1(r.cashAmount); }, 0);
+      var wechatTotal = summaryRows.reduce(function(s,r){ return s + nReportStep1(r.wechatAmount); }, 0);
+      var alipayTotal = summaryRows.reduce(function(s,r){ return s + nReportStep1(r.alipayAmount); }, 0);
+      var bankTotal = summaryRows.reduce(function(s,r){ return s + nReportStep1(r.bankAmount); }, 0);
+      var debtMethodTotal = summaryRows.reduce(function(s,r){ return s + nReportStep1(r.debtMethodAmount); }, 0);
       var summary = document.getElementById("reportsStep1Summary");
       var table = document.getElementById("reportsStep1Table");
       var title = document.getElementById("reportsStep1TableTitle");
       title.textContent = "员工销售汇总";
-      summary.innerHTML = '<div class="reports-step1-card"><span>员工数</span><b>'+summaryRows.length+'</b></div><div class="reports-step1-card"><span>销售金额</span><b>'+mReportStep1(salesTotal)+'</b></div><div class="reports-step1-card"><span>收款金额</span><b>'+mReportStep1(paidTotal)+'</b></div><div class="reports-step1-card"><span>欠款金额</span><b>'+mReportStep1(debtTotal)+'</b></div>';
-      table.innerHTML = summaryRows.length ? '<div class="reports-step1-table-wrap"><table class="reports-step1-table"><thead><tr><th>员工姓名</th><th>手机号</th><th>订单数量</th><th>销售金额</th><th>收款金额</th><th>欠款金额</th></tr></thead><tbody>' + summaryRows.map(function(r){
-        return '<tr><td>'+eReportStep1(r.employee_name)+'</td><td>'+eReportStep1(r.phone || "-")+'</td><td>'+nReportStep1(r.orderCount)+'</td><td>'+mReportStep1(r.salesAmount)+'</td><td>'+mReportStep1(r.paidAmount)+'</td><td>'+mReportStep1(r.debtAmount)+'</td></tr>';
+      summary.innerHTML = '<div class="reports-step1-card"><span>员工数</span><b>'+summaryRows.length+'</b></div><div class="reports-step1-card"><span>销售金额</span><b>'+mReportStep1(salesTotal)+'</b></div><div class="reports-step1-card"><span>收款金额</span><b>'+mReportStep1(paidTotal)+'</b></div><div class="reports-step1-card"><span>欠款金额</span><b>'+mReportStep1(debtTotal)+'</b></div><div class="reports-step1-card"><span>现金收入</span><b>'+mReportStep1(cashTotal)+'</b></div><div class="reports-step1-card"><span>微信收入</span><b>'+mReportStep1(wechatTotal)+'</b></div><div class="reports-step1-card"><span>支付宝收入</span><b>'+mReportStep1(alipayTotal)+'</b></div><div class="reports-step1-card"><span>银行卡收入</span><b>'+mReportStep1(bankTotal)+'</b></div><div class="reports-step1-card"><span>赊欠金额</span><b>'+mReportStep1(debtMethodTotal)+'</b></div>';
+      table.innerHTML = summaryRows.length ? '<div class="reports-step1-table-wrap"><table class="reports-step1-table"><thead><tr><th>员工姓名</th><th>手机号</th><th>订单数量</th><th>销售金额</th><th>收款金额</th><th>现金</th><th>微信</th><th>支付宝</th><th>银行卡</th><th>赊欠</th><th>欠款金额</th></tr></thead><tbody>' + summaryRows.map(function(r){
+        return '<tr><td>'+eReportStep1(r.employee_name)+'</td><td>'+eReportStep1(r.phone || "-")+'</td><td>'+nReportStep1(r.orderCount)+'</td><td>'+mReportStep1(r.salesAmount)+'</td><td>'+mReportStep1(r.paidAmount)+'</td><td>'+mReportStep1(r.cashAmount)+'</td><td>'+mReportStep1(r.wechatAmount)+'</td><td>'+mReportStep1(r.alipayAmount)+'</td><td>'+mReportStep1(r.bankAmount)+'</td><td>'+mReportStep1(r.debtMethodAmount)+'</td><td>'+mReportStep1(r.debtAmount)+'</td></tr>';
       }).join("") + '</tbody></table></div>' : '<div class="reports-step1-empty">当前日期内暂无员工销售记录。</div>';
       return;
     }
@@ -20694,7 +20887,13 @@ body.buyers-mode-step1 #buyerManagerV47 .buyer-v47-right{
     if(typeof renderCashierCustomers === "function") renderCashierCustomers();
     var sel = document.getElementById("cashierCustomer");
     if(sel) sel.value = c.id;
-    if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill();
+    try{ selectedBuyerV47Id = c.id; }catch(err){}
+    try{ window.selectedCashierCustomerIdV116 = c.id; }catch(err){}
+    try{ if(typeof window.syncCustomerStateV116 === "function") window.syncCustomerStateV116(c.id); }catch(err){}
+    try{ window.currentBuyer = c; window.selectedBuyer = c; }catch(err){}
+    if(typeof handleCustomerOrPayChange === "function") handleCustomerOrPayChange();
+    else if(typeof renderCurrentCodeBill === "function") renderCurrentCodeBill();
+    try{ if(typeof renderBuyerV47 === "function") renderBuyerV47(); }catch(err){}
     saveV59();
     if(typeof toast === "function") toast(existed ? "买家已存在，已选中" : "买家已新增");
   };
@@ -29225,7 +29424,7 @@ body.show-profile-v92 #inventoryView{
     function ensure(id, name, phone){
       id = id || "owner";
       if(!map[id]){
-        map[id] = {employee_id:id, employee_name:name || (id === "owner" ? "主账号" : "未命名员工"), phone:phone || "", orderCount:0, salesAmount:0, paidAmount:0, debtAmount:0};
+        map[id] = {employee_id:id, employee_name:name || (id === "owner" ? "主账号" : "未命名员工"), phone:phone || "", orderCount:0, salesAmount:0, paidAmount:0, debtAmount:0, cashAmount:0, wechatAmount:0, alipayAmount:0, bankAmount:0, debtMethodAmount:0};
       }
       if(name && map[id].employee_name === "未命名员工") map[id].employee_name = name;
       if(phone && !map[id].phone) map[id].phone = phone;
@@ -29246,10 +29445,16 @@ body.show-profile-v92 #inventoryView{
       var total = n(order.totalAmount || order.total || order.amount);
       var paid = n(order.paidAmount || order.paid || (String(order.status || order.displayStatus || "").includes("收银") ? total : 0));
       var debt = n(order.debtAmount || order.debt || Math.max(total - paid, 0));
+      var method = String(order.paymentMethod || order.payment || "").toLowerCase();
       row.orderCount += 1;
       row.salesAmount += total;
       row.paidAmount += paid;
       row.debtAmount += debt;
+      row.debtMethodAmount += debt;
+      if(method === "wechat") row.wechatAmount += paid;
+      else if(method === "alipay") row.alipayAmount += paid;
+      else if(method === "bank") row.bankAmount += paid;
+      else row.cashAmount += paid;
     });
     return Object.keys(map).map(function(key){ return map[key]; });
   };
@@ -32761,10 +32966,7 @@ body.show-profile-v92 #inventoryView{
     padding:10px!important;
   }
   #cashierRoot .order-customer-row{
-    grid-template-columns:minmax(0,1fr) auto!important;
-  }
-  #cashierRoot .order-customer-row button:last-child{
-    display:none!important;
+    grid-template-columns:minmax(0,1fr) auto auto!important;
   }
   #cashierRoot .order-customer-row select,
   #cashierRoot .order-customer-row button,
@@ -32772,6 +32974,13 @@ body.show-profile-v92 #inventoryView{
   #cashierRoot .pay-box input{
     height:42px!important;
     font-size:15px!important;
+  }
+  #cashierRoot .order-customer-row .cashier-bill-center-keep{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    min-width:92px!important;
+    white-space:nowrap!important;
   }
   #cashierRoot .order-table-head,
   #cashierRoot .order-item{
@@ -34022,6 +34231,7 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     remark:"",
     lastDue:0
   };
+  if(!window.currentPaymentMethod) window.currentPaymentMethod = "cash";
   var finalizeOrderV107 = typeof window.confirmOrderFromCodeBill === "function"
     ? window.confirmOrderFromCodeBill
     : null;
@@ -34042,6 +34252,12 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
       .replace(/&/g,"&amp;")
       .replace(/</g,"&lt;")
       .replace(/>/g,"&gt;");
+  }
+  function syncCurrentPaymentMethodV107(method){
+    var next = String(method || "cash");
+    if(typeof window.setCurrentPaymentMethodV121 === "function") return window.setCurrentPaymentMethodV121(next);
+    window.currentPaymentMethod = next;
+    return next;
   }
   function cloneCheckoutRowsV115(rows){
     return (Array.isArray(rows) ? rows : []).map(function(item){ return Object.assign({}, item); });
@@ -34247,13 +34463,14 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     document.getElementById("checkoutDebtHintV107").textContent = payload.debt > 0 ? ("当前仍有未收金额：¥" + moneyText(payload.debt)) : "当前实收金额将按确认内容保存到订单";
     renderPaymentMethods(payload.payment);
   }
+  window.renderModalV107 = renderModalV107;
   function loadDraftFromLegacy(){
     var original = currentOriginalAmount();
     var discount = Math.max(num(document.getElementById("cashierDiscountAmount") && document.getElementById("cashierDiscountAmount").value), 0);
     if(discount > original) discount = original;
     var paidRaw = document.getElementById("cashierPaidAmount") ? document.getElementById("cashierPaidAmount").value : "";
     checkoutDraft.discount = discount;
-    checkoutDraft.payment = checkoutDraft.payment || "cash";
+    checkoutDraft.payment = syncCurrentPaymentMethodV107(window.currentPaymentMethod || checkoutDraft.payment || "cash");
     checkoutDraft.paidTouched = !!String(paidRaw || "").trim();
     checkoutDraft.paid = checkoutDraft.paidTouched ? num(paidRaw) : Math.max(original - discount, 0);
     checkoutDraft.remark = (document.getElementById("cashierOrderRemarkStep1") && document.getElementById("cashierOrderRemarkStep1").value) || checkoutDraft.remark || "";
@@ -34290,6 +34507,7 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
       return;
     }
     checkoutDraft.payment = method || "cash";
+    syncCurrentPaymentMethodV107(checkoutDraft.payment);
     if(checkoutDraft.payment === "debt"){
       checkoutDraft.paid = 0;
       checkoutDraft.paidTouched = true;
@@ -34367,6 +34585,7 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     checkoutDraft.paid = "";
     checkoutDraft.paidTouched = false;
     checkoutDraft.remark = "";
+    syncCurrentPaymentMethodV107("cash");
   }
   function directFinalizeCheckoutOrderV107(){
     var liveRows = restoreCheckoutRowsV115();
@@ -34475,6 +34694,7 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
       checkoutDraft.paid = payload.totalAmount;
       checkoutDraft.paidTouched = false;
     }
+    syncCurrentPaymentMethodV107(payload.payment || checkoutDraft.payment || "cash");
     if(typeof window.isTemporaryCashierCustomer === "function" && window.isTemporaryCashierCustomer() && payload.paid < payload.totalAmount){
       payload.paid = payload.totalAmount;
       payload.debt = 0;
@@ -34483,6 +34703,7 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
       checkoutDraft.payment = "cash";
       if(typeof window.toast === "function") window.toast("临时客户必须当场结清，已自动修正为全额实收");
     }
+    syncCurrentPaymentMethodV107(payload.payment || checkoutDraft.payment || "cash");
     finalizeCheckoutWithPayloadV107(payload);
   };
   window.submitDebtCheckoutConfirmModalV107 = function(){
@@ -34499,6 +34720,7 @@ body.show-cashier #cashierRoot .order-remark-box-step1{
     checkoutDraft.payment = "debt";
     checkoutDraft.paid = 0;
     checkoutDraft.paidTouched = true;
+    syncCurrentPaymentMethodV107("debt");
     finalizeCheckoutWithPayloadV107(payload);
   };
 
