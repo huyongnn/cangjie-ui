@@ -14,7 +14,7 @@
 
 <script src="./storage.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="./app.js"></script>
+<script src="./app.js" defer></script>
 
 </head>
 <body class="merchant-entry-locked-v1">
@@ -33,6 +33,7 @@
       <button type="button" class="merchant-entry-wechat-v1" onclick="merchantEntryWechatPlaceholderV1()">微信登录</button>
     </div>
     <button type="button" class="merchant-entry-system-v1" onclick="enterMerchantAppV1()">进入系统</button>
+    <button type="button" class="merchant-entry-test-v1" onclick="enterMerchantAppForTestV1()">测试进入系统</button>
     <div id="merchantEntryStatusV1" class="merchant-entry-status-v1">未登录</div>
   </div>
 </section>

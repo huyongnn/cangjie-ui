@@ -723,14 +723,20 @@ function addCategory(){
   document.getElementById("gmCategory").value = name.trim();
   toast("分类已新增");
 }
-document.getElementById("oversellState").onclick = function(){
-  modalState.oversell = modalState.oversell === "允许库存超卖" ? "不允许库存超卖" : "允许库存超卖";
-  this.textContent = modalState.oversell + " ＞";
-};
-document.getElementById("basketState").onclick = function(){
-  modalState.basket = modalState.basket === "不押筐" ? "押筐" : "不押筐";
-  this.textContent = modalState.basket + " ＞";
-};
+const oversellStateEl = document.getElementById("oversellState");
+if(oversellStateEl){
+  oversellStateEl.onclick = function(){
+    modalState.oversell = modalState.oversell === "允许库存超卖" ? "不允许库存超卖" : "允许库存超卖";
+    this.textContent = modalState.oversell + " ＞";
+  };
+}
+const basketStateEl = document.getElementById("basketState");
+if(basketStateEl){
+  basketStateEl.onclick = function(){
+    modalState.basket = modalState.basket === "不押筐" ? "押筐" : "不押筐";
+    this.textContent = modalState.basket + " ＞";
+  };
+}
 function saveGoodsFromModal(){
   const name = document.getElementById("gmName").value.trim();
   const category = document.getElementById("gmCategory").value;
@@ -21378,6 +21384,14 @@ function goBackToBatchEditFromOverview(){
       authorized:true
     });
   }
+  function applyMerchantProfileForTest(phone){
+    writeJSON("cangjieMerchantProfileV92", {
+      title:"仓颉",
+      name:"测试商户",
+      address:"测试地址",
+      phone:phone
+    });
+  }
   window.createCustomerTestLoginV1 = function(phone){
     phone = String(phone || "").trim();
     var merchantId = "mch_test_" + stableId(phone);
@@ -21410,13 +21424,7 @@ function goBackToBatchEditFromOverview(){
       wechat:"",
       status:"启用"
     });
-    var profile = readJSON("cangjieMerchantProfileV92", {}) || {};
-    writeJSON("cangjieMerchantProfileV92", {
-      title:profile.title || "仓颉",
-      name:profile.name || "客户测试商户",
-      address:profile.address || "客户测试地址",
-      phone:profile.phone || phone
-    });
+    applyMerchantProfileForTest(phone);
     var meta = readJSON("cangjieCommercialSyncV1", {}) || {};
     meta.merchantId = merchantId;
     meta.userId = "owner";
@@ -21449,6 +21457,18 @@ function goBackToBatchEditFromOverview(){
 
   window.merchantEntryWechatPlaceholderV1 = function(){
     status("微信登录即将接入，请先使用手机号登录");
+  };
+
+  window.enterMerchantAppForTestV1 = function(){
+    var phone = "13800000000";
+    var input = document.getElementById("merchantEntryPhoneV1");
+    if(input) input.value = phone;
+    window.createCustomerTestLoginV1(phone);
+    ensureDefaultAccount(phone);
+    applyMerchantProfileForTest(phone);
+    if(typeof window.renderProfileV92 === "function") try{ window.renderProfileV92(); }catch(err){}
+    unlockEntry("测试商户已登录");
+    setTimeout(showDefaultPage, 0);
   };
 
   window.enterMerchantAppV1 = function(){
@@ -21485,6 +21505,7 @@ function goBackToBatchEditFromOverview(){
     }
     if(isLoggedIn()){
       unlockEntry("已登录");
+      setTimeout(showDefaultPage, 0);
     }else{
       lockEntry("未登录");
     }

@@ -4403,6 +4403,7 @@ body.batch-create-mode #inboundRoot .app{
 .merchant-entry-phone-v1{background:#111827;color:#fff;}
 .merchant-entry-wechat-v1{background:#e8f5ed;color:#176a34;}
 .merchant-entry-system-v1{width:100%;background:#2563eb;color:#fff;}
+.merchant-entry-test-v1{width:100%;margin-top:10px;background:#2f8e40;color:#fff;}
 .merchant-entry-status-v1{
   min-height:20px;
   margin-top:14px;
